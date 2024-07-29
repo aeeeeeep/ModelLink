@@ -8,25 +8,19 @@
 
 - [Qwen-7B](#Qwen-7B)
   - [Training](#training)
-  - [Script](#script)
-  - [Performance](#performance)
-    - [Machine performance](#machine-performance)
+    - [Script](#script)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
 - [Qwen-14B](#Qwen-14B)
   - [Training](#training)
-  - [Script](#script)
-  - [Performance](#performance)
-    - [Machine performance](#machine-performance)
+    - [Script](#script)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
 - [Qwen-72B](#Qwen-72B)
   - [Training](#training)
-  - [Script](#script)
-  - [Performance](#performance)
-    - [Machine performance](#machine-performance)
+    - [Script](#script)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
@@ -169,7 +163,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     
     # process datasets  
     mkdir ./dataset/Qwen-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen-7B/ \
         --output-prefix ./dataset/Qwen-7B/alpaca \
@@ -200,16 +194,7 @@ Here's a hardware summary of pre-training  Qwen-7B:
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
-### Performance
 
-#### Machine performance
-
-The performance of Qwen-7B in **Ascend NPU** and **Reference**:
-
-|  Device   |  Model  | throughput rate (tokens/s/p) |
-|:---------:|:-------:|:----------------------------:|
-|   NPUs    | Qwen-7B |             2499             |
-| Reference | Qwen-7B |             2867             |
 
 ## Inference
 
@@ -411,7 +396,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
    
     # process datasets  
     mkdir ./dataset/Qwen-14B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen-14B/ \
         --output-prefix ./dataset/Qwen-14B/alpaca \
@@ -441,16 +426,7 @@ Here's a hardware summary of pre-training  Qwen-14B:
     bash examples/qwen/pretrain_qwen_14b_ptd.sh 
    ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
-### Performance
 
-#### Machine performance
-
-The performance of Qwen-14B in **Ascend NPU** and **Reference**:
-
-|  Device   |  Model   | throughput rate (tokens/s/p) |
-|:---------:|:--------:|:----------------------------:|
-|   NPUs    | Qwen-14B |             1560             |
-| Reference | Qwen-14B |             1578             |
 
 ## Inference
 
@@ -634,7 +610,7 @@ Here's a hardware summary of pre-training  Qwen-72B:
 
     # process datasets  
     mkdir ./dataset/Qwen-72B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen-72B/ \
         --output-prefix ./dataset/Qwen-72B/alpaca \
@@ -674,16 +650,6 @@ Here's a hardware summary of pre-training  Qwen-72B:
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
-### Performance
-
-#### Machine performance
-
-The performance of Qwen-72B in **Ascend NPU** and **Reference**:
-
-|  Device   |  Model  | throughput rate (tokens/s/p)(8k) | throughput rate (tokens/s/p)(32k) |
-|:---------:|:-------:|:--------------------------------:|:---------------------------------:|
-|   NPUs    | Qwen-7B |               285                |                --                 |
-| Reference | Qwen-7B |               345                |                --                 |
 
 
 ## Inference

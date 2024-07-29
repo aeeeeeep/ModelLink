@@ -10,8 +10,6 @@
 - [Yi-34B](#yi-34b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference](#inference)
   - [Evaluation](#evaluation)
 
@@ -149,7 +147,7 @@ Here's a hardware summary of pre-training Yi-34B:
    
     # process datasets          
     mkdir ./dataset/Yi-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Yi-34B/ \
         --output-prefix ./dataset/Yi-34B/alpaca \
@@ -178,14 +176,13 @@ Here's a hardware summary of pre-training Yi-34B:
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
+
 6. fine-tuning
 
     6.1 Prepare fine-tuning dataset
 
     Download the fine-tuning datasets from [here](https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet)
-
-
-    ```shell
+    ```
     # download datasets
     mkdir finetune_dataset
     cd ./finetune_dataset
@@ -194,7 +191,7 @@ Here's a hardware summary of pre-training Yi-34B:
     
     # process datasets  
     mkdir ./finetune_dataset/Yi-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
       --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
       --tokenizer-name-or-path ./model_from_hf/Yi-34B/ \
       --output-prefix ./finetune_dataset/Yi-34B/alpaca \
@@ -203,8 +200,7 @@ Here's a hardware summary of pre-training Yi-34B:
       --tokenizer-type PretrainedFromHF \
       --handler-name GeneralInstructionHandler \
       --append-eod
-    ```
-    
+   ```
     6.2 Full Parameters Fine-Tuning yi_34B
     
     The configuration script for full parameters fine-tuning  is basically the same as that for pretrain_yi_34b_ptd_16p.sh.*The difference is that the dataset and the training parameter is-instruction-dataset are added.*
@@ -223,18 +219,6 @@ Here's a hardware summary of pre-training Yi-34B:
       --tokenizer-name-or-path ${TOKENIZER_PATH} \
       --tokenizer-not-use-fast \
     ```
-
-### Performance
-
-#### Machine performance
-
-The performance of Yi-34B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations | throughput rate (samples/s) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|:----:|:---------:|:----:|:---------------------:|:---------------:|:----------------:|
-| NPUs |  Yi-34B | - | 3.16| 809| 324 |      
-|  Reference  | Yi-34B | - |  2.85  | 732 | 359 |    
-
 
 ## Inference
 

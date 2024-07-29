@@ -1,16 +1,14 @@
-import unittest
 import sys
 import os
 import math
 
 from utils import judge_expression
-import modellink
 
 from modellink.tokenizer import build_tokenizer
 from modellink.tokenizer.tokenizer import _AutoTokenizer
-from modellink.data.data_handler import GeneralPretrainHandler
-from modellink.data.data_handler import build_dataset, get_dataset_handler
-from tools.preprocess_data import get_args, build_splitter
+from modellink.tasks.preprocess.data_handler import GeneralPretrainHandler
+from modellink.tasks.preprocess.data_handler import build_dataset, get_dataset_handler
+from preprocess_data import get_args, build_splitter
 
 
 class TestProcessPretrainData:
@@ -18,10 +16,10 @@ class TestProcessPretrainData:
     def setup_class(self):
         sys.argv = [
             sys.argv[0],
-            "--input", "/home/dataset/ci_engineering/train-00000-of-00001-a09b74b3ef9c3b56.parquet",
+            "--input", "/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet",
             "--tokenizer-type", "PretrainedFromHF",
-            "--output-prefix", "/home/dataset/ci_engineering/pretrain_dataset/alpaca",
-            "--tokenizer-name-or-path", "/home/dataset/ci_engineering/llama-2-7b-hf",
+            "--output-prefix", "/data/pretrain_dataset/alpaca",
+            "--tokenizer-name-or-path", "/data/llama-2-7b-hf",
             "--workers", "4",
             "--log-interval", "1000"
         ]
@@ -73,7 +71,7 @@ class TestProcessPretrainData:
         Test generate pretrain object files and files are not None(MB).
         """
         self.handler.serialize_to_disk()
-        folder_path = "/home/dataset/ci_engineering/pretrain_dataset"
+        folder_path = "/data/pretrain_dataset"
         bin_file = 0
         idx_file = 0
         total_size = 0

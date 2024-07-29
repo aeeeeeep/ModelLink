@@ -12,15 +12,11 @@
 - [LLAMA3-8B](#llama3-8b)
   - [训练](#训练)
     - [脚本](#脚本)
-    - [性能](#性能)
-      - [吞吐](#吞吐)
   - [推理-8B](#推理-8b)
   - [评估-8B](#评估-8b)
 - [LLAMA3-70B](#llama3-70b)
   - [训练](#训练)
     - [脚本](#脚本)
-    - [性能](#性能)
-      - [吞吐](#吞吐)
   - [推理-70B](#推理-70b)
   - [评估-70B](#评估-70b)
 
@@ -148,7 +144,7 @@ LLAMA3-8B 训练的硬件配置:
     cd ..
     # 处理数据   
     mkdir ./dataset/llama-3-8b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-3-8b-hf/ \
         --output-prefix ./dataset/llama-3-8b-hf/alpaca \
@@ -195,7 +191,7 @@ LLAMA3-8B 训练的硬件配置:
     
     # 处理微调数据集  
     mkdir ./finetune_dataset/llama-3-8b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-3-8b-hf/ \
         --output-prefix ./finetune_dataset/llama-3-8b-hf/alpaca \
@@ -221,16 +217,7 @@ LLAMA3-8B 训练的硬件配置:
         --tokenizer-not-use-fast \
     ```
 
-### 性能
 
-#### 吞吐
-
-LLaMA3-8B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备 |   模型   | 迭代数 | tokens吞吐 (tokens/s/p) |
-| :--: | :-------: | :----: | :---------------------: |
-| NPUs | LLaMA3-8B |  1000  |        2483         |
-| 参考 | LLaMA3-8B |  1000  |        2674          |
 ## 推理-8B
 
 配置llama3-8B 推理脚本: examples/llama3/generate_llama3_8b_ptd.sh
@@ -445,7 +432,7 @@ LLAMA3-70B 训练的硬件配置:
     cd ..
     # 处理数据   
     mkdir ./dataset/llama-3-70b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-3-70b-hf/ \
         --output-prefix ./dataset/llama-3-70b-hf/alpaca \
@@ -492,7 +479,7 @@ LLAMA3-70B 训练的硬件配置:
     
     # 处理微调数据集  
     mkdir ./finetune_dataset/llama-3-70b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-3-70b-hf/ \
         --output-prefix ./finetune_dataset/llama-3-70b-hf/alpaca \
@@ -518,16 +505,7 @@ LLAMA3-70B 训练的硬件配置:
         --tokenizer-not-use-fast \
     ```
 
-### 性能
 
-#### 吞吐
-
-LLaMA3-70B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备 |   模型   | 迭代数 | tokens吞吐 (tokens/s/p) |
-| :--: | :-------: | :----: | :---------------------: |
-| NPUs | LLaMA3-70B |  1000  |        283          |
-| 参考 | LLaMA3-70B |  -  |        355          |
 ## 推理-70B
 
 配置llama3-70B 推理脚本: examples/llama3/generate_llama3_70b_ptd.sh

@@ -11,16 +11,12 @@
 - [Internlm-7B](#internlm-7b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 - [Contents](#contents)
 - [Internlm-65B](#internlm-65b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
 
 # InternLM-7B
 
@@ -103,7 +99,7 @@ Here's a hardware summary of pre-training InternLM-7B:
     #!/bin/bash
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     mkdir ./dataset/internlm-7b/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/internlm-7b/ \
         --output-prefix ./dataset/internlm-7b/alpaca \
@@ -172,16 +168,6 @@ Here's a hardware summary of pre-training InternLM-7B:
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
-### Performance
-
-#### Machine performance
-
-The performance of Internlm-7B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations | throughput rate (samples/s) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|----|-------------|------|--------------------|----------------------|-----------------|
-| NPUs | Internlm-7B | 1000 | 10.85            | 2776                 | 5.90            | 
-| benchmarks | Internlm-7B | 1000 | 11.14               | 2854                 |  5.74         | 
 
 
 #### Inference
@@ -293,7 +279,7 @@ Here's a hardware summary of pre-training InternLM-65B:
     #!/bin/bash
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     mkdir ./dataset/internlm-65b/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/internlm-65b/ \
         --output-prefix ./dataset/internlm-65b/alpaca \
@@ -323,13 +309,3 @@ Here's a hardware summary of pre-training InternLM-65B:
     ```
     **Note**: If using multi machine training, and no data sharing configuration on the mechines, it's necessary to add the parameter `--no-shared-storage`. This parameter will determine whether non master nodes need to load data based on distributed parameters, and check the corresponding cache and generated data.
 
-### Performance
-
-#### Machine performance
-
-The performance of Internlm-65B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|----|-------------|------|--------------------|----------------------|-----------------|
-| NPUs | Internlm-65B |  |          5.33 |             341   |   48       | 
-| Reference | Internlm-65B | - | -              | 414                 | -            | 

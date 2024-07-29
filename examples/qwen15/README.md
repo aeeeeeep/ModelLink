@@ -9,52 +9,38 @@
 - [Qwen1.5-0.5B](#Qwen1.5-0.5b)
   - [训练-0.5B](#训练-0.5b)
     - [脚本-0.5B](#脚本-0.5b)
-    - [性能-0.5B](#性能-0.5b)
-       - [吞吐-0.5B](#吞吐-0.5b)
   - [推理-0.5B](#推理-0.5b)
   - [评估-0.5B](#评估-0.5b)
 - [Qwen1.5-1.8B](#Qwen1.5-1.8b)
   - [训练-1.8B](#训练-1.8b)
     - [脚本-1.8B](#脚本-1.8b)
-    - [性能-1.8B](#性能-1.8b)
-       - [吞吐-1.8B](#吞吐-1.8b)
   - [推理-1.8B](#推理-1.8b)
   - [评估-1.8B](#评估-1.8b)
 - [Qwen1.5-4B](#Qwen1.5-4b)
   - [训练-4B](#训练-4b)
     - [脚本-4B](#脚本-4b)
-    - [性能-4B](#性能-4b)
-       - [吞吐-4B](#吞吐-4b)
   - [推理-4B](#推理-4b)
   - [评估-4B](#评估-4b)
 - [Qwen1.5-7B](#qwen15-7b)
-	- [训练-7B](#训练-7b)
-	   - [脚本-7B](#脚本-7b)
-	   - [性能-7B](#性能-7b)
-		  - [吞吐-7B](#吞吐-7b)
-	- [推理-7B](#推理-7b)
-	- [评估-7B](#评估-7b)
+  - [训练-7B](#训练-7b)
+	- [脚本-7B](#脚本-7b)
+  - [推理-7B](#推理-7b)
+  - [评估-7B](#评估-7b)
 - [Qwen1.5-14B](#qwen15-14b)
-	- [训练-14B](#训练-14b)
-	  - [脚本-14B](#脚本-14b)
-	  - [性能-14B](#性能-14b)
-		- [吞吐-14B](#吞吐-14b)
-	- [推理-14B](#推理-14b)
-	- [评估-14B](#评估-14b)
+  - [训练-14B](#训练-14b)
+	- [脚本-14B](#脚本-14b)
+  - [推理-14B](#推理-14b)
+  - [评估-14B](#评估-14b)
 - [Qwen1.5-32B](#qwen15-32b)
-    - [训练-32B](#训练-32b)
-      - [脚本-32B](#脚本-32b)
-      - [性能-32B](#性能-32b)
-        - [吞吐-32B](#吞吐-32b)
-    - [推理-32B](#推理-32b)
-    - [评估-32B](#评估-32b)
+  - [训练-32B](#训练-32b)
+    - [脚本-32B](#脚本-32b)
+  - [推理-32B](#推理-32b)
+  - [评估-32B](#评估-32b)
 - [Qwen1.5-72B](#qwen15-72b)
-    - [训练-72B](#训练-72b)
-      - [脚本-72B](#脚本-72b)
-      - [性能-72B](#性能-72b)
-        - [吞吐-72B](#吞吐-72b)
-    - [推理-72B](#推理-72b)
-    - [评估-72B](#评估-72b)
+  - [训练-72B](#训练-72b)
+    - [脚本-72B](#脚本-72b)
+  - [推理-72B](#推理-72b)
+  - [评估-72B](#评估-72b)
 # Qwen1.5-0.5B
 
 ## 训练-0.5B
@@ -175,7 +161,7 @@ Qwen1.5-0.5B 训练的硬件配置:
     cd ..
     # 处理数据   
     mkdir ./dataset/qwen15-0.5b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-0.5b-hf/ \
         --output-prefix ./dataset/qwen15-0.5b-hf/alpaca \
@@ -212,7 +198,7 @@ Qwen1.5-0.5B 训练的硬件配置:
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen15-0.5b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-0.5b-hf/ \
         --output-prefix ./finetune_dataset/qwen15-0.5b-hf/alpaca \
@@ -239,16 +225,7 @@ Qwen1.5-0.5B 训练的硬件配置:
         --tokenizer-name-or-path ${TOKENIZER_PATH} \
         --tokenizer-not-use-fast \
     ```
-### 性能-0.5B
 
-#### 吞吐-0.5B
-
-Qwen1.5-0.5B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备 |      模型      | 迭代数  | tokens吞吐 (tokens/s/p) |
-| :--: |:------------:|:----:|:---------------------:|
-| NPUs | Qwen1.5-0.5B | 2000 |         22834         |
-| 参考 | Qwen1.5-0.5B | 2000 |         25306         |
 
 ## 推理-0.5B
 
@@ -421,7 +398,7 @@ Qwen1.5-1.8B 训练的硬件配置:
     cd ..
     # 处理数据   
     mkdir ./dataset/qwen15-1.8b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-1.8b-hf/ \
         --output-prefix ./dataset/qwen15-1.8b-hf/alpaca \
@@ -458,7 +435,7 @@ Qwen1.5-1.8B 训练的硬件配置:
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen15-1.8b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-1.8b-hf/ \
         --output-prefix ./finetune_dataset/qwen15-1.8b-hf/alpaca \
@@ -485,16 +462,7 @@ Qwen1.5-1.8B 训练的硬件配置:
         --tokenizer-name-or-path ${TOKENIZER_PATH} \
         --tokenizer-not-use-fast \
     ```
-### 性能-1.8B
 
-#### 吞吐-1.8B
-
-Qwen1.5-1.8B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备 |      模型      | 迭代数  | tokens吞吐 (tokens/s/p) |
-| :--: |:------------:|:----:|:---------------------:|
-| NPUs | Qwen1.5-1.8B | 2000 |         13029         |
-| 参考 | Qwen1.5-1.8B | 2000 |         12181         |
 
 ## 推理-1.8B
 
@@ -669,7 +637,7 @@ Qwen1.5-4B 训练的硬件配置:
     cd ..
     # 处理数据   
     mkdir ./dataset/qwen15-4b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-4b-hf/ \
         --output-prefix ./dataset/qwen15-4b-hf/alpaca \
@@ -706,7 +674,7 @@ Qwen1.5-4B 训练的硬件配置:
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen15-4b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-4b-hf/ \
         --output-prefix ./finetune_dataset/qwen15-4b-hf/alpaca \
@@ -733,16 +701,7 @@ Qwen1.5-4B 训练的硬件配置:
         --tokenizer-name-or-path ${TOKENIZER_PATH} \
         --tokenizer-not-use-fast \
     ```
-### 性能-4B
 
-#### 吞吐-4B
-
-Qwen1.5-4B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备 |   模型   | 迭代数 | tokens吞吐 (tokens/s/p) |
-| :--: | :-------: | :----: | :---------------------: |
-| NPUs | Qwen1.5-4B |  1000  |        5033         |
-| 参考 | Qwen1.5-4B |  1000  |        5328          |
 
 ## 推理-4B
 
@@ -921,7 +880,7 @@ Qwen1.5-7B 训练的硬件配置:
    
    # 处理数据   
    mkdir ./dataset/Qwen1.5-7B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-7B \
        --output-prefix ./dataset/Qwen1.5-7B/alpaca \
@@ -967,7 +926,7 @@ Qwen1.5-7B 训练的硬件配置:
    
    # 处理微调数据集  
    mkdir ./finetune_dataset/Qwen1.5-7B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-7B/ \
        --output-prefix ./finetune_dataset/Qwen1.5-7B/alpaca \
@@ -996,17 +955,6 @@ Qwen1.5-7B 训练的硬件配置:
    --tokenizer-not-use-fast \
    ```
 
-
-### 性能-7B
-
-#### 吞吐-7B
-
-Qwen1.5-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-|       设备       |          模型           |  tokens吞吐 (tokens/s/p)   |
-|:--------------:|:---------------------:|:------------------------:|
-|      NPUs      |      Qwen1.5-7B       |           2862           |
-|       参考       |      Qwen1.5-7B       |           2621           |
 
 ## 推理-7B
 
@@ -1184,7 +1132,7 @@ Qwen1.5-14B 训练的硬件配置:
    
    # 处理数据   
    mkdir ./dataset/Qwen1.5-14B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-14B \
        --output-prefix ./dataset/Qwen1.5-14B/alpaca \
@@ -1230,7 +1178,7 @@ Qwen1.5-14B 训练的硬件配置:
    
    # 处理微调数据集  
    mkdir ./finetune_dataset/Qwen1.5-14B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-14B/ \
        --output-prefix ./finetune_dataset/Qwen1.5-14B/alpaca \
@@ -1260,17 +1208,6 @@ Qwen1.5-14B 训练的硬件配置:
    ```
 
 
-
-### 性能-14B
-
-#### 吞吐-14B
-
-Qwen1.5-14B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-|       设备       |     模型      | tokens吞吐 (tokens/s/p) |
-|:--------------:|:-----------:|:---------------------:|
-|      NPUs      | Qwen1.5-14B |        1717.8         |
-|       参考       | Qwen1.5-14B |        1702.2         |
 
 ## 推理-14B
 
@@ -1458,7 +1395,7 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
      cd ..
      # 处理数据   
      mkdir ./dataset/qwen1.5-32B-hf/
-     python ./tools/preprocess_data.py \
+     python ./preprocess_data.py \
          --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
          --tokenizer-name-or-path ./model_from_hf/Qwen1.5-32B/ \
          --output-prefix ./dataset/qwen1.5-32B-hf/alpaca \
@@ -1499,7 +1436,7 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen-1.5-32b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen1.5-32B/ \
         --output-prefix ./finetune_dataset/qwen-1.5-32b-hf/alpaca \
@@ -1543,16 +1480,6 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
     bash examples/qwen15/tune_qwen15_32b_ptd.sh
     ```
 
-### 性能-32B
-
-#### 吞吐-32B
-
-Qwen1.5-32B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-|  设备  |     模型      | tokens吞吐 (tokens/s/p)(8k序列) |
-|:----:|:-----------:|:---------------------------:|
-| NPUs | Qwen1.5-32B |            748.1            |
-|  参考  | Qwen1.5-32B |            709.2            | 
 
 
 ## 推理-32B
@@ -1744,7 +1671,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
      cd ..
      # 处理数据   
      mkdir ./dataset/Qwen1.5-72B-hf/
-     python ./tools/preprocess_data.py \
+     python ./preprocess_data.py \
          --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
          --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
          --output-prefix ./dataset/Qwen1.5-72B-hf/alpaca \
@@ -1786,7 +1713,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/qwen-1.5-72b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
         --output-prefix ./finetune_dataset/qwen-1.5-72b-hf/alpaca \
@@ -1830,16 +1757,6 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
     bash examples/qwen15/tune_qwen15_72b_ptd.sh
     ```
 
-### 性能-72B
-
-#### 吞吐-72B
-
-Qwen1.5-72B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-|  设备  |     模型      | tokens吞吐 (tokens/s/p)(8k序列) |
-|:----:|:-----------:|:---------------------------:|
-| NPUs | Qwen1.5-72B |            301.4            |
-|  参考  | Qwen1.5-72B |            317.3            | 
 
 
 ## 推理-72B

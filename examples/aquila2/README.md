@@ -8,16 +8,12 @@
 - [Aquila2-7B](#7b)
   - [训练](#7b-training)
     - [脚本](#7b-script)
-    - [性能](#7b-performance)
-      - [吞吐](#7b-throughput)
   - [推理](#7b-inference)
   - [评估](#7b-evaluation)
 
 - [Aquila2-34B](#34b)
   - [训练](#34b-training)
     - [脚本](#34b-script)
-    - [性能](#34b-performance)
-      - [吞吐](#34b-throughput)
   - [推理](#34b-inference)
   - [评估](#34b-evaluation)
 
@@ -131,7 +127,7 @@ Aquila2-7B 训练的硬件配置如下:
 
     # 处理数据   
     mkdir ./dataset/Aquila2-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-7B/ \
         --output-prefix ./dataset/Aquila2-7B/alpaca \
@@ -181,7 +177,7 @@ Aquila2-7B 训练的硬件配置如下:
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/Aquila2-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-7B/ \
         --output-prefix ./finetune_dataset/Aquila2-7B/alpaca \
@@ -206,16 +202,6 @@ Aquila2-7B 训练的硬件配置如下:
         --tokenizer-not-use-fast \
     ```
 
-<h3 id="7b-performance">性能</h3>
-
-<h4 id="7b-throughput">吞吐</h4>
-
-Aquila2-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备 | 模型       | 迭代数| token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) |
-|------|------------|------|------------------------|----------------------|
-| NPU  | Aquila2-7B  | 5000 | 3323                  | 4.93                  | 
-| 参考  | Aquila2-7B  | 5000 | 2673                  |    6.13               | 
 
 <h2 id="7b-inference">推理</h2>
 
@@ -382,7 +368,7 @@ Aquila2-34B 训练的硬件配置如下:
 
     # 处理数据   
     mkdir ./dataset/Aquila2-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-34B/ \
         --output-prefix ./dataset/Aquila2-34B/alpaca \
@@ -432,7 +418,7 @@ Aquila2-34B 训练的硬件配置如下:
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/Aquila2-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-34B/ \
         --output-prefix ./finetune_dataset/Aquila2-34B/alpaca \
@@ -457,17 +443,6 @@ Aquila2-34B 训练的硬件配置如下:
         --tokenizer-not-use-fast \
     ```
 
-
-<h3 id="34b-performance">性能</h3>
-
-<h4 id="34b-throughput">吞吐</h4>
-
-Aquila2-34B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备 | 模型       | 迭代数| token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) |
-|------|------------|------|------------------------|----------------------|
-| NPU  | Aquila2-34B  | 5000 | 854                  | 307                  | 
-| 参考  | Aquila2-34B  | 5000 | 732                  |    358               | 
 
 
 <h2 id="34b-inference">推理</h2>

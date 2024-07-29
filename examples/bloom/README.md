@@ -123,7 +123,7 @@ Bloom-7B 训练的硬件配置如下：
 
     # 处理数据         
     mkdir ./dataset/Bloom-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Bloom-7B/ \
         --output-prefix ./dataset/Bloom-7B/alpaca \
@@ -151,16 +151,6 @@ Bloom-7B 训练的硬件配置如下：
     ```
     **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
-### 性能
-
-#### 吞吐
-
-Bloom-7B
-
-|  设备  |    模型     | 迭代数  | 样本吞吐 (samples/s) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) | 
-|:----:|:---------:|:----:|:---------------------:|:---------------:|:----------------:|
-| NPUs | Bloom 7b | 1000 | 7.95 | 2034 | 64.55
-|  参考  | Bloom 7B | 1000 | 9.894 |  2525 | 19.40 
 
 
 
@@ -337,7 +327,7 @@ Bloom-176B 训练的硬件配置:
 
     # 处理数据        
     mkdir ./dataset/Bloom-176B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Bloom-176B/ \
         --output-prefix ./dataset/Bloom-176B/alpaca \
@@ -369,16 +359,6 @@ Bloom-176B 训练的硬件配置:
     ```
     **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
-## 性能
-
-### 吞吐
-
-Bloom-176B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
-
-| 设备 | 模型       | 总迭代数 | tokens吞吐 (tokens/p/s) |
-| ---- | ---------- | -------- | ----------------------- |
-| NPUs | Bloom-176B | 1000     | 100                    |
-| 参考 | Bloom-176B | NA       | 107                     |
 
 
 ## 推理

@@ -13,8 +13,6 @@
   - [Hardware-Requirements](#hardware-requirements)
   - [Preparation](#preparation)
   - [Model-Training](#model-training)
-  - [Model-Performance](#model-performance)
-    - [Throughput](#throughput)
   - [Model-Inference](#model-inference)
   - [Model-Evaluation](#model-evaluation)
 
@@ -161,7 +159,7 @@ Recommended hardware configuration for inference:
     cd ..
     # process datasets
     mkdir ./dataset/Mixtral-8x7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Mixtral-8x7B/ \
         --output-prefix ./dataset/Mixtral-8x7B/alpaca \
@@ -217,7 +215,7 @@ Recommended hardware configuration for inference:
 
     # process datasets  
     mkdir ./finetune_dataset/Mixtral-8x7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/Alpaca_data_gpt4_zh.jsonl \
         --output-prefix ./finetune_dataset/Mixtral-8x7B/alpaca \
         --tokenizer-type PretrainedFromHF \
@@ -242,16 +240,7 @@ Recommended hardware configuration for inference:
         --is-instruction-dataset
     ```
 
-## Model-Performance
 
-### Throughput
-
-Comparison of Mixtral-8x7B performance on 4 nodes and 32 chips with tp8 pp4:
-
-|  Device  |    Model    | Iterations | Sample Throughput (samples/step) | Tokens Throughput (tokens/s/p) | Single Step Iteration Time (s/step) |
-| :-------: | :----------: | :--------: |:--------------------------------:|:------------------------------:|:-----------------------------------:|
-|   NPUs   | Mixtral-8x7B |    1000    |               0.47               |              487               |                16.81                |
-| Reference | Mixtral-8x7B |    1000    |               0.59               |              610               |                13.41                |
 
 ## Model-Inference
 

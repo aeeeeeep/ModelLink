@@ -8,8 +8,6 @@
 - [Aquila-7B](#Aquila-7B)
   - [训练](#训练)
     - [脚本](#脚本)
-    - [性能](#性能)
-      - [吞吐](#吞吐)
   - [推理](#推理)
   - [评估](#评估)
 
@@ -87,7 +85,7 @@ Aquila-7B 训练的硬件配置如下:
     # 请按照您的真实环境修改 set_env.sh 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
     mkdir ./dataset/Aquila-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila-7B/ \
         --output-prefix ./dataset/Aquila-7B/alpaca \
@@ -164,17 +162,6 @@ Aquila-7B 训练的硬件配置如下:
     ```shell
     bash examples/aquila/pretrain_aquila_7b_ptd.sh
     ```
-
-### 性能
-
-#### 吞吐
-
-Aquila-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备 | 模型       | 迭代数| token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) |
-|------|------------|------|------------------------|----------------------|
-| NPU  | Aquila-7B  | 1000 | 2849                  | 5.75                  | 
-| 参考 | Aquila-7B  | 1000 | 2874                   |    5.70               | 
 
 
 

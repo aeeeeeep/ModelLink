@@ -2,14 +2,12 @@ import unittest
 import sys
 import os
 import glob
-import torch_npu
 from utils import ParamConfig
-import modellink
 from modellink.tokenizer import build_tokenizer
 from modellink.tokenizer.tokenizer import _AutoTokenizer
-from modellink.data.data_handler import GeneralPretrainHandler
-from modellink.data.data_handler import build_dataset, get_dataset_handler
-from tools.preprocess_data import get_args, build_splitter
+from modellink.tasks.preprocess.data_handler import GeneralPretrainHandler
+from modellink.tasks.preprocess.data_handler import build_dataset, get_dataset_handler
+from preprocess_data import get_args, build_splitter
 
 
 class TestProcessPretrainData(unittest.TestCase):

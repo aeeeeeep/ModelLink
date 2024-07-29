@@ -12,16 +12,12 @@
 - [Baichuan-7B](#Baichuan-7B)
   - [训练](#训练)
     - [脚本](#脚本)
-    - [性能](#性能)
-        - [吞吐](#吞吐)
   - [推理](#推理)
   - [评估](#评估)
 
 - [Baichuan-13B](#Baichuan-13B)
   - [训练](#训练)
     - [脚本](#脚本)
-    - [性能](#性能)
-        - [吞吐](#吞吐)
   - [推理](#推理)
   - [评估](#评估)
 
@@ -150,7 +146,7 @@ Baichuan-7B 训练的硬件配置如下：
 
     # 处理数据              
     mkdir ./dataset/Baichuan-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Baichuan-7B/ \
         --output-prefix ./dataset/Baichuan-7B/alpaca \
@@ -178,16 +174,6 @@ Baichuan-7B 训练的硬件配置如下：
     ```
     **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
-### 性能
-
-#### 吞吐
-
-Baichuan-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-|  设备  |    模型     | 迭代数  | 样本吞吐 (samples/s) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) | 
-|:----:|:---------:|:----:|:---------------------:|:---------------:|:----------------:|
-| NPUs | Baichuan-7B | 1000 | 5.24 | 2685 | 6.1| 
-|  参考  | Baichuan-7B | - | - |  2036 | - | 
 
 
 
@@ -385,7 +371,7 @@ Baichuan-13B 训练的硬件配置如下:
     cd ..
 
     mkdir ./dataset/Baichuan-13B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Baichuan-13B/ \
         --output-prefix ./dataset/Baichuan-13B/alpaca \
@@ -413,16 +399,6 @@ Baichuan-13B 训练的硬件配置如下:
     ```
     **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
-### 性能
-
-#### 吞吐
-
-Baichuan-13B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
-
-|  设备  |      模型      | 迭代数  | 样本吞吐 (samples/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 
-|:----:|:------------:|:----:|:------------------:|:--------------------:|:---------------:|
-| NPUs | Baichuan-13B | 1000 | 2.37 | 1213| 13.5 |      
-|  参考  | Baichuan-13B | - |  -   |         862          |     -   |    
 
 
 

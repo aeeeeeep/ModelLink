@@ -11,8 +11,6 @@
 - [CodeLlama-34B](#codellama-34b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference](#inference)
   - [Evaluation](#evaluation)
 
@@ -150,7 +148,7 @@ Here's a hardware summary of pre-training CodeLlama-34B:
 
     # process datasets          
     mkdir ./dataset/CodeLlama-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/CodeLlama-34B/ \
         --output-prefix ./dataset/CodeLlama-34B/alpaca \
@@ -195,7 +193,7 @@ Here's a hardware summary of pre-training CodeLlama-34B:
 
     # process datasets  
     mkdir ./finetune_dataset/CodeLlama-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/CodeLlama-34B/ \
         --output-prefix ./finetune_dataset/CodeLlama-34B/alpaca \
@@ -225,16 +223,6 @@ Here's a hardware summary of pre-training CodeLlama-34B:
         --padded-vocab-size 32000 \
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of CodeLlama-34B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations | throughput rate (samples/s) | throughput rate (tokens/s/p) | single-step time (s/step) | 
-|:----:|:---------:|:----:|:---------------------:|:---------------:|:----------------:|
-| NPUs | CodeLlama-34B | - | 3.27 | 837 | 313 |
-|  Reference  | CodeLlama-34B | - |  2.97   | 762 | 344 | 
 
 
 ## Inference

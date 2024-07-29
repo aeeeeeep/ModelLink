@@ -31,7 +31,7 @@ DISTRIBUTED_ARGS="
     --master_addr $MASTER_ADDR \
     --master_port $MASTER_PORT
 "
-
+#grok1总层数是64
 MODEL_ARGS="
     --use-mcore-models \
     --disable-bias-linear \
@@ -57,7 +57,7 @@ MODEL_ARGS="
 
 MOE_ARGS="
     --num-experts 8 \
-    --expert-model-parallel-size 2 \
+    --expert-model-parallel-size 1 \
     --moe-router-load-balancing-type aux_loss \
     --moe-router-topk 2 \
     --moe-aux-loss-coeff 1e-2 \
@@ -67,7 +67,7 @@ MOE_ARGS="
 "
 
 DATA_ARGS="
-    --tokenizer-type PretrainedFromHF \
+    --tokenizer-type Llama2Tokenizer \
     --tokenizer-name-or-path ${TOKENIZER_MODEL} \
     --data-path $DATA_PATH \
     --split 99990,8,2
@@ -98,7 +98,7 @@ TRAINING_ARGS="
 "
 
 MODEL_PARALLEL_ARGS="
-    --tensor-model-parallel-size 4 \
+    --tensor-model-parallel-size 8 \
     --pipeline-model-parallel-size 2 \
     --sequence-parallel
 "

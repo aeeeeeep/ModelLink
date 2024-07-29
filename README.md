@@ -87,7 +87,6 @@ ModelLink已发布版本维护策略：
       <th>模型</th>
       <th>参数</th>
       <th>序列</th>
-      <th>实现</th>
       <th>集群</th>
       <th>模式</th>
       <th>性能</th>
@@ -100,7 +99,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="1"><a href="examples/aquila/README.md">Aquila</a></td>
       <td>7B</td>
       <td>2K</td>
-      <td>Legacy</td>
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 2849 </td>
@@ -111,7 +109,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="2"><a href="examples/aquila2/README.md">Aquila2</a></td>
       <td>7B</td>
       <td>2K</td>
-      <td>Legacy</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 3323 </td>
@@ -121,7 +118,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>34B</td>
       <td>4K</td>
-      <td>Legacy</td>
       <td> 2x8</td>
       <td> BF16 </td>
       <td> 854 </td>
@@ -132,7 +128,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
       <td>7B</td>
       <td>4K</td>
-      <td>Legacy</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 2685 </td>
@@ -142,7 +137,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>13B</td>
       <td>4K</td>
-      <td>Legacy</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 1213 </td>
@@ -153,7 +147,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="2"><a href="examples/baichuan2/README.md">Baichuan2</a></td>
       <td>7B</td>
       <td>4K</td>
-      <td>Legacy</td>
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 2664 </td>
@@ -163,7 +156,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>13B</td>
       <td>4K</td>
-      <td>Legacy</td>
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 1668 </td>
@@ -174,7 +166,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
       <td>7B1</td>
       <td>2K</td>
-      <td>Legacy</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 2034 </td>
@@ -184,7 +175,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>176B</td>
       <td>2K</td>
-      <td>Legacy</td>
       <td >12x8</td>
       <td> BF16 </td>
       <td> 100 </td>
@@ -192,10 +182,9 @@ ModelLink已发布版本维护策略：
       <td>【昇腾】</td>
     </tr>
     <tr>
-      <td rowspan="4"><a href="examples/chatglm3/README.md">ChatGLM3</a></td>
+      <td rowspan="1"><a href="examples/chatglm3/README.md">ChatGLM3</a></td>
       <td>6B</td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 4297 </td>
@@ -203,40 +192,9 @@ ModelLink已发布版本维护策略：
       <td>【社区】</td>
     </tr>
     <tr>
-      <td>6B</td>
-      <td>8K</td>
-      <td>Mcore</td>
-      <td >1x8</td>
-      <td> FP16 </td>
-      <td> 4611 </td>
-      <td> 4543 </td>
-      <td>【昇腾】</td>
-    </tr>
-    <tr>
-      <td>6B</td>
-      <td>32K</td>
-      <td>Mcore</td>
-      <td >1x8</td>
-      <td> FP16 </td>
-      <td> 2650 </td>
-      <td> 2887 </td>
-      <td>【昇腾】</td>
-    </tr>
-    <tr>
-      <td>6B</td>
-      <td>64K</td>
-      <td>Mcore</td>
-      <td >2x8</td>
-      <td> FP16 </td>
-      <td> 1724 </td>
-      <td> 2097 </td>
-      <td>【昇腾】</td>
-    </tr>
-    <tr>
       <td rowspan="1"><a href="examples/codellama/README.md">CodeLlama</a></td>
       <td>34B</td>
       <td>4K</td>
-      <td>Legacy</td>
       <td> 2x8</td>
       <td> BF16 </td>
       <td> 837 </td>
@@ -247,7 +205,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
       <td>7B</td>
       <td>2K</td>
-      <td>Legacy</td>
       <td>1x8</td>
       <td>BF16</td>
       <td> 2776 </td>
@@ -257,7 +214,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td >65B</td>
       <td>2K</td>
-      <td>Legacy</td>
       <td >4x8</td>
       <td> BF16 </td>
       <td> 341 </td>
@@ -268,7 +224,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="4"><a href="examples/llama/README.md">LLaMA</td>
       <td>7B</td>
       <td>2K</td>
-      <td>Legacy</td>
       <td>1x8</td>
       <td>FP16</td>
       <td> 3600 </td>
@@ -278,7 +233,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>13B</td>
       <td>2K</td>
-      <td>Legacy</td>
       <td>1x8</td>
       <td>FP16</td>
       <td> 1895 </td>
@@ -288,7 +242,6 @@ ModelLink已发布版本维护策略：
     <tr>
         <td>33B</td>
         <td>2K</td>
-      <td>Legacy</td>
         <td>4x8</td>
         <td>FP16</td>
         <td>621</td>
@@ -298,7 +251,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>65B</td>
       <td>2K</td>
-      <td>Legacy</td>
       <td>4x8</td>
       <td>BF16 </td>
       <td> 348 </td>
@@ -309,7 +261,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</td>
       <td>7B</td>
       <td>4K</td>
-      <td>Legacy</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 4200 </td>
@@ -319,7 +270,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>13B</td>
       <td>4K</td>
-      <td>Legacy</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 1990 </td>
@@ -329,7 +279,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>34B</td>
       <td>4K</td>
-      <td>Legacy</td>
       <td>2x8</td>
       <td>BF16 </td>
       <td> 749 </td>
@@ -339,7 +288,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>70B</td>
       <td>4K</td>
-      <td>Legacy</td>
       <td>4x8</td>
       <td>BF16 </td>
       <td> 420 </td>
@@ -349,8 +297,7 @@ ModelLink已发布版本维护策略：
     <tr>
       <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</td>
       <td>8B</td>
-      <td>8K</td>
-      <td>Legacy</td>
+      <td> 8K </td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2483 </td>
@@ -360,7 +307,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>70B</td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td>8x8</td>
       <td>BF16 </td>
       <td> 283 </td>
@@ -371,7 +317,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
       <td>7B</td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2499 </td>
@@ -381,7 +326,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>14B</td>
       <td>2K</td>
-      <td>Legacy</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 1560 </td>
@@ -391,7 +335,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>72B</td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td>16x8</td>
       <td>BF16 </td>
       <td> 285 </td>
@@ -403,7 +346,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="7"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
       <td> 0.5B </td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 22834 </td>
@@ -412,7 +354,6 @@ ModelLink已发布版本维护策略：
       <tr>
       <td> 1.8B </td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 13029 </td>
@@ -421,7 +362,6 @@ ModelLink已发布版本维护策略：
       <tr>
       <td> 4B </td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 5033 </td>
@@ -430,7 +370,6 @@ ModelLink已发布版本维护策略：
       <tr>
       <td> 7B </td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 2862 </td>
@@ -439,7 +378,6 @@ ModelLink已发布版本维护策略：
       <tr>
       <td> 14B </td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 1717 </td>
@@ -448,7 +386,6 @@ ModelLink已发布版本维护策略：
       <tr>
       <td> 32B </td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td> 4x8 </td>
       <td> BF16 </td>
       <td> 751 </td>
@@ -457,7 +394,6 @@ ModelLink已发布版本维护策略：
       <tr>
       <td> 72B </td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td> 8x8 </td>
       <td> BF16 </td>
       <td> 301 </td>
@@ -467,8 +403,7 @@ ModelLink已发布版本维护策略：
     <tr>
       <td rowspan="1"><a href="examples/yi/README.md">Yi</a></td>
       <td>34B</td>
-      <td>4K</td>
-      <td>Legacy</td>
+      <td> 4K</td>
       <td>2x8</td>
       <td>BF16 </td>
       <td> 809 </td>
@@ -478,8 +413,7 @@ ModelLink已发布版本维护策略：
     <tr>
       <td rowspan="1"><a href="examples/README.md">Mixtral</a></td>
       <td>8x7B</td>
-      <td>32K</td>
-      <td>Legacy</td>
+      <td> 32K</td>
       <td>2x8</td>
       <td>BF16 </td>
       <td> 487 </td>
@@ -490,7 +424,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
       <td>7B</td>
       <td> 32K</td>
-      <td>Legacy</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2806 </td>
@@ -501,7 +434,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="2"><a href="examples/gemma/README.md">Gemma</a></td>
       <td>2B</td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 6821 </td>
@@ -511,7 +443,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>7B</td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2938 </td>
@@ -522,7 +453,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="2"><a href="examples/gpt3/README.md">GPT3</a></td>
       <td>175B</td>
       <td> 2K </td>
-      <td>Legacy</td>
       <td> 16x8 </td>
       <td> FP16 </td>
       <td> 153 </td>
@@ -532,7 +462,6 @@ ModelLink已发布版本维护策略：
     <tr>
       <td>15B</td>
       <td> 2K </td>
-      <td>Legacy</td>
       <td> 1x8 </td>
       <td> FP16 </td>
       <td> 1890 </td>
@@ -543,7 +472,6 @@ ModelLink已发布版本维护策略：
       <td rowspan="1"><a href="examples/README.md">Grok1</a></td>
       <td>40B</td>
       <td> 8K </td>
-      <td>Legacy</td>
       <td> 2x8 </td>
       <td> BFP16 </td>
       <td> 1646 </td>

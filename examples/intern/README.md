@@ -11,15 +11,11 @@
 - [Internlm-7B](#internlm-7b)
   - [训练](#训练)
     - [脚本](#脚本)
-    - [性能](#性能)
-      - [吞吐](#吞吐)
-    - [推理](#推理)
-    - [评估](#评估)
+  - [推理](#推理)
+  - [评估](#评估)
 - [Internlm-65B](#internlm-65b)
   - [训练](#训练)
     - [脚本](#脚本)
-    - [性能](#性能)
-      - [吞吐](#吞吐)
 
 # InternLM-7B
 
@@ -102,7 +98,7 @@ InternLM-7B 训练的硬件配置如下:
     #!/bin/bash
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     mkdir ./dataset/internlm-7b/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/internlm-7b/ \
         --output-prefix ./dataset/internlm-7b/alpaca \
@@ -171,16 +167,6 @@ InternLM-7B 训练的硬件配置如下:
     ```
     **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
-### 性能
-
-#### 吞吐
-
-Internlm-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备 | 模型          | 总迭代数 | 样本吞吐 (samples/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 
-|----|-------------|------|--------------------|----------------------|-----------------|
-| NPUs | Internlm-7B | 1000 | 10.85            | 2776                 | 5.90       |
-| 参考 | Internlm-7B | 1000 | 11.14              | 2854                 |  5.74             | 
 
 
 #### 推理
@@ -293,7 +279,7 @@ InternLM-65B 训练的硬件配置如下:
     #!/bin/bash
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     mkdir ./dataset/internlm-65b/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/internlm-65b/ \
         --output-prefix ./dataset/internlm-65b/alpaca \
@@ -323,13 +309,3 @@ InternLM-65B 训练的硬件配置如下:
     ```
     **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
-### 性能
-
-#### 吞吐
-
-Internlm-65B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备 | 模型          | 总迭代数 | 样本吞吐 (samples/p/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 
-|----|-------------|------|--------------------|----------------------|-----------------|
-| NPUs | Internlm-65B |  |      5.33      |            341    |     48     | 
-| Reference | Internlm-65B | - | -              | 414                 | -            | 

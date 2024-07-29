@@ -13,8 +13,6 @@
   - [Hardware-Requirements](#hardware-requirements)
   - [Preparation](#preparation)
   - [Model-Training](#model-training)
-  - [Model-Performance](#model-performance)
-    - [Throughput](#throughput)
   - [Model-Inference](#model-inference)
   - [Model-Evaluation](#model-evaluation)
 
@@ -142,7 +140,7 @@ wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00
 cd ..
 # process datasets
 mkdir ./dataset/Mistral-7B/
-python ./tools/preprocess_data.py \
+python ./preprocess_data.py \
     --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/Mistral-7B-Instruct-v0.2/ \
     --output-prefix ./dataset/Mistral-7B/alpaca \
@@ -199,7 +197,7 @@ cd ..
 
 # process datasets  
 mkdir ./finetune_dataset/Mistral-7B/
-python ./tools/preprocess_data.py \
+python ./preprocess_data.py \
     --input ./finetune_dataset/Alpaca_data_gpt4_zh.jsonl \
     --output-prefix ./finetune_dataset/Mistral-7B/alpaca \
     --tokenizer-type PretrainedFromHF \
@@ -224,16 +222,7 @@ CKPT_PATH="./ckpt/Mistral-7B-Instruct-v0.2-tp8-pp1/"
 --is-instruction-dataset
 ```
 
-## Model-Performance
 
-### Throughput
-
-Comparison of Mistral-7B-32K(**SWA 4096**) performance on 1 nodes and 8 chips with tp8 pp1:
-
-|  Device  |    Model    | Iterations | Sample Throughput (samples/step) | Tokens Throughput (tokens/s/p) | Single Step Iteration Time (s/step) | Memory usage/p |
-| :--: | :----------: | :----: | :---------------------: | :---------------------: | :-------------------: | :-------------------: |
-| NPUs | Mistral-7B 32K |  1000  |         0.69           |        2806          |         46.7         |        ~44642MB        |
-| Reference | Mistral-7B 32K |  1000  |          0.67          |        2734          |        48.0          |         ~65500MB         |
 
 ## Model-Inference
 

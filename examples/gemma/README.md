@@ -9,17 +9,13 @@
 
 - [Gemma-2B](#Gemma-2B)
   - [训练](#训练)
-  - [脚本](#脚本)
-  - [性能](#性能)
-    - [吞吐](#吞吐)
+    - [脚本](#脚本)
   - [推理](#推理)
   - [评估](#评估)
 
 - [Gemma-7B](#Gemma-7B)
   - [训练](#训练)
-  - [脚本](#脚本)
-  - [性能](#性能)
-    - [吞吐](#吞吐)
+    - [脚本](#脚本)
   - [推理](#推理)
   - [评估](#评估)
 
@@ -137,7 +133,7 @@ Gemma-2B 训练的硬件配置:
 
     # 处理数据
     mkdir ./dataset/Gemma-2B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/wikipedia-cn-20230720-filtered.json \
         --output-prefix ./dataset/Gemma-2B/wikipedia_cn \
         --tokenizer-type PretrainedFromHF \
@@ -183,7 +179,7 @@ Gemma-2B 训练的硬件配置:
 
     # 处理数据集  
     mkdir ./finetune_dataset/Gemma-2B/
-    python tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-2B/moss \
         --tokenizer-type PretrainedFromHF \
@@ -209,16 +205,6 @@ Gemma-2B 训练的硬件配置:
         --tokenizer-not-use-fast \
     ```
    
-### 性能
-
-#### 吞吐
-
-Gemma-2B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-|  设备  |    模型    | tokens吞吐 (tokens/s/p) |
-|:----:|:--------:|:---------------------:|
-| NPUs | Gemma-2B |         6821          |
-|  参考  | Gemma-2B |         7602          |
 
 
 ## 推理
@@ -386,7 +372,7 @@ Gemma-7B 训练的硬件配置:
 
     # 处理数据
     mkdir ./dataset/Gemma-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/wikipedia-cn-20230720-filtered.json \
         --output-prefix ./dataset/Gemma-7B/wikipedia_cn \
         --tokenizer-type PretrainedFromHF \
@@ -432,7 +418,7 @@ Gemma-7B 训练的硬件配置:
 
     # 处理数据集  
     mkdir ./finetune_dataset/Gemma-7B/
-    python tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-7B/moss \
         --tokenizer-type PretrainedFromHF \
@@ -487,16 +473,6 @@ Gemma-7B 训练的硬件配置:
     bash examples/gemma/tune_gemma_7b_ptd.sh
     ```
    
-### 性能
-
-#### 吞吐
-
-Gemma-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-|  设备  |   模型    | tokens吞吐 (tokens/s/p) |
-|:------:|:-------:|:---------------------:|
-|  NPUs  | Gemma-7B |         2938          |
-|  参考  | Gemma-7B |         2607          |
 
 
 ## 推理

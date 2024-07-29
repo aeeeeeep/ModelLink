@@ -11,22 +11,16 @@
 - [LLAMA2-7B](#llama2-7b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference-7B](#inference-7b)
   - [Evaluation-7B](#evaluation-7b)
 - [LLaMA2-13B](#llama2-13b)
   - [Training](#training-1)
     - [Script](#script-1)
-    - [Performance](#performance-1)
-      - [Machine performance](#machine-performance-1)
   - [Inference](#inference)
   - [Evaluation](#evaluation)
 - [LLaMA2-34B/70B](#llama2-34b70b)
   - [Training-2](#training-2)
     - [Script-2](#script-2)
-    - [Performance-2](#performance-2)
-      - [Machine performance-2](#machine-performance-2)
   - [Inference-2](#inference-2)
   - [Evaluation-2](#evaluation-2)
 
@@ -171,7 +165,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     
     # process datasets  
     mkdir ./dataset/llama-2-7b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
         --output-prefix ./dataset/llama-2-7b-hf/alpaca \
@@ -215,7 +209,7 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     
     # process datasets  
     mkdir ./finetune_dataset/llama-2-7b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
         --output-prefix ./finetune_dataset/llama-2-7b-hf/alpaca \
@@ -279,16 +273,6 @@ Here's a hardware summary of pre-training  LLAMA2-7B:
     --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of LLaMA2-7B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
-| :------: | :-----------: | :----------------: | :-----------------------------: | :----------------------------: | :-------------------------: | :-----------------------------------: |
-| NPUs   | LLaMA2-7B | 1024             | 1.03                      | 4241                      | 30.9                  | 122.39                         |
-| Reference   | LLaMA2-7B | 1024             | 0.939                      | 3850                       | 34.06                   | 131.96                         |
 
 
 
@@ -529,7 +513,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     
     # process datasets  
     mkdir ./dataset/Llama-2-13b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Llama-2-13b-hf/ \
         --output-prefix ./dataset/Llama-2-13b-hf/alpaca \
@@ -574,7 +558,7 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     
     # process datasets  
     mkdir ./finetune_dataset/Llama-2-13b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Llama-2-13b-hf \
         --output-prefix ./finetune_dataset/Llama-2-13b-hf/alpaca \
@@ -623,16 +607,6 @@ Here's a hardware summary of pre-training  LLaMA2-13B:
     bash examples/llama2/tune_llama2_13b_ptd.sh 
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of LLaMA2-13B in **Ascend NPU** and **Reference**:
-
-|  Device  |   Model   | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
-| :-------: | :--------: | :--------------: | :---------------------------: | :--------------------------: | :-----------------------: | :---------------------------------: |
-|   NPUs   | LLaMA2-13B |       5000       |             --             |             1990             |           65.870           |               133.77               |
-| Reference | LLaMA2-13B |        --        |              --              |             1920             |            68.267            |                 --                 |
 
 ## Inference
 
@@ -919,7 +893,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
 
         # process datasets  
         mkdir ./dataset/llama2-70b-hf/
-        python ./tools/preprocess_data.py \
+        python ./preprocess_data.py \
             --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
             --tokenizer-name-or-path ./model_from_hf/llama2-70b-hf/ \
             --output-prefix ./dataset/llama2-70b-hf/alpaca \
@@ -940,7 +914,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
         cd ..
         
         # process datasets  
-        python tools/preprocess_data.py \
+        python ./preprocess_data.py \
             --input ./dataset/moss-003-sft-no-tools.jsonl \
             --output-prefix ./dataset/llama2-70b-hf_moss \
             --tokenizer-type PretrainedFromHF \
@@ -1001,7 +975,7 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
     
     # process datasets  
     mkdir ./finetune_dataset/llama2-70b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama2-70b-hf/ \
         --output-prefix ./finetune_dataset/llama2-70b-hf/alpaca \
@@ -1062,20 +1036,6 @@ Here's a hardware summary of pre-training  LLaMA2-34B/70B:
     ```shell
     bash examples/llama2/tune_llama2_70b_ptd.sh 
     ```
-
-### Performance-2
-
-#### Machine performance-2
-
-The performance of LLaMA2-34B/70B in **Ascend NPU** and **Reference**
-
-|     Device      |     Model     |  throughput (tokens/s/p) |  
-|:---------------:|:----------:|:---------------------:|
-|      NPUs       | LLaMA2-34B |          749          |
-|    Reference    | LLaMA2-34B |          796          |
-|      NPUs       | LLaMA2-70B |          420          |
-|    Reference    | LLaMA2-70B |          430          |
-
 
 
 

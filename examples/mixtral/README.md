@@ -13,8 +13,6 @@
   - [硬件要求](#硬件要求)
   - [准备工作](#准备工作)
   - [模型训练](#模型训练)
-  - [模型性能](#模型性能)
-    - [吞吐](#吞吐)
   - [模型推理](#模型推理)
   - [模型评估](#模型评估)
 
@@ -160,7 +158,7 @@
     cd ..
     # 处理数据   
     mkdir ./dataset/Mixtral-8x7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Mixtral-8x7B/ \
         --output-prefix ./dataset/Mixtral-8x7B/alpaca \
@@ -215,7 +213,7 @@
     
     # 处理微调数据集  
     mkdir ./finetune_dataset/Mixtral-8x7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/Alpaca_data_gpt4_zh.jsonl \
         --output-prefix ./finetune_dataset/Mixtral-8x7B/alpaca \
         --tokenizer-type PretrainedFromHF \
@@ -241,16 +239,7 @@
         --is-instruction-dataset
     ```
 
-## 模型性能
 
-### 吞吐
-
-Mixtral-8x7B 在四机32卡上(tp8 pp4) **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-| 设备 |     模型     | 迭代数 | 样本吞吐 (samples/step) | tokens吞吐 (tokens/s/p) | 单步迭代时间 (s/step) |
-| :--: | :----------: | :----: |:-------------------:|:---------------------:|:---------------:|
-| NPUs | Mixtral-8x7B |  1000  |        0.47         |          487          |      16.81      |
-| 参考 | Mixtral-8x7B |  1000  |        0.59         |          610          |      13.41      |
 
 ## 模型推理
 

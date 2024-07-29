@@ -12,7 +12,7 @@ from megatron.core import parallel_state
 from megatron.core.models.common.embeddings.rotary_pos_embedding import _rotate_half, get_pos_emb_on_this_cp_rank
 
 
-def RotaryEmbedding_forward(self, max_seq_len: int, offset: int = 0):
+def rotary_embedding_forward(self, max_seq_len: int, offset: int = 0):
     """Forward pass of RoPE embedding.
 
     Args:
@@ -57,10 +57,13 @@ def _process_partial_rope(freqs, t):
     rot_dim = freqs.shape[-2] * 2
     t, t_pass = t[..., :rot_dim], t[..., rot_dim:]
     freqs = freqs[:sq].to(t.dtype)
-    xshaped = t.reshape(sq, -1, np, rot_dim // 2, 2)
-    freqs = freqs.view(sq, -1, 1, xshaped.size(3), 2)
+
+    xshaped = t.reshape(sq, -1, np, rot_dim // 2, 2).contiguous()
+    freqs = freqs.view(sq, -1, 1, xshaped.size(3), 2).contiguous()
+
     x_shape1, x_shape2 = torch.chunk(xshaped, 2, dim=-1)
     freqs1, freqs2 = torch.chunk(freqs, 2, dim=-1)
+
     t = torch.stack(
         [
             x_shape1 * freqs1 - x_shape2 * freqs2,

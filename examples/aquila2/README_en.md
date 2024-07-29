@@ -9,16 +9,12 @@
 - [Aquila2-7B](#7b)
   - [Training](#7b-training)
     - [Script](#7b-script)
-    - [Performance](#7b-performance)
-      - [Machine performance](#7b-throughput)
   - [Inference](#7b-inference)
   - [Evaluation](#7b-evaluation)
 
 - [Aquila2-34B](#34b)
   - [Training](#34b-training)
     - [Script](#34b-script)
-    - [Performance](#34b-performance)
-      - [Machine performance](#34b-throughput)
   - [Inference](#34b-inference)
   - [Evaluation](#34b-evaluation)
 
@@ -132,7 +128,7 @@ Here's a hardware summary of pre-training Aquila2-7B:
 
     # process datasets          
     mkdir ./dataset/Aquila2-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-7B/ \
         --output-prefix ./dataset/Aquila2-7B/alpaca \
@@ -181,7 +177,7 @@ Here's a hardware summary of pre-training Aquila2-7B:
 
     # process datasets  
     mkdir ./finetune_dataset/Aquila2-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-7B/ \
         --output-prefix ./finetune_dataset/Aquila2-7B/alpaca \
@@ -207,16 +203,6 @@ Here's a hardware summary of pre-training Aquila2-7B:
         --tokenizer-not-use-fast \
     ```
 
-<h3 id="7b-performance">Performance</h3>
-
-<h4 id="7b-throughput">Machine performance</h4>
-
-The performance of Aquila2-7B in Ascend NPU and reference device:
-
-| Device    | Model      | Iterations | throughput rate (tokens/p/s) | single iteration step time (s/step) |
-| --------- | ---------- | ---------- | ---------------------------- | ----------------------------------- |
-| NPU       | Aquila2-7B | 5000       | 3323                         | 4.93                                |
-| Reference | Aquila2-7B | 5000       | 2673                         | 6.13                                |
 
 <h2 id="7b-inference">Inference</h2>
 
@@ -378,7 +364,7 @@ Here's a hardware summary of pre-training Aquila2-34B:
 
     # process datasets          
     mkdir ./dataset/Aquila2-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-34B/ \
         --output-prefix ./dataset/Aquila2-34B/alpaca \
@@ -427,7 +413,7 @@ Here's a hardware summary of pre-training Aquila2-34B:
 
     # process datasets  
     mkdir ./finetune_dataset/Aquila2-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Aquila2-34B/ \
         --output-prefix ./finetune_dataset/Aquila2-34B/alpaca \
@@ -453,16 +439,6 @@ Here's a hardware summary of pre-training Aquila2-34B:
         --tokenizer-not-use-fast \
     ```
 
-<h3 id="34b-performance">Performance</h3>
-
-<h4 id="34b-throughput">Machine performance</h4>
-
-The performance of Aquila2-34B in Ascend NPU and reference device:
-
-| Device    | Model       | Iterations | throughput rate (tokens/p/s) | single iteration step time (s/step) |
-| --------- | ----------- | ---------- | ---------------------------- | ----------------------------------- |
-| NPU       | Aquila2-34B | 5000       | 854                          | 307                                 |
-| Reference | Aquila2-34B | 5000       | 732                          | 358                                 |
 
 <h2 id="34b-inference">Inference</h2>
 

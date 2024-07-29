@@ -17,8 +17,7 @@ import os
 from functools import wraps
 import argparse
 import torch
-from megatron.training import print_rank_0
-from megatron.training.arguments import load_retro_args, _print_args, _check_arg_is_not_none
+from modellink.utils import print_rank0_by_args
 
 
 def extra_args_provider_decorator(extra_args_provider):
@@ -56,12 +55,15 @@ def process_args(parser):
     parser = _add_alibi_args(parser)
     parser = _add_dataset_args(parser)
     parser = _add_high_availability_args(parser)
+    parser = _add_cp_args(parser)
+
     return parser
 
 
 def _add_profile_args(parser):
     group = parser.add_argument_group(title='profiler')
-
+    group.add_argument('--profile-ranks', nargs='+', type=int, default=[-1],
+                       help='Global ranks to profile.The default value of -1 means to profile all ranks')
     group.add_argument('--profile-level', type=str, default='level0',
                        choices=['level0', 'level1', 'level2'], help='profiling level0, level1, level2')
     group.add_argument('--profile-with-stack', action='store_true', help='profiling with stack info')
@@ -72,6 +74,84 @@ def _add_profile_args(parser):
                        help='path to save profiling files')
 
     return parser
+
+
+def _add_cp_args(parser):
+    group = parser.add_argument_group(title='cp parallel')
+    group.add_argument('--context-parallel-algo', type=str, default='ulysses_cp_algo',
+                       choices=['ulysses_cp_algo', 'megatron_cp_algo', 'hybrid_cp_algo'], help='context parallel algorithm')
+    group.add_argument('--ulysses-degree-in-cp', type=int, default=None)
+    group.add_argument('--cp-attention-mask-type', type=str, default='causal',
+                       choices=['causal', 'full'], help='context parallel attention mask type')
+    group.add_argument('--use-cp-send-recv-overlap', action='store_true',
+                       help='use it to enable cp send-recv-overlap.')
+    group.add_argument('--kv-head-repeat-before-uly-alltoall', action='store_true', default=True,
+                       help='use it to expand key and value for ulysses when GQA/MQA is used.')
+    return parser
+
+
+def _validate_cp_args(args):
+    def _check_attention_head(args, uly_size):
+        """
+        check GQA & ulysses
+        """
+        head, remainder = divmod(args.num_attention_heads, uly_size * args.tensor_model_parallel_size)
+        assert head >= 1 and remainder == 0, f"num_attention_heads must be divisible by ulysses_size * tensor_model_parallel_size"
+        if args.group_query_attention and args.num_query_groups >= 1:
+            head_split_by_tp, remainder = divmod(args.num_query_groups, args.tensor_model_parallel_size)
+            assert head_split_by_tp >= 1 and remainder == 0, f"num_query_groups must be divisible by tensor_model_parallel_size"
+
+            if not args.kv_head_repeat_before_uly_alltoall:
+                head_split_by_tp_cp, remainder = divmod(head_split_by_tp, uly_size)
+                if not (head_split_by_tp_cp >= 1 and remainder == 0):
+                    raise AssertionError(
+                        'num_query_groups must be divisible by ulysses_size * tensor_model_parallel_size.\n'
+                        'Solution 1. adjust the ulysses_size\n'
+                        'Solution 2. You can enable --kv-head-repeat-before-uly-alltoall to roll on.\n'
+                        'However, performance would be affected since it would increase communication volume \n'
+                        'for ulysses alltoall as well as memory usage.')
+
+    if args.context_parallel_size <= 1:
+        return
+
+    # In context parallel we use FA
+    args.use_flash_attn = True
+    print_rank0_by_args(args, f"[INFO] Setting args.use_flash_attn={args.use_flash_attn} since context parallel is enabled.")
+    if not args.use_mcore_models:
+        raise AssertionError(f"Context parallel is only supported in Mcore.")
+
+    if args.context_parallel_algo == 'ulysses_cp_algo':
+        assert args.seq_length % args.context_parallel_size == 0, f"sequence length must be divisible by context_parallel_size"
+        head, remainder = divmod(args.num_attention_heads,
+                                 args.context_parallel_size * args.tensor_model_parallel_size)
+        assert head >= 1 and remainder == 0, f"num_attention_heads must be divisible by context_parallel_size * tensor_model_parallel_size"
+    if args.context_parallel_algo == 'megatron_cp_algo':
+        assert args.seq_length % (
+                    2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size"
+        _check_attention_head(args, args.context_parallel_size)
+
+    if args.context_parallel_algo == 'hybrid_cp_algo':
+        assert args.ulysses_degree_in_cp is not None, "--ulysses-degree-in-cp must be specified in hybrid_cp_algo"
+        ring_degree, remainder = divmod(args.context_parallel_size, args.ulysses_degree_in_cp)
+        assert ring_degree > 1 and remainder == 0, "--ulysses-degree-in-cp must be devisible by --context-parallel-size"
+
+        head, remainder = divmod(args.num_attention_heads,
+                                 args.ulysses_degree_in_cp * args.tensor_model_parallel_size)
+        assert head >= 1 and remainder == 0, f"num_attention_heads must be divisible by ulysse-degree-in-cp * tensor_model_parallel_size in hybrid cp"
+        assert args.seq_length % (
+                    2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size in hybrid cp"
+        _check_attention_head(args, args.ulysses_degree_in_cp)
+
+    if args.sliding_window:
+        raise AssertionError("sliding window is not supported in context parallel.")
+
+
+def _validate_tocken(args):
+    """To avoid invalid tocken configration."""
+    if args.pre_tocken > args.seq_length:
+        print_rank0_by_args(args, f"[INFO] pre_tocken={args.pre_tocken} would be adjusted to {args.seq_length} for better performance.")
+    if args.next_tocken > args.seq_length:
+        print_rank0_by_args(args, f"[INFO] next_tocken={args.next_tocken} would be adjusted to {args.seq_length} for better performance.")
 
 
 def _add_lora_args(parser):
@@ -234,6 +314,8 @@ def _add_training_args(parser):
                        help='pre-tockens is used by Flash attention')
     group.add_argument('--next-tockens', type=int, default=0,
                        help='next-tockens is used by Flash attention')
+    group.add_argument('--sparse-mode', type=int, default=0,
+                       help='different modes of flash attention mask')
     group.add_argument('--shape-order', type=str, default='SBH',
                        choices=['SBH', 'BSH', 'BSND'],
                        help='input shape order used by Flash attention')
@@ -243,6 +325,7 @@ def _add_training_args(parser):
                        help='enable deterministic computing for npu')
     group.add_argument('--jit-compile', action='store_true', default=False,
                        help='Setting jit compile mode to True')
+
     return parser
 
 
@@ -307,9 +390,11 @@ def _validate_create_attention_mask_in_dataloader(args):
     args.create_attention_mask_in_dataloader = False
     reset_data = args.reset_attention_mask or args.reset_position_ids
     alibi_without_flash_attn = args.position_embedding_type == 'alibi' and not args.use_flash_attn
-    if (reset_data or alibi_without_flash_attn or args.tokenizer_padding_side == "left"):
+    if reset_data or alibi_without_flash_attn or args.tokenizer_padding_side == "left":
         args.create_attention_mask_in_dataloader = True
-    print_rank_0("create-attention-mask-in-dataloader is {}".format(args.create_attention_mask_in_dataloader))
+    print_rank0_by_args(args, f"[INFO] Setting args.create_attention_mask_in_dataloader to {args.create_attention_mask_in_dataloader} "
+                 f"since reset_data={reset_data} or alibi_without_flash_attn={alibi_without_flash_attn} or "
+                 f"args.tokenizer_padding_side={args.tokenizer_padding_side}")
 
 
 def _validate_position_embedding(args):
@@ -335,372 +420,26 @@ def _validate_instruction_finetune(args):
             raise AssertionError('Context parallelism is forbidden when use variable seq lengths.')
 
 
-def validate_args(args, defaults={}):
-    # Load saved args from Retro (if applicable).
-    load_retro_args(args)
+def validate_args_decorator(megatron_validate_args):
+    @wraps(megatron_validate_args)
+    def wrapper(args, defaults=None):
+        if defaults is None:
+            defaults = {}
+        variable_seq_lengths = args.variable_seq_lengths
+        megatron_validate_args(args, defaults)
+        args.variable_seq_lengths = variable_seq_lengths
 
-    # Tensor model parallel size.
-    args.tensor_model_parallel_size = min(
-        args.tensor_model_parallel_size, args.world_size)
-    assert args.world_size % args.tensor_model_parallel_size == 0, 'world size'\
-        ' ({}) is not divisible by tensor model parallel size ({})'.format(
-            args.world_size, args.tensor_model_parallel_size)
+        args.use_mc2 = False
 
-    # Pipeline model parallel size.
-    args.pipeline_model_parallel_size = min(
-        args.pipeline_model_parallel_size,
-        (args.world_size // args.tensor_model_parallel_size))
-    args.transformer_pipeline_model_parallel_size = (
-        args.pipeline_model_parallel_size - 1
-        if args.standalone_embedding_stage else
-        args.pipeline_model_parallel_size
-    )
+        _validate_cp_args(args)
+        _validate_create_attention_mask_in_dataloader(args)
+        _validate_instruction_finetune(args)
+        _validate_position_embedding(args)
+        _validate_high_availability(args)
 
-    # Checks.
-    model_parallel_size = args.pipeline_model_parallel_size * \
-                          args.tensor_model_parallel_size
-    assert args.world_size % (model_parallel_size * args.context_parallel_size) == 0, \
-        'world size ({}) is not divisible by tensor parallel size ({}) times ' \
-        'pipeline parallel size ({}) times context parallel size ({})'.format(
-        args.world_size, args.tensor_model_parallel_size,
-        args.pipeline_model_parallel_size, args.context_parallel_size)
-    args.data_parallel_size = args.world_size // (model_parallel_size * args.context_parallel_size)
-    if args.rank == 0:
-        print('using world size: {}, data-parallel size: {}, '
-              'context-parallel size: {} '
-              'tensor-model-parallel size: {}, '
-              'pipeline-model-parallel size: {} '.format(
-                  args.world_size, args.data_parallel_size,
-                  args.context_parallel_size,
-                  args.tensor_model_parallel_size,
-                  args.pipeline_model_parallel_size), flush=True)
-    if args.pipeline_model_parallel_size > 1:
-        if args.pipeline_model_parallel_split_rank is not None:
-            assert args.pipeline_model_parallel_split_rank < \
-                    args.pipeline_model_parallel_size, 'split rank needs'\
-                    ' to be less than pipeline model parallel size ({})'.format(
-                            args.pipeline_model_parallel_size)
+        from modellink.utils import print_args
+        print_args('ModelLink Arguments', args)
+        return args
 
-    if args.tp_comm_overlap:
-        assert args.sequence_parallel == True, 'Tensor parallel communication/GEMM overlap can happen only when sequence parallelism is enabled'
+    return wrapper
 
-    # Deprecated arguments
-    assert args.batch_size is None, '--batch-size argument is no longer ' \
-        'valid, use --micro-batch-size instead'
-    del args.batch_size
-    assert args.warmup is None, '--warmup argument is no longer valid, use ' \
-        '--lr-warmup-fraction instead'
-    del args.warmup
-    assert args.model_parallel_size is None, '--model-parallel-size is no ' \
-        'longer valid, use --tensor-model-parallel-size instead'
-    del args.model_parallel_size
-
-    if args.checkpoint_activations:
-        if args.rank == 0:
-            print('--checkpoint-activations is no longer valid, use --recompute-activations, '
-                  'or, for more control, --recompute-granularity and --recompute-method.')
-        exit()
-    del args.checkpoint_activations
-
-    if args.recompute_activations:
-        args.recompute_granularity = 'selective'
-    del args.recompute_activations
-
-    # Set input defaults.
-    for key in defaults:
-        # For default to be valid, it should not be provided in the
-        # arguments that are passed to the program. We check this by
-        # ensuring the arg is set to None.
-        if getattr(args, key, None) is not None:
-            if args.rank == 0:
-                print('WARNING: overriding default arguments for {key}:{v} \
-                       with {key}:{v2}'.format(key=key, v=defaults[key],
-                                               v2=getattr(args, key)),
-                                               flush=True)
-        else:
-            setattr(args, key, defaults[key])
-
-    # Batch size.
-    assert args.micro_batch_size is not None
-    assert args.micro_batch_size > 0
-    if args.global_batch_size is None:
-        args.global_batch_size = args.micro_batch_size * args.data_parallel_size
-        if args.rank == 0:
-            print('setting global batch size to {}'.format(
-                args.global_batch_size), flush=True)
-    assert args.global_batch_size > 0
-    if args.num_layers_per_virtual_pipeline_stage is not None:
-        assert args.pipeline_model_parallel_size > 2, \
-            'pipeline-model-parallel size should be greater than 2 with ' \
-            'interleaved schedule'
-        assert args.num_layers % args.transformer_pipeline_model_parallel_size == 0, \
-            'number of layers should be divisible by the pipeline parallel size'
-        num_layers_per_pipeline_stage = args.num_layers // args.transformer_pipeline_model_parallel_size
-        assert num_layers_per_pipeline_stage % args.num_layers_per_virtual_pipeline_stage == 0, \
-            'number of layers per pipeline stage must be divisible number of layers per virtual pipeline stage'
-        args.virtual_pipeline_model_parallel_size = num_layers_per_pipeline_stage // \
-            args.num_layers_per_virtual_pipeline_stage
-    else:
-        args.virtual_pipeline_model_parallel_size = None
-        # Overlap P2P communication is disabled if not using the interleaved schedule.
-        args.overlap_p2p_comm = False
-        if args.rank == 0:
-            print('WARNING: Setting args.overlap_p2p_comm to False since non-interleaved '
-                  'schedule does not support overlapping p2p communication')
-
-    if args.overlap_param_gather:
-        assert args.use_distributed_optimizer, \
-            '--overlap-param-gather only supported with distributed optimizer'
-        assert args.overlap_grad_reduce, \
-            '--overlap-grad-reduce should be turned on when using --overlap-param-gather'
-        assert args.use_mcore_models, \
-            '--overlap-param-gather only supported with MCore models'
-
-    # Parameters dtype.
-    args.params_dtype = torch.float
-    if args.fp16:
-        assert not args.bf16
-        args.params_dtype = torch.half
-        # Turn off checking for NaNs in loss and grads if using dynamic loss scaling,
-        # where NaNs in grads / loss are signal to the loss scaler.
-        if not args.loss_scale:
-            args.check_for_nan_in_loss_and_grad = False
-            if args.rank == 0:
-                print('WARNING: Setting args.check_for_nan_in_loss_and_grad to False since '
-                      'dynamic loss scaling is being used')
-    if args.bf16:
-        assert not args.fp16
-        args.params_dtype = torch.bfloat16
-        # bfloat16 requires gradient accumulation and all-reduce to
-        # be done in fp32.
-        if not args.accumulate_allreduce_grads_in_fp32:
-            args.accumulate_allreduce_grads_in_fp32 = True
-            if args.rank == 0:
-                print('accumulate and all-reduce gradients in fp32 for '
-                      'bfloat16 data type.', flush=True)
-
-    if args.rank == 0:
-        print('using {} for parameters ...'.format(args.params_dtype),
-              flush=True)
-
-    if args.dataloader_type is None:
-        args.dataloader_type = 'single'
-
-    # Consumed tokens.
-    args.consumed_train_samples = 0
-    args.consumed_valid_samples = 0
-
-    # Iteration-based training.
-    if args.train_iters:
-        # If we use iteration-based training, make sure the
-        # sample-based options are off.
-        assert args.train_samples is None, \
-            'expected iteration-based training'
-        assert args.lr_decay_samples is None, \
-            'expected iteration-based learning rate decay'
-        assert args.lr_warmup_samples == 0, \
-            'expected iteration-based learning rate warmup'
-        assert args.rampup_batch_size is None, \
-            'expected no batch-size rampup for iteration-based training'
-        if args.lr_warmup_fraction is not None:
-            assert args.lr_warmup_iters == 0, \
-                'can only specify one of lr-warmup-fraction and lr-warmup-iters'
-
-    # Sample-based training.
-    if args.train_samples:
-        # If we use sample-based training, make sure the
-        # iteration-based options are off.
-        assert args.train_iters is None, \
-            'expected sample-based training'
-        assert args.lr_decay_iters is None, \
-            'expected sample-based learning rate decay'
-        assert args.lr_warmup_iters == 0, \
-            'expected sample-based learnig rate warmup'
-        if args.lr_warmup_fraction is not None:
-            assert args.lr_warmup_samples == 0, \
-                'can only specify one of lr-warmup-fraction ' \
-                'and lr-warmup-samples'
-
-    if args.num_layers is not None:
-        assert args.encoder_num_layers is None, \
-            'cannot have both num-layers and encoder-num-layers specified'
-        args.encoder_num_layers = args.num_layers
-    else:
-        assert args.encoder_num_layers is not None, \
-            'either num-layers or encoder-num-layers should be specified'
-        args.num_layers = args.encoder_num_layers
-
-    # Check required arguments.
-    required_args = ['num_layers', 'hidden_size', 'num_attention_heads',
-                     'max_position_embeddings']
-    for req_arg in required_args:
-        _check_arg_is_not_none(args, req_arg)
-
-    # Checks.
-    if args.ffn_hidden_size is None:
-        if args.swiglu:
-            # reduce the dimnesion for MLP since projections happens on
-            # two linear layers. this keeps the number of paramters in
-            # the same ballpark as the counterpart with 4*h size
-            # we keep it a multiple of 64, which means the actual tensor size
-            # will be a multiple of 64 / tp_size
-            args.ffn_hidden_size = int((4 * args.hidden_size * 2 / 3) / 64) * 64
-        else:
-            args.ffn_hidden_size = 4 * args.hidden_size
-
-    if args.kv_channels is None:
-        assert args.hidden_size % args.num_attention_heads == 0
-        args.kv_channels = args.hidden_size // args.num_attention_heads
-
-    if args.seq_length is not None:
-        assert args.encoder_seq_length is None
-        args.encoder_seq_length = args.seq_length
-    else:
-        assert args.encoder_seq_length is not None
-        args.seq_length = args.encoder_seq_length
-
-    if args.seq_length is not None:
-        assert args.max_position_embeddings >= args.seq_length
-    if args.decoder_seq_length is not None:
-        assert args.max_position_embeddings >= args.decoder_seq_length
-    if args.lr is not None:
-        assert args.min_lr <= args.lr
-    if args.save is not None:
-        assert args.save_interval is not None
-    # Mixed precision checks.
-    if args.fp16_lm_cross_entropy:
-        assert args.fp16, 'lm cross entropy in fp16 only support in fp16 mode.'
-    if args.fp32_residual_connection:
-        assert args.fp16 or args.bf16, \
-            'residual connection in fp32 only supported when using fp16 or bf16.'
-
-    if args.moe_grouped_gemm:
-        assert args.bf16, 'Currently GroupedGEMM for MoE only supports bf16 dtype.'
-        dc = torch.cuda.get_device_capability()
-        assert dc[0] >= 8, "Unsupported compute capability for GroupedGEMM kernels."
-
-    if args.weight_decay_incr_style == 'constant':
-        assert args.start_weight_decay is None
-        assert args.end_weight_decay is None
-        args.start_weight_decay = args.weight_decay
-        args.end_weight_decay = args.weight_decay
-    else:
-        assert args.start_weight_decay is not None
-        assert args.end_weight_decay is not None
-
-    TORCH_MAJOR = int(torch.__version__.split('.')[0])
-    TORCH_MINOR = int(torch.__version__.split('.')[1])
-    # Persistent fused layer norm.
-    if TORCH_MAJOR < 1 or (TORCH_MAJOR == 1 and TORCH_MINOR < 11):
-        args.no_persist_layer_norm = True
-        if args.rank == 0:
-            print('Persistent fused layer norm kernel is supported from '
-                  'pytorch v1.11 (nvidia pytorch container paired with v1.11). '
-                  'Defaulting to no_persist_layer_norm=True')
-
-    # Activation recomputing.
-    if args.distribute_saved_activations:
-        assert args.tensor_model_parallel_size > 1, 'can distribute ' \
-            'recomputed activations only across tensor model ' \
-            'parallel groups'
-        assert args.recompute_granularity == 'full', \
-            'distributed recompute activations is only '\
-            'application to full recompute granularity'
-        assert args.recompute_method is not None, \
-            'for distributed recompute activations to work you '\
-            'need to use a recompute method '
-        assert (TORCH_MAJOR, TORCH_MINOR) >= (1, 10), \
-            'distributed recompute activations are supported for pytorch ' \
-            'v1.10 and above (Nvidia Pytorch container >= 21.07). Current ' \
-            'pytorch version is v%s.%s.' % (TORCH_MAJOR, TORCH_MINOR)
-
-    if args.recompute_granularity == 'selective':
-        assert args.recompute_method is None, \
-            'recompute method is not yet supported for ' \
-            'selective recomputing granularity'
-
-    # disable sequence parallelism when tp=1
-    # to avoid change in numerics when
-    # sequence_parallelism is enabled.
-    if args.tensor_model_parallel_size == 1:
-        args.sequence_parallel = False
-
-    # disable async_tensor_model_parallel_allreduce when
-    # model parallel memory optimization is enabled
-    if args.sequence_parallel:
-        args.async_tensor_model_parallel_allreduce = False
-
-    if os.environ.get('CUDA_DEVICE_MAX_CONNECTIONS') != "1":
-        if args.sequence_parallel:
-            raise RuntimeError(
-                "Using sequence parallelism requires setting the environment variable "
-                "CUDA_DEVICE_MAX_CONNECTIONS to 1")
-        if args.async_tensor_model_parallel_allreduce:
-            raise RuntimeError(
-                "Using async gradient all reduce requires setting the environment "
-                "variable CUDA_DEVICE_MAX_CONNECTIONS to 1")
-
-    # Disable bias gelu fusion if we are disabling bias altogether
-    if not args.add_bias_linear:
-        args.bias_gelu_fusion = False
-
-    # Retro checks.
-    if args.retro_add_retriever:
-
-        # Train samples should be auto-loaded.
-        assert args.train_samples is not None, \
-            "args.train_samples should be auto-loaded from the retro config."
-
-        # Sequence parallelism unsupported.
-        assert not args.sequence_parallel, \
-            "retro currently does not support sequence parallelism."
-
-        # Pipeline parallelism unsupported.
-        assert args.pipeline_model_parallel_size == 1, \
-            "retro currently does not support pipeline parallelism."
-
-    if args.decoupled_lr is not None or args.decoupled_min_lr is not None:
-        assert args.use_mcore_models, \
-            '--decoupled-lr and --decoupled-min-lr only supported by Megatron Core, please add --use-mcore-models.'
-
-    # Legacy RoPE arguments
-    if args.use_rotary_position_embeddings:
-        args.position_embedding_type = 'rope'
-    if args.rotary_interleaved and args.apply_rope_fusion:
-        raise RuntimeError('--rotary-interleaved does not work with rope_fusion.')
-    if args.rotary_interleaved and not args.use_mcore_models:
-        raise RuntimeError('--rotary-interleaved only support Megatron Core, please add --use-mcore-models.')
-
-    # Would just need to add 'NoPE' as a position_embedding_type to support this, but for now
-    # don't allow it to keep things simple
-    if not args.add_position_embedding and args.position_embedding_type != 'rope':
-        raise RuntimeError('--no-position-embedding is deprecated, use --position-embedding-type')
-
-    # MoE Spec check
-    if args.num_experts is not None:
-        assert args.spec is None, "Model Spec must be None when using MoEs"
-        if args.tensor_model_parallel_size > 1:
-            assert args.sequence_parallel, \
-                "When using MoE and tensor parallelism, sequence parallelism must be used."
-
-    # Expert parallelism check
-    if args.expert_model_parallel_size  > 1:
-        assert args.num_experts is not None, "num_experts must be non None to use expert model parallelism"
-        assert args.num_experts % args.expert_model_parallel_size == 0, \
-            "Number of experts should be a multiple of expert model parallel_size."
-        assert not args.fp16, \
-            "Expert parallelism is not supported with fp16 training."
-
-    # Distributed checkpointing checks
-    if args.use_dist_ckpt and not args.use_mcore_models:
-        raise RuntimeError('--use-dist-ckpt only support Megatron Core, please add --use-mcore-models.')
-
-    _validate_create_attention_mask_in_dataloader(args)
-    _validate_instruction_finetune(args)
-    _validate_position_embedding(args)
-    _validate_high_availability(args)
-
-    # Print arguments.
-    _print_args("arguments", args)
-
-    return args

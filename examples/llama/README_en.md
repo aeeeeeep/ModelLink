@@ -8,8 +8,6 @@
 - [LLaMA-7B/13B](#llama-7b13b)
   - [Training](#training)
     - [Script](#script)
-    - [Performance](#performance)
-      - [Machine performance](#machine-performance)
   - [Inference](#Inference)
     - [Script](#script)
   - [Evaluation with Numerous Benchmarks](#Evaluation-with-Numerous-Benchmarks)
@@ -17,8 +15,6 @@
   - [Training](#pre-training)
     - [Datasets](#datasets)
     - [Script](#script-1)
-    - [Performance](#performance-1)
-      - [Machine performance](#machine-performance-1)
   - [Inference](#Inference)
     - [Script](#script)
   - [Evaluation with Numerous Benchmarks](#Evaluation-with-Numerous-Benchmarks)
@@ -184,7 +180,7 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
     ```shell
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     mkdir ./dataset/llama-7b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
         --output-prefix ./dataset/llama-7b-hf/alpaca \
@@ -198,7 +194,7 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
     ```shell
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
     mkdir ./dataset/llama-7b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \
         --output-prefix ./dataset/llama-7b-hf/alpaca \
@@ -268,7 +264,7 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
 
     ```shell
     mkdir ./finetune_dataset/llama-7b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-7b-hf/ \
         --output-prefix ./finetune_dataset/llama-7b-hf/alpaca \
@@ -283,7 +279,7 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
 
     ```shell
     mkdir ./finetune_dataset/llama-13b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-13b-hf/ \ 
         --output-prefix ./finetune_dataset/llama-13b-hf/alpaca \
@@ -338,19 +334,6 @@ Here's a hardware summary of pre-training LLaMA-7B/13B:
     # 8p
     bash examples/llama/tune_llama_13b_ptd.sh 
     ```
-
-### Performance
-
-#### Machine performance
-
-The performance of LLaMA-7B/13B in **Ascend NPU** and **Reference**:
-
-| Device    | Model     | total Iterations | throughput rate (samples/s/p) | throughput rate (tokens/s/p) | single-step time (s/step) | floating point operation (TFLOPs/s) |
-|-----------|-----------|------------------|-------------------------------|------------------------------|---------------------------|-------------------------------------|
-| NPUs      | LLaMA-7B  | 2048             | 1.75                          | 3600                         | 18.2                      | 159.9                               |
-| Reference | LLaMA-7B  | 2048             | 1.85                          | 3804                         | 18.5                      | 161.5                               |
-| NPUs      | LLaMA-13B | 2048             | 0.92                         | 1895                         | 17.2                     | 200.57                              |
-| Reference | LLaMA-13B | 2048             | 0.96                          | 2012                         | 16.6                     | 213.29                              |
 
 
 
@@ -604,7 +587,7 @@ The model was trained using alpaca datasets.
 
     ```shell
     mkdir ./dataset/llama-33b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-33b-hf \
         --output-prefix ./dataset/llama-33b-hf/alpaca \
@@ -617,7 +600,7 @@ The model was trained using alpaca datasets.
 
     ```shell
     mkdir ./dataset/llama-65b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-65b-hf \
         --output-prefix ./dataset/llama-65b-hf/alpaca \
@@ -702,7 +685,7 @@ The model was trained using alpaca datasets.
 
     ```shell
     mkdir ./finetune_dataset/llama-33b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-33b-hf/ \ 
         --output-prefix ./finetune_dataset/llama-33b-hf/alpaca \
@@ -717,7 +700,7 @@ The model was trained using alpaca datasets.
 
     ```shell
     mkdir ./finetune_dataset/llama-65b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset_llama2/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/llama-65b-hf/  \
         --output-prefix ./finetune_dataset/llama-65b-hf/alpaca \
@@ -781,19 +764,6 @@ The model was trained using alpaca datasets.
     NNODES=4
     NODE_RANK=0
     ```
-
-### Performance
-
-#### Machine performance
-
-The performance of the NPUs in **Ascend** and Reference:
-
-|  Device   |   Model   | throughput rate (tokens/s/p) |
-|:---------:|:---------:|:----------------------------:|
-| Reference | llama-33B |             776              |
-|   NPUs    | llama-33B |             621              |
-| Reference | llama-65B |             426              |
-|   NPUs    | llama-65B |             348              |
 
 
 

@@ -8,50 +8,36 @@
 - [Qwen1.5-0.5B](#Qwen1.5-0.5b)
   - [Training-0.5B](#training-0.5b)
     - [Script-0.5B](#script-0.5b)
-    - [Performance-0.5B](#performance-0.5b)
-      - [Machine performance 0.5B](#machine-performance-0.5b)
   - [Inference-0.5B](#inference-0.5b)
   - [Evaluation-0.5B](#evaluation-0.5b)
 - [Qwen1.5-1.8B](#Qwen1.5-1.8b)
   - [Training-1.8B](#training-1.8b)
     - [Script-1.8B](#script-1.8b)
-    - [Performance-1.8B](#performance-1.8b)
-      - [Machine performance 1.8B](#machine-performance-1.8b)
   - [Inference-1.8B](#inference-1.8b)
   - [Evaluation-1.8B](#evaluation-1.8b)
 - [Qwen1.5-4B](#Qwen1.5-4b)
   - [Training-4B](#training-4b)
     - [Script-4B](#script-4b)
-    - [Performance-4B](#performance-4b)
-      - [Machine performance 4B](#machine-performance-4b)
   - [Inference-4B](#inference-4b)
   - [Evaluation-4B](#evaluation-4b)
 - [Qwen1.5-7B](#qwen15-7b)
   - [Training-7B](#training-7b)
     - [Script-7B](#script-7b)
-    - [Performance-7B](#performance-7b)
-      - [Machine performance 7B](#machine-performance-7b)
   - [Inference-7B](#Inference-7b)
   - [Evaluation-7B](#Evaluation-7b)
 - [Qwen1.5-14B](#qwen15-14b)
   - [Training-14B](#training-14b)
     - [Script-14B](#script-14b)
-    - [Performance-14B](#performance-14b)
-      - [Machine performance 14B](#machine-performance-14b)
   - [Inference-14B](#Inference-14b)
   - [Evaluation-14B](#Evaluation-14b)
 - [Qwen1.5-32B](#qwen15-32b)
   - [Training-32B](#training-32b)
     - [Script-32B](#script-32b)
-    - [Performance-32B](#performance-32b)
-      - [Machine performance 32B](#machine-performance-32b)
   - [Inference-32B](#Inference-32b)
   - [Evaluation-32B](#Evaluation-32b)
 - [Qwen1.5-72B](#qwen15-72b)
   - [Training-72B](#training-72b)
     - [Script-72B](#script-72b)
-    - [Performance-72B](#performance-72b)
-      - [Machine performance 72B](#machine-performance-72b)
   - [Inference-72B](#Inference-72b)
   - [Evaluation-72B](#Evaluation-72b)
 # Qwen1.5-0.5B
@@ -173,7 +159,7 @@ Here's a hardware summary of pre-training  Qwen-0.5B:
     cd ..
     # process datasets   
     mkdir ./dataset/qwen15-0.5b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-0.5b-hf/ \
         --output-prefix ./dataset/qwen15-0.5b-hf/alpaca \
@@ -210,7 +196,7 @@ Here's a hardware summary of pre-training  Qwen-0.5B:
 
     # process datasets   
     mkdir ./finetune_dataset/qwen15-0.5b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-0.5b-hf/ \
         --output-prefix ./finetune_dataset/qwen15-0.5b-hf/alpaca \
@@ -237,16 +223,7 @@ Here's a hardware summary of pre-training  Qwen-0.5B:
         --tokenizer-name-or-path ${TOKENIZER_PATH} \
         --tokenizer-not-use-fast \
     ```
-### Performance-0.5B
 
-#### Machine performance
-
-The performance of Qwen1.5-0.5B in **Ascend NPU** and **Reference**:
-
-| Device |    Model     | total Iterations | throughput rate (tokens/s/p) |
-| :--: |:------------:|:----------------:|:----------------------------:|
-| NPUs | Qwen1.5-0.5B |       2000       |            22834             |
-| Reference | Qwen1.5-0.5B |       2000       |            25306             |
 
 ## Inference-0.5B
 
@@ -417,7 +394,7 @@ Here's a hardware summary of pre-training  Qwen-1.8B:
     cd ..
     # process datasets   
     mkdir ./dataset/qwen15-1.8b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-1.8b-hf/ \
         --output-prefix ./dataset/qwen15-1.8b-hf/alpaca \
@@ -454,7 +431,7 @@ Here's a hardware summary of pre-training  Qwen-1.8B:
 
     # process datasets   
     mkdir ./finetune_dataset/qwen15-1.8b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-1.8b-hf/ \
         --output-prefix ./finetune_dataset/qwen15-1.8b-hf/alpaca \
@@ -481,16 +458,7 @@ Here's a hardware summary of pre-training  Qwen-1.8B:
         --tokenizer-name-or-path ${TOKENIZER_PATH} \
         --tokenizer-not-use-fast \
     ```
-### Performance-1.8B
 
-#### Machine performance
-
-The performance of Qwen1.5-1.8B in **Ascend NPU** and **Reference**:
-
-| Device |    Model     | total Iterations | throughput rate (tokens/s/p) |
-| :--: |:------------:|:----------------:|:----------------------------:|
-| NPUs | Qwen1.5-1.8B |       2000       |            13029             |
-| Reference | Qwen1.5-1.8B |       2000       |            12181             |
 
 ## Inference-1.8B
 
@@ -663,7 +631,7 @@ Here's a hardware summary of pre-training  Qwen-4B:
     cd ..
     # process datasets   
     mkdir ./dataset/qwen15-4b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-4b-hf/ \
         --output-prefix ./dataset/qwen15-4b-hf/alpaca \
@@ -702,7 +670,7 @@ Here's a hardware summary of pre-training  Qwen-4B:
 
     # process datasets   
     mkdir ./finetune_dataset/qwen15-4b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/qwen15-4b-hf/ \
         --output-prefix ./finetune_dataset/qwen15-4b-hf/alpaca \
@@ -729,16 +697,7 @@ Here's a hardware summary of pre-training  Qwen-4B:
         --tokenizer-name-or-path ${TOKENIZER_PATH} \
         --tokenizer-not-use-fast \
     ```
-### Performance-4B
 
-#### Machine performance
-
-The performance of Qwen1.5-4B in **Ascend NPU** and **Reference**:
-
-| Device | Model       | total Iterations  | throughput rate (tokens/s/p) |
-| :--: | :-------: | :----: | :---------------------: |
-| NPUs | Qwen1.5-4B |  1000  |        5033         |
-| Reference | Qwen1.5-4B |  1000  |        5328          |
 
 ## Inference-4B
 
@@ -914,7 +873,7 @@ Here's a hardware summary of pre-training  Qwen1.5-7B:
 
    # process datasets
    mkdir ./dataset/Qwen1.5-7B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-7B \
        --output-prefix ./dataset/Qwen1.5-7B/alpaca \
@@ -957,7 +916,7 @@ Here's a hardware summary of pre-training  Qwen1.5-7B:
 
    # process datasets   
    mkdir ./finetune_dataset/Qwen1.5-7B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-7B/ \
        --output-prefix ./finetune_dataset/Qwen1.5-7B/alpaca \
@@ -988,17 +947,6 @@ Here's a hardware summary of pre-training  Qwen1.5-7B:
    --tokenizer-not-use-fast \
    ```
 
-
-### Performance
-
-#### Machine performance
-
-The performance of Qwen1.5-7B in **Ascend NPU** and **Reference**:
-
-|     Device     |      Model       | throughput rate (tokens/s/p)  |
-|:--------------:|:----------------:|:-----------------------------:|
-|      NPUs      |    Qwen1.5-7B    |             2862              |
-|   Reference    |    Qwen1.5-7B    |             2621              |
 
 ## Inference
 
@@ -1175,7 +1123,7 @@ Here's a hardware summary of pre-training  Qwen1.5-14B:
 
    # process datasets
    mkdir ./dataset/Qwen1.5-14B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-14B \
        --output-prefix ./dataset/Qwen1.5-14B/alpaca \
@@ -1218,7 +1166,7 @@ Here's a hardware summary of pre-training  Qwen1.5-14B:
 
    # process datasets   
    mkdir ./finetune_dataset/Qwen1.5-14B/
-   python ./tools/preprocess_data.py \
+   python ./preprocess_data.py \
        --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
        --tokenizer-name-or-path ./model_from_hf/Qwen1.5-14B/ \
        --output-prefix ./finetune_dataset/Qwen1.5-14B/alpaca \
@@ -1251,16 +1199,6 @@ Here's a hardware summary of pre-training  Qwen1.5-14B:
    --tokenizer-not-use-fast \
    ```
 
-### Performance
-
-#### Machine performance
-
-The performance of Qwen1.5-14B in **Ascend NPU** and **Reference**:
-
-|  Device   |    Model    | throughput rate (tokens/s/p) |
-|:---------:|:-----------:|:----------------------------:|
-|   NPUs    | Qwen1.5-14B |            1717.8            |
-| Reference | Qwen1.5-14B |            1702.2            |
 
 ## Inference
 
@@ -1453,7 +1391,7 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
      cd ..
      # process datasets   
      mkdir ./dataset/qwen1.5-32B-hf/
-     python ./tools/preprocess_data.py \
+     python ./preprocess_data.py \
          --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
          --tokenizer-name-or-path ./model_from_hf/Qwen1.5-32B/ \
          --output-prefix ./dataset/qwen1.5-32B-hf/alpaca \
@@ -1494,7 +1432,7 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
 
     # process datasets  
     mkdir ./finetune_dataset/qwen-1.5-32b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/ train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen1.5-32B/ \
         --output-prefix ./finetune_dataset/qwen-1.5-32b-hf/alpaca \
@@ -1529,16 +1467,6 @@ bash examples/qwen15/evaluate_qwen15_14b_ptd.sh
         --lora-alpha 32 \
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of Qwen1.5-32B in **Ascend NPU** and **Reference**:
-
-|  Device  |    Model    | throughput rate (tokens/s/p)(8k) |
-|:----:|:-----------:|:--------------------------------:|
-|  Reference  | Qwen1.5-32B |              748.1               | 
-| Reference | Qwen1.5-32B  |              708.3               |
 
 ## Inference
 
@@ -1734,7 +1662,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
      cd ..
      # process datasets   
      mkdir ./dataset/Qwen1.5-72B-hf/
-     python ./tools/preprocess_data.py \
+     python ./preprocess_data.py \
          --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
          --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
          --output-prefix ./dataset/Qwen1.5-72B-hf/alpaca \
@@ -1777,7 +1705,7 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
 
     # process datasets  
     mkdir ./finetune_dataset/qwen-1.5-72b-hf/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen1.5-72B/ \
         --output-prefix ./finetune_dataset/qwen-1.5-72b-hf/alpaca \
@@ -1812,16 +1740,6 @@ bash examples/qwen15/evaluate_qwen15_32b_ptd.sh
         --lora-alpha 32 \
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of Qwen1.5-72B in **Ascend NPU** and **Reference**:
-
-|  Device  |    Model    | throughput rate (tokens/s/p)(8k) |
-|:----:|:-----------:|:--------------------------------:|
-|  Reference  | Qwen1.5-72B |              301.4               | 
-| Reference | Qwen1.5-72B |              317.3               |
 
 ## Inference
 

@@ -28,7 +28,7 @@ torchrun $DISTRIBUTED_ARGS evaluation.py   \
        --task ${TASK}\
        --seq-length 8192 \
        --max-new-tokens 1 \
-       --max-position-embeddings 32768 \
+       --max-position-embeddings 8192 \
        --tensor-model-parallel-size 2  \
        --pipeline-model-parallel-size 4  \
        --num-layers 28  \

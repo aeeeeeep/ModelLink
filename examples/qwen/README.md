@@ -9,25 +9,19 @@
 
 - [Qwen-7B](#Qwen-7B)
   - [训练](#训练)
-  - [脚本](#脚本)
-  - [性能](#性能)
-    - [吞吐](#吞吐)
+    - [脚本](#脚本)
   - [推理](#推理)
   - [评估](#评估)
 
 - [Qwen-14B](#Qwen-14B)
   - [训练](#训练)
-  - [脚本](#脚本)
-  - [性能](#性能)
-    - [吞吐](#吞吐)
+    - [脚本](#脚本)
   - [推理](#推理)
   - [评估](#评估)
 
 - [Qwen-72B](#Qwen-72B)
   - [训练](#训练)
-  - [脚本](#脚本)
-  - [性能](#性能)
-    - [吞吐](#吞吐)
+    - [脚本](#脚本)
   - [推理](#推理)
   - [评估](#评估)
 
@@ -169,7 +163,7 @@ Qwen-7B 训练的硬件配置:
     
     # 处理数据   
     mkdir ./dataset/Qwen-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen-7B/ \
         --output-prefix ./dataset/Qwen-7B/alpaca \
@@ -199,16 +193,7 @@ Qwen-7B 训练的硬件配置:
     ```
     **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
 
-### 性能
 
-#### 吞吐
-
-Qwen-7B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-|  设备  |   模型    | tokens吞吐 (tokens/s/p) |
-|:----:|:-------:|:---------------------:|
-| NPUs | Qwen-7B |         2499          |
-|  参考  | Qwen-7B |         2867          |
 
 
 ## 推理
@@ -408,7 +393,7 @@ Qwen-14B 训练的硬件配置:
     
     # 处理数据   
     mkdir ./dataset/Qwen-14B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen-14B/ \
         --output-prefix ./dataset/Qwen-14B/alpaca \
@@ -438,16 +423,7 @@ Qwen-14B 训练的硬件配置:
     bash examples/qwen/pretrain_qwen_14b_ptd.sh
     ```
     **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
-### 性能
 
-#### 吞吐
-
-Qwen-14B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-|  设备   |    模型    | tokens吞吐 (tokens/s/p) |
-|:-----:|:--------:|:---------------------:|
-| NPUs | Qwen-14B |         1560          |
-|  参考   | Qwen-14B |         1578          |
 
 ## 推理
 
@@ -627,7 +603,7 @@ Qwen-72B 训练的硬件配置:
     
     # 处理数据   
     mkdir ./dataset/Qwen-72B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/Qwen-72B/ \
         --output-prefix ./dataset/Qwen-72B/alpaca \
@@ -667,16 +643,7 @@ Qwen-72B 训练的硬件配置:
     bash examples/qwen/pretrain_qwen_72b_ptd.sh
     ```
     **注意**：如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据分布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据。
-### 性能
 
-#### 吞吐
-
-Qwen-72B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比：
-
-|  设备  |    模型    | tokens吞吐 (tokens/s/p)(8k序列) | tokens吞吐 (tokens/s/p)(32k序列) |
-|:----:|:--------:|:-----------------------:|:-----------------------:|
-| NPUs | Qwen-72B |           285           |           --            |
-|  参考  | Qwen-72B |           345           |           --            |
 
 
 ## 推理

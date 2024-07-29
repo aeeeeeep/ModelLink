@@ -8,17 +8,13 @@
 
 - [Gemma-2B](#Gemma-2B)
   - [Training](#training)
-  - [Script](#script)
-  - [Performance](#performance)
-    - [Machine performance](#machine-performance)
+    - [Script](#script)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
 - [Gemma-7B](#Gemma-7B)
   - [Training](#training)
-  - [Script](#script)
-  - [Performance](#performance)
-    - [Machine performance](#machine-performance)
+    - [Script](#script)
   - [Inference](#Inference)
   - [Evaluation](#Evaluation)
 
@@ -138,7 +134,7 @@ Here's a hardware summary of pre-training  Gemma-2B:
 
     # process datasets  
     mkdir ./dataset/Gemma-2B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/wikipedia-cn-20230720-filtered.json \
         --output-prefix ./dataset/Gemma-2B/wikipedia_cn \
         --tokenizer-type PretrainedFromHF \
@@ -185,7 +181,7 @@ Here's a hardware summary of pre-training  Gemma-2B:
 
     # process datasets  
     mkdir ./finetune_dataset/Gemma-2B/  
-    python tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-2B/moss \
         --tokenizer-type PretrainedFromHF \
@@ -210,16 +206,6 @@ Here's a hardware summary of pre-training  Gemma-2B:
         --tokenizer-not-use-fast \
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of Gemma-2B in **Ascend NPU** and **Reference**:
-
-|  Device   |  Model   | throughput rate (tokens/s/p) |
-|:---------:|:--------:|:----------------------------:|
-|   NPUs    | Gemma-2B |             6821             |
-| Reference | Gemma-2B |             7602             |
 
 ## Inference
 
@@ -387,7 +373,7 @@ Here's a hardware summary of pre-training  Gemma-7B:
 
     # process datasets  
     mkdir ./dataset/Gemma-7B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/wikipedia-cn-20230720-filtered.json \
         --output-prefix ./dataset/Gemma-7B/wikipedia_cn \
         --tokenizer-type PretrainedFromHF \
@@ -434,7 +420,7 @@ Here's a hardware summary of pre-training  Gemma-7B:
 
     # process datasets  
     mkdir ./finetune_dataset/Gemma-7B/  
-    python tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/moss-003-sft-no-tools.jsonl \
         --output-prefix ./finetune_dataset/Gemma-7B/moss \
         --tokenizer-type PretrainedFromHF \
@@ -488,16 +474,6 @@ Here's a hardware summary of pre-training  Gemma-7B:
     bash examples/gemma/tune_gemma_7b_ptd.sh 
     ```
 
-### Performance
-
-#### Machine performance
-
-The performance of Gemma-7B in **Ascend NPU** and **Reference**:
-
-|  Device   |  Model  | throughput rate (tokens/s/p) |
-|:---------:|:-------:|:----------------------------:|
-|   NPUs    | Gemma-7B |             2938             |
-| Reference | Gemma-7B |             2607             |
 
 ## Inference
 

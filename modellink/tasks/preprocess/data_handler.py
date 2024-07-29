@@ -19,21 +19,22 @@ import time
 import glob
 import json
 import logging
-from typing import List
-
 import torch
 import numpy as np
+from typing import Any, Dict, List
 from datasets import load_dataset
 
 from megatron.core.datasets import indexed_dataset
-from modellink.data.prompter import Prompter, AlpacaTemplate
+
+from modellink.tasks.preprocess.templates import Prompter, AlpacaTemplate
+from modellink.tasks.preprocess.templates import get_templates, Role, get_template_and_fix_tokenizer
+from .utils import get_dataset_list, load_single_dataset, merge_dataset
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 __all__ = ["get_dataset_handler", "build_dataset"]
-
-DEFAULT_CACHE_DIR = "~/tmp"
 
 
 class BaseDatasetHandler(object):
@@ -183,7 +184,84 @@ class AlpacaPretrainHandler(GeneralPretrainHandler):
         sample[key] = doc_ids
         sample[key] = list(map(lambda x: x['input_ids'], sample[key]))
         return sample
-    
+
+
+class LlamaFactoryInstructionHandler(BaseDatasetHandler):
+    """
+    Handle LlamaFactory supported dataset format
+    a Llama-factory Alpaca instruction dataset handler
+    """
+    def __init__(self, args, raw_datasets, tokenizer, splitter):
+        super().__init__(args, raw_datasets, tokenizer, splitter)
+        # self.prompter is unused in LlamaFactoryInstructionHandler
+        self.prompter = None
+        self.train_on_inputs = False
+        self.args.json_keys = ["input_ids", "attention_mask", "labels"]
+        # use 'packed' string to mark that this is a packed dataset
+        self.args.output_prefix = self.args.output_prefix + "_packed"
+        self.ignored_label = -100
+        self.is_multi_turn = True
+        self.dataset_attr = get_dataset_list(args)
+        self.llama_factory_template = get_template_and_fix_tokenizer(tokenizer.tokenizer, args.lla_fact_ins_template.strip())
+
+    def _format_msg(self, sample):
+        return sample
+
+    def _tokenize_prompt(
+        self,
+        example: Dict[str, List[Any]],
+        template: "Template",
+        tokenizer: "PreTrainedTokenizer",
+) -> Dict[str, List[List[int]]]:
+        model_inputs = {"input_ids": [], "attention_mask": [], "labels": []}
+        input_ids, labels = [], []
+        if len(example["prompt"]) % 2 != 1 or len(example["response"]) != 1:
+            # this message is invalid
+            messages = [{'role': 'user', 'content': ''}, {'role': 'assistant', 'content': ''}]
+        else:
+            messages = example["prompt"] + example["response"]
+
+        for source_ids, target_ids in self.llama_factory_template.encode_multiturn(
+            tokenizer, messages, example["system"][0], example["tools"][0]
+        ):
+            if self.train_on_inputs: 
+                source_mask = source_ids
+            elif len(input_ids) != 0 and template.efficient_eos:
+                source_mask = [tokenizer.eos_token_id] + [self.ignored_label] * (len(source_ids) - 1)
+            else:
+                source_mask = [self.ignored_label] * len(source_ids)
+
+            input_ids += source_ids + target_ids
+            labels += source_mask + target_ids
+
+        if template.efficient_eos:
+            input_ids += [tokenizer.eos_token_id]
+            labels += [tokenizer.eos_token_id]
+
+        total_length = len(input_ids)
+
+        model_inputs["input_ids"] = input_ids
+
+        if input_ids[0] == 0:
+            model_inputs["attention_mask"] = [1] * total_length
+        else:
+            model_inputs["attention_mask"] = [input_ids[0] // input_ids[0]] * total_length
+        model_inputs["labels"] = labels
+        return model_inputs
+
+    def _filter(self, sample):
+        messages = self._format_msg(sample)
+        tokenized_full_prompt = self._tokenize_prompt(messages, self.llama_factory_template, self.tokenizer.tokenizer)
+
+        if self.args.append_eod:
+            tokenized_full_prompt["input_ids"].append(self.tokenizer.eod)
+            tokenized_full_prompt["attention_mask"].append(1)
+            tokenized_full_prompt["labels"].append(self.tokenizer.eod)
+
+        for key in self.args.json_keys:
+            tokenized_full_prompt[key] = [tokenized_full_prompt[key]]
+        return tokenized_full_prompt
+
 
 class GeneralInstructionHandler(BaseDatasetHandler):
     """
@@ -463,19 +541,53 @@ def _has_py_script(input_name):
 
 def build_dataset(args):
     """loading dataset by huggingface"""
-    if args.handler_name == "MOSSInstructionHandler" or args.handler_name == "MOSSMultiTurnHandler":
-        # for MOSS, streaming is needed.
-        args.streaming = True
-    if args.hf_datasets_params:
-        with open(args.hf_datasets_params, 'r') as fin:
-            param_dict = json.load(fin)
-        return load_dataset(**param_dict)
-    cache_dir = DEFAULT_CACHE_DIR
-    split_flag = "train"
-    load_from_local = os.path.exists(args.input)
-    if load_from_local:
-        if _has_py_script(args.input):
-            logger.info("loading data from a local python script")
+    raw_datasets = None
+    if (args.handler_name == "LlamaFactoryInstructionHandler"):
+        all_datasets = []
+        for dataset_attr in get_dataset_list(args):
+            all_datasets.append(load_single_dataset(dataset_attr, args))
+        raw_datasets = merge_dataset(all_datasets, args)
+    else:
+        if args.handler_name == "MOSSInstructionHandler" or args.handler_name == "MOSSMultiTurnHandler":
+            # for MOSS, streaming is needed.
+            args.streaming = True
+        if args.hf_datasets_params:
+            with open(args.hf_datasets_params, 'r') as fin:
+                param_dict = json.load(fin)
+            return load_dataset(**param_dict)
+        cache_dir = args.cache_dir
+        split_flag = "train"
+        load_from_local = os.path.exists(args.input)
+        if load_from_local:
+            if _has_py_script(args.input):
+                logger.info("loading data from a local python script")
+                raw_datasets = load_dataset(
+                    args.input,
+                    split=split_flag,
+                    num_proc=None if args.streaming else args.workers,
+                    cache_dir=cache_dir,
+                    streaming=args.streaming
+                )
+            else:
+                data_files = [args.input] if os.path.isfile(args.input) else \
+                    glob.glob(os.path.join(args.input, '*'))
+                ext, data_format = _get_data_format(data_files)
+                filtered_data_files = list(filter(lambda x: x.split('.')[-1] == ext, data_files))
+                if filtered_data_files:
+                    logger.info("loading data from local file, format: %s," 
+                                " file num: %s", data_format, len(data_files))
+                    raw_datasets = load_dataset(
+                        data_format,
+                        split=split_flag,
+                        data_files=filtered_data_files,
+                        num_proc=None if args.streaming else args.workers,
+                        cache_dir=cache_dir,
+                        streaming=args.streaming
+                    )
+                else:
+                    raise Exception("unknown local data!")
+        else:
+            logger.info("loading data from remote huggingface")
             raw_datasets = load_dataset(
                 args.input,
                 split=split_flag,
@@ -483,31 +595,7 @@ def build_dataset(args):
                 cache_dir=cache_dir,
                 streaming=args.streaming
             )
-        else:
-            data_files = [args.input] if os.path.isfile(args.input) else \
-                glob.glob(os.path.join(args.input, '*'))
-            ext, data_format = _get_data_format(data_files)
-            filtered_data_files = list(filter(lambda x: x.split('.')[-1] == ext, data_files))
-            if filtered_data_files:
-                logger.info("loading data from local file, format: %s," 
-                            " file num: %s", data_format, len(data_files))
-                raw_datasets = load_dataset(
-                    data_format,
-                    split=split_flag,
-                    data_files=filtered_data_files,
-                    num_proc=None if args.streaming else args.workers,
-                    cache_dir=cache_dir,
-                    streaming=args.streaming
-                )
-            else:
-                raise Exception("unknown local data!")
-    else:
-        logger.info("loading data from remote huggingface")
-        raw_datasets = load_dataset(
-            args.input,
-            split=split_flag,
-            num_proc=None if args.streaming else args.workers,
-            cache_dir=cache_dir,
-            streaming=args.streaming
-        )
+        if raw_datasets is None:
+            raise Exception("unknown data!")
+
     return raw_datasets

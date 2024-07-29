@@ -12,8 +12,6 @@
 - [CodeLlama-34B](#codellama-34b)
   - [训练](#训练)
     - [脚本](#脚本)
-    - [性能](#性能)
-      - [吞吐](#吞吐)
   - [推理](#推理)
   - [评估](#评估)
 
@@ -148,7 +146,7 @@ CodeLlama-34B 训练的硬件配置如下:
     cd ..
 
     mkdir ./dataset/CodeLlama-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/CodeLlama-34B/ \
         --output-prefix ./dataset/CodeLlama-34B/alpaca \
@@ -193,7 +191,7 @@ CodeLlama-34B 训练的硬件配置如下:
 
     # 处理微调数据集  
     mkdir ./finetune_dataset/CodeLlama-34B/
-    python ./tools/preprocess_data.py \
+    python ./preprocess_data.py \
         --input ./finetune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
         --tokenizer-name-or-path ./model_from_hf/CodeLlama-34B/ \
         --output-prefix ./finetune_dataset/CodeLlama-34B/alpaca \
@@ -222,17 +220,7 @@ CodeLlama-34B 训练的硬件配置如下:
         --tokenizer-not-use-fast \
         --padded-vocab-size 32000 \
     ```
-
-### 性能
-
-#### 吞吐
-
-CodeLlama-34B 在 **昇腾芯片** 和 **参考芯片** 上的性能对比:
-
-|  设备  |      模型      | 迭代数  | 样本吞吐 (samples/s) | token吞吐 (tokens/p/s) | 单步迭代时间 (s/step) | 
-|:----:|:------------:|:----:|:------------------:|:--------------------:|:---------------:|
-| NPUs | CodeLlama-34B | - | 3.27 | 837 | 313 |      
-|  参考  | CodeLlama-34B | - |  2.97   | 762 | 344 |    
+ 
 
 
 ## 推理
