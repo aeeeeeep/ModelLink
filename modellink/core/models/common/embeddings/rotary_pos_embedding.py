@@ -4,12 +4,15 @@
 
 from functools import wraps
 
+import math
 import torch
 from torch import Tensor
 import torch_npu
 from megatron.training import get_args
 from megatron.core import parallel_state
 from megatron.core.models.common.embeddings.rotary_pos_embedding import _rotate_half, get_pos_emb_on_this_cp_rank
+
+from modellink.error_utils import ensure_valid
 
 
 def rotary_embedding_forward(self, max_seq_len: int, offset: int = 0):
@@ -22,6 +25,7 @@ def rotary_embedding_forward(self, max_seq_len: int, offset: int = 0):
     Returns:
         Tensor: Embeddings after applying RoPE.
     """
+    args = get_args()
     seq = (
         torch.arange(max_seq_len, device=self.inv_freq.device, dtype=self.inv_freq.dtype)
         + offset
@@ -30,15 +34,17 @@ def rotary_embedding_forward(self, max_seq_len: int, offset: int = 0):
     if self.seq_len_interpolation_factor is not None:
         seq *= 1 / self.seq_len_interpolation_factor
 
+    if args.use_scaled:
+        self.inv_freq = apply_scaling(self.inv_freq)
+
     freqs = torch.outer(seq, self.inv_freq)
     # first part even vector components, second part odd vector components,
     #  2 * dim in dimension size
 
-    args = get_args()
     if args.use_partial_rope:
         emb = torch.stack([torch.cos(freqs), torch.sin(freqs)], dim=-1)
         if freqs.dtype in (torch.float16, torch.bfloat16, torch.int8):
-            emb = emb.bfloat16() if dtype == torch.bfloat16 else emb.half()
+            emb = emb.bfloat16() if freqs.dtype == torch.bfloat16 else emb.half()
     else:
         emb = torch.cat((freqs, freqs), dim=-1)
     # emb [seq_length, .., dim]
@@ -118,3 +124,28 @@ def apply_rotary_pos_emb_bshd_wrapper(fn):
         return fn(t, freqs, rotary_interleaved)
 
     return wrapper
+
+
+def apply_scaling(freqs: torch.Tensor):
+    # Values obtained from grid search
+    scale_factor = 8
+    low_freq_factor = 1
+    high_freq_factor = 4
+    old_context_len = 8192  # original llama3 length
+
+    low_freq_wavelen = old_context_len / low_freq_factor
+    high_freq_wavelen = old_context_len / high_freq_factor
+    new_freqs = []
+    for freq in freqs:
+        wavelen = 2 * math.pi / freq
+        if wavelen < high_freq_wavelen:
+            new_freqs.append(freq)
+        elif wavelen > low_freq_wavelen:
+            new_freqs.append(freq / scale_factor)
+        else:
+            ensure_valid((low_freq_wavelen != high_freq_wavelen), error_message="low_freq_wavelen need not equal high_freq_wavelen")
+            smooth = (old_context_len / wavelen - low_freq_factor) / (
+                high_freq_factor - low_freq_factor
+            )
+            new_freqs.append((1 - smooth) * freq / scale_factor + smooth * freq)
+    return torch.tensor(new_freqs, dtype=freqs.dtype, device=freqs.device)
