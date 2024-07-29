@@ -3,10 +3,26 @@
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 NPUS_PER_NODE=8
-MASTER_ADDR=90.90.94.154
-MASTER_PORT=6001
-NNODES=2
-NODE_RANK=0
+
+IPs=('IP1' 'IP2')
+LOCAL_HOST=`hostname -I|awk -F " " '{print$1}'`
+echo $LOCAL_HOST
+NPUS_PER_NODE=8
+MASTER_ADDR=${IPs[0]}
+MASTER_PORT=6010
+NNODES=${#IPs[@]}
+NODE_RANK=""
+
+for i in "${!IPs[@]}";
+do
+    if [ "$LOCAL_HOST" == "${IPs[$i]}" ];
+    then
+        echo "Node Rank : ${i}"
+        NODE_RANK=$i
+        break
+    fi
+done
+
 WORLD_SIZE=$((NPUS_PER_NODE*$NNODES))
 
 
@@ -19,7 +35,7 @@ TP=1
 PP=1
 CP=16
 MBS=1
-GBS=32
+GBS=64
 SEQ_LEN=65536
 CP_ALGO=hybrid_cp_algo
 
@@ -32,7 +48,7 @@ DISTRIBUTED_ARGS="
 "
 
 GPT_ARGS="
-    --use-mcore-models
+    --use-mcore-models \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
@@ -40,12 +56,12 @@ GPT_ARGS="
     --hidden-size 4096 \
     --ffn-hidden-size 13696 \
     --num-attention-heads 32 \
+    --ulysses-degree-in-cp 8 \
     --seq-length ${SEQ_LEN} \
     --micro-batch-size ${MBS} \
     --global-batch-size ${GBS} \
     --transformer-impl local \
     --context-parallel-algo ${CP_ALGO} \
-    --ulysses-degree-in-cp 8 \
     --context-parallel-size ${CP}
     --max-position-embeddings 65536 \
     --padded-vocab-size 65024 \
@@ -83,14 +99,16 @@ GPT_ARGS="
     --initial-loss-scale 4096 \
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
-    --load ${CKPT_LOAD_DIR}  \
     --no-load-optim \
     --no-load-rng \
     --fp16 \
     --num-workers 1 \
     --kv-head-repeat-before-uly-alltoall \
-    --no-shared-storage
-
+    --no-shared-storage \
+    --use-cp-send-recv-overlap \
+    --overlap-grad-reduce \
+    --overlap-param-gather \
+    --use-mc2 \
 "
 
 DATA_ARGS="
@@ -99,10 +117,11 @@ DATA_ARGS="
 "
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 2000 \
+    --save-interval 10000 \
     --eval-interval 1000 \
     --eval-iters 10 \
 "
+
 
 python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $GPT_ARGS \

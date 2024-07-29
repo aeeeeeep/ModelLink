@@ -22,6 +22,7 @@ MBS=1
 GBS=32
 SEQ_LEN=32768
 CP_ALGO=ulysses_cp_algo
+#CP_ALGO=megatron_cp_algo
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
@@ -45,7 +46,7 @@ GPT_ARGS="
     --global-batch-size ${GBS} \
     --transformer-impl local \
     --context-parallel-algo ${CP_ALGO} \
-    --context-parallel-size ${CP}
+    --context-parallel-size ${CP} \
     --max-position-embeddings 65536 \
     --padded-vocab-size 65024 \
     --make-vocab-size-divisible-by 1 \
@@ -82,11 +83,13 @@ GPT_ARGS="
     --initial-loss-scale 4096 \
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
-    --load ${CKPT_LOAD_DIR}  \
     --no-load-optim \
     --no-load-rng \
     --fp16 \
-    --kv-head-repeat-before-uly-alltoall
+    --kv-head-repeat-before-uly-alltoall \
+    --use-cp-send-recv-overlap \
+    --overlap-grad-reduce \
+    --overlap-param-gather \
 "
 
 DATA_ARGS="
@@ -94,9 +97,10 @@ DATA_ARGS="
     --split 949,50,1
 "
 
+
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 2000 \
+    --save-interval 10000 \
     --eval-interval 1000 \
     --eval-iters 10 \
 "
