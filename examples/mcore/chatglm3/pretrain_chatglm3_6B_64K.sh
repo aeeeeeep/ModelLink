@@ -61,7 +61,7 @@ GPT_ARGS="
     --micro-batch-size ${MBS} \
     --global-batch-size ${GBS} \
     --context-parallel-algo ${CP_ALGO} \
-    --context-parallel-size ${CP}
+    --context-parallel-size ${CP} \
     --max-position-embeddings 65536 \
     --padded-vocab-size 65024 \
     --make-vocab-size-divisible-by 1 \
