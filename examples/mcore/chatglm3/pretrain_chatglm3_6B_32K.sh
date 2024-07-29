@@ -105,5 +105,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --save $CKPT_SAVE_DIR \
-    | tee logs/train)_mcore_chatglm3_6B_32K.log
+    | tee logs/train_mcore_chatglm3_6B_32K.log
 
