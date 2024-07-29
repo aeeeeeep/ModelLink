@@ -259,6 +259,10 @@ def _add_network_size_args(parser):
                        action='store_true',
                        help='use partial rope in ChatGLM3.'
                        )
+    group.add_argument('--use-scaled',
+                    action='store_true',
+                    help='rope apply scaling in llama3.1.'
+                    )
     
     group.add_argument("--use-fused-rmsnorm", action='store_true',
                        help="Use fused rmsnorm.")
