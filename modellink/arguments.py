@@ -276,7 +276,9 @@ def _add_network_size_args(parser):
 def _add_algorithm_args(parser):
     group = parser.add_argument_group(title='algorithm')
     group.add_argument('--rotary-base', type=float, help='rotary-base.')
-
+    group.add_argument('--reuse-fp32-param', action='store_true',
+                       help='The distributed training optimizer frees up '
+                            'param copies of FP32 to save memory.')
     return parser
 
 
@@ -419,6 +421,11 @@ def _validate_instruction_finetune(args):
         if args.context_parallel_size > 1:
             raise AssertionError('Context parallelism is forbidden when use variable seq lengths.')
 
+def _validate_optimizer(args):
+    if args.reuse_fp32_param and not args.bf16:
+        raise AssertionError('--reuse-fp32-param only support for `bf16`')
+    if args.reuse_fp32_param and not args.use_distributed_optimizer:
+        raise AssertionError('--reuse-fp32-param only support for `use-distributed-optimizer`')
 
 def validate_args_decorator(megatron_validate_args):
     @wraps(megatron_validate_args)
@@ -436,7 +443,7 @@ def validate_args_decorator(megatron_validate_args):
         _validate_instruction_finetune(args)
         _validate_position_embedding(args)
         _validate_high_availability(args)
-
+        _validate_optimizer(args)
         from modellink.utils import print_args
         print_args('ModelLink Arguments', args)
         return args
