@@ -2,28 +2,11 @@
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 NPUS_PER_NODE=8
-
-IPs=('IP1' 'IP2')
-LOCAL_HOST=`hostname -I|awk -F " " '{print$1}'`
-echo $LOCAL_HOST
-NPUS_PER_NODE=8
-MASTER_ADDR=${IPs[0]}
-MASTER_PORT=6010
-NNODES=${#IPs[@]}
-NODE_RANK=""
-
-for i in "${!IPs[@]}";
-do
-    if [ "$LOCAL_HOST" == "${IPs[$i]}" ];
-    then
-        echo "Node Rank : ${i}"
-        NODE_RANK=$i
-        break
-    fi
-done
-
+MASTER_ADDR=localhost
+MASTER_PORT=6021
+NNODES=1
+NODE_RANK=0
 WORLD_SIZE=$((NPUS_PER_NODE*$NNODES))
-
 
 CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
@@ -31,12 +14,11 @@ TOKENIZER_PATH="your tokenizer path"
 CKPT_LOAD_DIR="your model ckpt path"
 
 TP=1
-PP=1
-CP=16
+PP=2
+CP=1
 MBS=1
-GBS=64
-SEQ_LEN=65536
-CP_ALGO=hybrid_cp_algo
+GBS=128
+SEQ_LEN=8192
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
@@ -47,7 +29,6 @@ DISTRIBUTED_ARGS="
 "
 
 GPT_ARGS="
-    --use-mcore-models \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
@@ -55,12 +36,11 @@ GPT_ARGS="
     --hidden-size 4096 \
     --ffn-hidden-size 13696 \
     --num-attention-heads 32 \
-    --ulysses-degree-in-cp 8 \
     --seq-length ${SEQ_LEN} \
     --micro-batch-size ${MBS} \
     --global-batch-size ${GBS} \
-    --transformer-impl local \
-    --context-parallel-algo ${CP_ALGO} \
+    --transformer-impl local
+    --context-parallel-algo megatron_cp_algo \
     --context-parallel-size ${CP}
     --max-position-embeddings 65536 \
     --padded-vocab-size 65024 \
@@ -71,14 +51,13 @@ GPT_ARGS="
     --add-qkv-bias \
     --position-embedding-type rope \
     --no-rope-fusion \
-    --use-distributed-optimizer \
     --use-partial-rope \
-    --use-flash-attn \
-    --use-fused-rmsnorm \
-    --use-fused-swiglu \
     --normalization RMSNorm \
+    --use-fused-rmsnorm \
     --swiglu \
-    --no-create-attention-mask-in-dataloader \
+    --use-fused-swiglu \
+    --use-flash-attn \
+    --use-distributed-optimizer \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --lr 1e-6 \
@@ -101,19 +80,14 @@ GPT_ARGS="
     --no-load-optim \
     --no-load-rng \
     --fp16 \
-    --num-workers 1 \
-    --kv-head-repeat-before-uly-alltoall \
-    --no-shared-storage \
-    --use-cp-send-recv-overlap \
-    --overlap-grad-reduce \
-    --overlap-param-gather \
-    --use-mc2 \
+    --kv-head-repeat-before-uly-alltoall
 "
 
 DATA_ARGS="
     --data-path $DATA_PATH \
     --split 949,50,1
 "
+
 OUTPUT_ARGS="
     --log-interval 1 \
     --save-interval 10000 \
@@ -128,4 +102,4 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --save $CKPT_SAVE_DIR \
-    | tee logs/train_chatglm3_6B_64K.log
+    | tee logs/train_chatglm3_6B_8K.log

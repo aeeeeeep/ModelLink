@@ -1,5 +1,4 @@
 #!/bin/bash
-# export WITHOUT_JIT_COMPILE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 NPUS_PER_NODE=8
@@ -8,7 +7,6 @@ MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$((NPUS_PER_NODE*$NNODES))
-
 
 CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
