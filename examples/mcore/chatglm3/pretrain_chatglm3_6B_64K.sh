@@ -48,6 +48,7 @@ DISTRIBUTED_ARGS="
 
 GPT_ARGS="
     --use-mcore-models \
+    --transformer-impl local \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
@@ -59,7 +60,6 @@ GPT_ARGS="
     --seq-length ${SEQ_LEN} \
     --micro-batch-size ${MBS} \
     --global-batch-size ${GBS} \
-    --transformer-impl local \
     --context-parallel-algo ${CP_ALGO} \
     --context-parallel-size ${CP}
     --max-position-embeddings 65536 \
@@ -128,4 +128,4 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --save $CKPT_SAVE_DIR \
-    | tee logs/train_chatglm3_6B_64K.log
+    | tee logs/train_mcore_chatglm3_6B_64K.log
