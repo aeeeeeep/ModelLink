@@ -410,18 +410,22 @@ def _validate_position_embedding(args):
     if args.tokenizer_padding_side == 'left' and args.position_embedding_type == 'alibi':
         raise AssertionError('Alibi is not support tokenizer-padding-side left now.')
 
+
 def _validate_high_availability(args):
     if args.enable_optimizer_state_local_copy and not args.enable_high_availability:
         raise AssertionError('switch of the high availability feature is unsupported')
+
 
 def _validate_instruction_finetune(args):
     if args.variable_seq_lengths:
         if args.context_parallel_size > 1:
             raise AssertionError('Context parallelism is forbidden when use variable seq lengths.')
 
+
 def _validate_optimizer(args):
     if args.reuse_fp32_param and not args.bf16:
         raise AssertionError('--reuse-fp32-param only support for `bf16`')
+
 
 def validate_args_decorator(megatron_validate_args):
     @wraps(megatron_validate_args)

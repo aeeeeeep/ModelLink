@@ -302,6 +302,7 @@ def patch_high_availability_feature():
     PatchManager.register_patch('megatron.core.optimizer.distrib_optimizer.DistributedOptimizer.__init__', distributed_optimizer_init_wrapper)
     PatchManager.register_patch('megatron.training.training.setup_model_and_optimizer', setup_model_and_optimizer_wrapper)
 
+
 def patch_reuse_fp32_param():
     from mindspeed.optimizer.optimizer import mixed_precision_optimizer_step, reuse_fp32_param_init_wrapper, \
         optimizer_config_init_wrapper

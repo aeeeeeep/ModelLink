@@ -93,6 +93,7 @@ def reuse_fp32_param_distrib_optimizer_init_wrapper(init_func):
             self.fp32_tensor_convert_to_fp16_tensor = types.MethodType(fp32_tensor_convert_to_fp16_tensor_wrapper(fp32_tensor_convert_to_fp16_tensor), self)
     return reuse_fp32_param_distrib_optimizer_init
 
+
 def load_parameter_state_from_dp_zero(self, state_dict):
     self.load_parameter_state_from_dp_zero_func(state_dict)
     self.first_sub_flag = False
@@ -125,6 +126,7 @@ def load_parameter_state_from_dp_zero(self, state_dict):
         recv_tensor_bf16_view = torch.tensor(recv_tensor.data.untyped_storage(), dtype=torch.bfloat16, device=recv_tensor.device)
         shard_main_param_res_buffer.copy_(recv_tensor_bf16_view)
 
+
 def get_parameter_state_dp_zero(self):
     state = self.get_parameter_state_dp_zero_func()
     data_parallel_world_size = torch.distributed.get_world_size(self.data_parallel_group)
@@ -156,6 +158,7 @@ def get_parameter_state_dp_zero(self):
     state['shard_main_param_res'] = buffer_res_full_shard
     return state
 
+
 def fp16_tensor_convert_to_fp32_tensor_wrapper(init_func):
     @wraps(init_func)
     def fp16_tensor_convert_to_fp32_tensor_func(self):
@@ -173,7 +176,8 @@ def fp16_tensor_convert_to_fp32_tensor_wrapper(init_func):
         else:
             init_func(self)
     return fp16_tensor_convert_to_fp32_tensor_func
-    
+
+
 def fp32_tensor_convert_to_fp16_tensor_wrapper(init_func):
     @wraps(init_func)
     def fp32_tensor_convert_to_fp16_tensor_func(self):
