@@ -80,11 +80,13 @@ GPT_ARGS="
     --initial-loss-scale 4096 \
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
-    --load ${CKPT_LOAD_DIR}  \
     --no-load-optim \
     --no-load-rng \
     --fp16 \
     --kv-head-repeat-before-uly-alltoall \
+    --use-cp-send-recv-overlap \
+    --overlap-grad-reduce \
+    --overlap-param-gather \
 "
 
 DATA_ARGS="
@@ -94,7 +96,7 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 2000 \
+    --save-interval 10000 \
     --eval-interval 1000 \
     --eval-iters 10 \
 "
