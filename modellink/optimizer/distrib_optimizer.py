@@ -9,6 +9,7 @@ from mindspeed.optimizer.distrib_optimizer import _copy_model_params_to_main_par
 
 TRANSPOSE_BF16_BLOCK_SIZE = 4096 * 4096
 
+
 def reuse_fp32_param_distrib_optimizer_init_wrapper(init_func):
     @wraps(init_func)
     def reuse_fp32_param_distrib_optimizer_init(*args, **kwargs):
