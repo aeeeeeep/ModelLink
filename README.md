@@ -12,28 +12,24 @@
         <img src="https://app.codacy.com/project/badge/Grade/1710faac5e634acaabfc26b0a778cdde">
     </a>
 </p>
-<p align="center">
-        <b>简体中文</b> |
-        <b><a href="README_en.md">English</a> </b>
-</p>
 
 ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上提供端到端的大语言模型方案, 包含模型，算法，以及下游任务。
 
 ---
 
-## ModelLink解决方案概览
+## ModelLink大模型方案概览
 
 
 当前ModelLink支撑大模型使用功能:
-* [制作预训练数据集](#jump11)/[制作指令微调数据集](#jump12)
-* [预训练](#jump13)/[全参微调](#jump14)/[低参微调](#jump15)
-* [流式推理/人机对话](#jump16)
-* [评估基线数据集](#jump17)
-* [加速算法/融合算子/并行策略](#jump18)
-* [基于昇腾芯片采集Profiling数据](#jump19)
-* [Huggingface与Megatron-LM权重转换](#jump20)
-* [基于昇腾芯片的确定性计算功能](#jump21)
-* [基于昇腾芯片的高可用特性](#jump22)
+* [制作预训练数据集](#jump11)/[制作指令微调数据集](#jump12) 【NAIE】【昇腾】
+* [预训练](#jump13)/[全参微调](#jump14)/[低参微调](#jump15) 【昇腾】【GTS】【NAIE】
+* [流式推理/人机对话](#jump16) 【NAIE】【昇腾】
+* [评估基线数据集](#jump17)【NAIE】
+* [加速算法/融合算子/并行策略](#jump18)【昇腾】【计算算法部】【计算研究部】
+* [基于昇腾芯片采集Profiling数据](#jump19) 【昇腾】
+* [Huggingface与Megatron-LM权重转换](#jump20) 【昇腾】【OCK】
+* [基于昇腾芯片的确定性计算功能](#jump21) 【昇腾】
+* [基于昇腾芯片的高可用特性](#jump22) 【计算研究部】
 
 强化学习等特性持续研发中....
 
@@ -63,7 +59,7 @@ ModelLink已发布版本维护策略：
 
 ## 配套版本与支持模型
 
-【需要注意模型使用时的配套环境版本，参考如下】
+【版本配套环境】
 
 |           软件            | [版本](https://www.hiascend.com/zh/) |
 | :-----------------------: |:----------------------------------:|
@@ -75,11 +71,15 @@ ModelLink已发布版本维护策略：
 |         torch_npu         |           在研版本           |
 
 
-【基于现版本我们实测的性能情况统计如下（硬件信息：Atlas 900 A2 PODc）】
+【现版本实测性能（硬件信息：Atlas 900 A2 PODc）】
 
-下述列表中支持的模型，我们在[examples](./examples/)文件夹中提供了相应的训练脚本和readme说明，里面有详细的模型训练、推理、评估流程。
+下述列表中支持的模型，我们在[examples/README.md](./examples/README.md)中提供了相应的使用说明，里面有详细的模型训练、推理、评估流程
 
-以下为开启 mc2 加速特性后的实测性能，该特性只在24RC2以上版本支持，本仓库代码层面默认关闭，若要使用，请参考首页[加速算法与融合算子](#加速算法与融合算子)章节
+`参数`列中的超链接指向模型的预训练文件下载地址，`模型`列中的超链接指向更多的社区资源地址，包括Chat/Instruct权重等
+
+`认证`【Pass】表示经过昇腾官方版本测试的模型，【Test】表示待测试模型
+
+表中为开启 mc2 特性后预训练实测性能，该特性只在24RC2以上版本支持，本仓库代码层面默认关闭，若要使用，请参考[加速算法与融合算子](#加速算法与融合算子)章节
 
 <table>
   <thead>
@@ -87,413 +87,670 @@ ModelLink已发布版本维护策略：
       <th>模型</th>
       <th>参数</th>
       <th>序列</th>
+      <th>实现</th>
       <th>集群</th>
       <th>模式</th>
       <th>性能</th>
       <th>参考</th>
       <th>贡献方</th>
+      <th>认证</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td rowspan="1"><a href="examples/aquila/README.md">Aquila</a></td>
-      <td>7B</td>
+      <td rowspan="1"><a href="https://huggingface.co/collections/BAAI/aquila-6698657124de09d10cd7a83f">Aquila</a></td>
+      <td><a href="https://huggingface.co/BAAI/Aquila-7B/tree/main">7B</a></td>
       <td>2K</td>
+      <th>Legacy</th>
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 2849 </td>
       <td> 2874 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</center></td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="2"><a href="examples/aquila2/README.md">Aquila2</a></td>
-      <td>7B</td>
+      <td rowspan="2"><a href="https://huggingface.co/collections/BAAI/aquila-6698657124de09d10cd7a83f">Aquila2</a></td>
+      <td><a href="https://huggingface.co/BAAI/Aquila2-7B/tree/main">7B</a></td>
       <td>2K</td>
+      <th>Legacy</th>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 3323 </td>
       <td> 2673 </td>
-      <td>【社区】</td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
-      <td>34B</td>
+      <td><a href="https://huggingface.co/BAAI/Aquila2-34B/tree/main">34B</a></td>
       <td>4K</td>
+      <th>Legacy</th>
       <td> 2x8</td>
       <td> BF16 </td>
       <td> 854 </td>
       <td> 732 </td>
-      <td>【社区】</td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
-      <td rowspan="2"><a href="examples/baichuan/README.md">Baichuan</a></td>
-      <td>7B</td>
+      <td rowspan="2"><a href="https://huggingface.co/baichuan-inc">Baichuan</a></td>
+      <td><a href="https://huggingface.co/baichuan-inc/Baichuan-7B/tree/main">7B</a></td>
       <td>4K</td>
+      <th>Legacy</th>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 2685 </td>
       <td> 2036 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td>13B</td>
+      <td><a href="https://huggingface.co/baichuan-inc/Baichuan-13B-Base/tree/main">13B</a></td>
       <td>4K</td>
+      <th>Legacy</th>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 1213 </td>
       <td> 862 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="2"><a href="examples/baichuan2/README.md">Baichuan2</a></td>
-      <td>7B</td>
+      <td rowspan="2"><a href="https://huggingface.co/baichuan-inc">Baichuan2</a></td>
+      <td><a href="https://huggingface.co/baichuan-inc/Baichuan2-7B-Base/tree/main">7B</a></td>
       <td>4K</td>
+      <th>Legacy</th>
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 2664 </td>
       <td> 3969 </td>
-      <td>【昇腾】</td>
+      <td><center>【昇腾】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td>13B</td>
+      <td><a href="https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/tree/main">13B</a></td>
       <td>4K</td>
+      <th>Legacy</th>
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 1668 </td>
       <td> 2062 </td>
-      <td>【昇腾】</td>
+      <td><center>【昇腾】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="2"><a href="examples/bloom/README.md">Bloom</a></td>
-      <td>7B1</td>
+      <td rowspan="2"><a href="https://huggingface.co/bigscience">Bloom</a></td>
+      <td><a href="https://huggingface.co/bigscience/bloom-7b1/tree/main">7B1</a></td>
       <td>2K</td>
+      <th>Legacy</th>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 2034 </td>
       <td> 2525 </td>
-      <td>【昇腾】</td>
+      <td><center>【昇腾】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td>176B</td>
+      <td><a href="https://huggingface.co/bigscience/bloom/tree/main">176B</td>
       <td>2K</td>
+      <th>Legacy</th>
       <td >12x8</td>
       <td> BF16 </td>
       <td> 100 </td>
       <td> 107 </td>
-      <td>【昇腾】</td>
+      <td><center>【昇腾】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/chatglm3/README.md">ChatGLM3</a></td>
-      <td>6B</td>
+      <td rowspan="1"><a href="https://huggingface.co/THUDM">ChatGLM3</a></td>
+      <td><a href="https://huggingface.co/THUDM/chatglm3-6b/tree/main">6B</a></td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 4297 </td>
       <td> 4267 </td>
-      <td>【社区】</td>
+      <td><center>【昇腾】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/codellama/README.md">CodeLlama</a></td>
-      <td>34B</td>
+      <td rowspan="1"><a href="https://huggingface.co/codellama">CodeLlama</a></td>
+      <td><a href="https://huggingface.co/codellama/CodeLlama-34b-hf/tree/main">34B</a></td>
       <td>4K</td>
+      <th>Legacy</th>
       <td> 2x8</td>
       <td> BF16 </td>
       <td> 837 </td>
       <td> 762 </td>
-      <td>【社区】</td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
-      <td rowspan="2"><a href="examples/intern/README.md">InternLM</a></td>
-      <td>7B</td>
+      <td rowspan="2"><a href="https://huggingface.co/internlm">InternLM</a></td>
+      <td><a href="https://huggingface.co/internlm/internlm-7b/tree/main">7B</a></td>
       <td>2K</td>
+      <th>Legacy</th>
       <td>1x8</td>
       <td>BF16</td>
       <td> 2776 </td>
       <td> 2854 </td>
-      <td>【昇腾】</td>
+      <td><center>【昇腾】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
       <td >65B</td>
       <td>2K</td>
+      <th>Legacy</th>
       <td >4x8</td>
       <td> BF16 </td>
       <td> 341 </td>
       <td> 414 </td>
-      <td>【昇腾】</td>
+      <td><center>【昇腾】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="4"><a href="examples/llama/README.md">LLaMA</td>
-      <td>7B</td>
+      <td rowspan="4"><a href="https://huggingface.co/meta-llama">LLaMA</td>
+      <td><a href="https://huggingface.co/ruibin-wang/llama-7b-hf/tree/main">7B</a></td>
       <td>2K</td>
+      <th>Legacy</th>
       <td>1x8</td>
       <td>FP16</td>
       <td> 3600 </td>
       <td> 3804 </td>
-      <td>【昇腾】</td>
+      <td><center>【昇腾】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td>13B</td>
+      <td><a href="https://huggingface.co/ruibin-wang/llama-13b-hf">13B</a></td>
       <td>2K</td>
+      <th>Legacy</th>
       <td>1x8</td>
       <td>FP16</td>
       <td> 1895 </td>
       <td> 2012 </td>
-      <td>【昇腾】</td>
+      <td><center>【昇腾】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-        <td>33B</td>
+        <td><a href="https://huggingface.co/pinkmanlove/llama-33b-hf/tree/main">33B</a></td>
         <td>2K</td>
+        <th>Legacy</th>
         <td>4x8</td>
         <td>FP16</td>
         <td>621</td>
         <td>776</td>
-        <td>【昇腾】</td>
+        <td><center>【昇腾】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td>65B</td>
+      <td><a href="https://huggingface.co/pinkmanlove/llama-65b-hf">65B</a></td>
       <td>2K</td>
+      <th>Legacy</th>
       <td>4x8</td>
       <td>BF16 </td>
       <td> 348 </td>
       <td> 426 </td>
-      <td>【昇腾】</td>
+      <td><center>【昇腾】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="4"><a href="examples/llama2/README.md">LLaMA2</td>
-      <td>7B</td>
+      <td rowspan="4"><a href="https://huggingface.co/meta-llama">LLaMA2</td>
+      <td><a href="https://huggingface.co/daryl149/llama-2-7b-hf/tree/main">7B</a></td>
       <td>4K</td>
+      <th>Legacy</th>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 4200 </td>
       <td> 3850 </td>
-      <td>【昇腾】</td>
+      <td><center>【NAIE】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td>13B</td>
+      <td><a href="https://huggingface.co/NousResearch/Llama-2-13b-hf/tree/main">13B</a></td>
       <td>4K</td>
+      <th>Legacy</th>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 1990 </td>
       <td> 1920 </td>
-      <td>【昇腾】</td>
+      <td><center>【NAIE】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td>34B</td>
+      <td><a href="https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/tree/main">34B</a></td>
       <td>4K</td>
+      <th>Legacy</th>
       <td>2x8</td>
       <td>BF16 </td>
       <td> 749 </td>
       <td> 796 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td>70B</td>
+      <td><a href="https://huggingface.co/meta-llama/Llama-2-70b-hf">70B</a></td>
       <td>4K</td>
+      <th>Legacy</th>
       <td>4x8</td>
       <td>BF16 </td>
       <td> 420 </td>
       <td> 430 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="2"><a href="examples/llama3/README.md">LLaMA3</td>
-      <td>8B</td>
+      <td rowspan="2"><a href="https://huggingface.co/meta-llama">LLaMA3</td>
+      <td><a href="https://huggingface.co/unsloth/llama-3-8b/tree/main">8B</a></td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2483 </td>
       <td> 2674 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td>70B</td>
+      <td><a href="https://huggingface.co/v2ray/Llama-3-70B/tree/main">70B</a></td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td>8x8</td>
       <td>BF16 </td>
       <td> 283 </td>
       <td> 355 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="3"><a href="examples/qwen/README.md">Qwen</a></td>
-      <td>7B</td>
+      <td rowspan="3"><a href="https://huggingface.co/Qwen">Qwen</a></td>
+      <td><a href="https://huggingface.co/Qwen/Qwen-7B/tree/main">7B</a></td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2499 </td>
       <td> 2867 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td>14B</td>
+      <td><a href="https://huggingface.co/Qwen/Qwen-14B/tree/main">14B</a></td>
       <td>2K</td>
+      <th>Legacy</th>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 1560 </td>
       <td> 1578 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td>72B</td>
+      <td><a href="https://huggingface.co/Qwen/Qwen-72B/tree/main">72B</a></td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td>16x8</td>
       <td>BF16 </td>
       <td> 285 </td>
       <td> 345 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</td>
+      <td>【Pass】</td>
     </tr>
     </tr>
        <tr>
-      <td rowspan="7"><a href="examples/qwen15/README.md">Qwen1.5</a></td>
-      <td> 0.5B </td>
+      <td rowspan="7"><a href="https://huggingface.co/Qwen">Qwen1.5</a></td>
+      <td> <a href="https://huggingface.co/Qwen/Qwen1.5-0.5B/tree/main">0.5B</a> </td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 22834 </td>
       <td> 25306 </td>
-      <td>【社区】</td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
       <tr>
-      <td> 1.8B </td>
+      <td> <a href="https://huggingface.co/Qwen/Qwen1.5-1.8B/tree/main">1.8B</a> </td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 13029 </td>
       <td> 12181 </td>
-      <td>【社区】</td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
       <tr>
-      <td> 4B </td>
+      <td> <a href="https://huggingface.co/Qwen/Qwen1.5-4B/tree/main">4B</a> </td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 5033 </td>
       <td> 5328 </td>
-      <td>【社区】</td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
       <tr>
-      <td> 7B </td>
+      <td> <a href="https://huggingface.co/Qwen/Qwen1.5-7B/tree/main">7B</a> </td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 2862 </td>
       <td> 2621 </td>
-      <td>【社区】</td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
       <tr>
-      <td> 14B </td>
+      <td> <a href="https://huggingface.co/Qwen/Qwen1.5-14B/tree/main">14B</a> </td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 1717 </td>
       <td> 1702 </td>
-      <td>【社区】</td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
       <tr>
-      <td> 32B </td>
+      <td> <a href="https://huggingface.co/Qwen/Qwen1.5-32B/tree/main">32B</a> </td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td> 4x8 </td>
       <td> BF16 </td>
       <td> 751 </td>
       <td> 708 </td>
-      <td>【社区】</td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
       <tr>
-      <td> 72B </td>
+      <td> <a href="https://huggingface.co/Qwen/Qwen1.5-72B/tree/main">72B</a> </td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td> 8x8 </td>
       <td> BF16 </td>
       <td> 301 </td>
       <td> 317 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</td>    
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/yi/README.md">Yi</a></td>
-      <td>34B</td>
+      <td rowspan="1"><a href="https://huggingface.co/01-ai">Yi</a></td>
+      <td><a href="https://huggingface.co/01-ai/Yi-34B/tree/main">34B</a></td>
       <td> 4K</td>
+      <th>Legacy</th>
       <td>2x8</td>
       <td>BF16 </td>
       <td> 809 </td>
       <td> 730 </td>
-      <td>【社区】</td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/README.md">Mixtral</a></td>
-      <td>8x7B</td>
+      <td rowspan="1"><a href="https://huggingface.co/mistralai">Mixtral</a></td>
+      <td><a href="https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/tree/main">8x7B</a></td>
       <td> 32K</td>
-      <td>2x8</td>
+      <th>Mcore</th>
+      <td>8x8</td>
       <td>BF16 </td>
-      <td> 487 </td>
-      <td> 610 </td>
-      <td>【昇腾】</td>
+      <td> 706 </td>
+      <td> 837 </td>
+      <td><center>【昇腾】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/mistral/README.md">Mistral</a></td>
-      <td>7B</td>
+      <td rowspan="1"><a href="https://huggingface.co/mistralai">Mistral</a></td>
+      <td><a href="https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2/tree/main">7B</a></td>
       <td> 32K</td>
+      <th>Legacy</th>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2806 </td>
       <td> 2734 </td>
-      <td>【昇腾】</td>
+      <td><center>【NAIE】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="2"><a href="examples/gemma/README.md">Gemma</a></td>
-      <td>2B</td>
+      <td rowspan="2"><a href="https://huggingface.co/google">Gemma</a></td>
+      <td><a href="https://huggingface.co/google/gemma-2b/tree/main">2B</a></td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 6821 </td>
       <td> 7602 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td>7B</td>
+      <td><a href="https://huggingface.co/google/gemma-7b">7B</a></td>
       <td> 8K </td>
+      <th>Legacy</th>
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2938 </td>
       <td> 2607 </td>
-      <td>【昇腾】</td>
+      <td><center>【GTS】</td>
+      <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="2"><a href="examples/gpt3/README.md">GPT3</a></td>
+      <td rowspan="2">GPT3</td>
       <td>175B</td>
       <td> 2K </td>
+      <th>Legacy</th>
       <td> 16x8 </td>
       <td> FP16 </td>
       <td> 153 </td>
       <td> -- </td>
-      <td>【社区】</td>
+      <td><center>【昇腾】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
       <td>15B</td>
       <td> 2K </td>
+      <th>Legacy</th>
       <td> 1x8 </td>
       <td> FP16 </td>
       <td> 1890 </td>
       <td> 1840 </td>
-      <td>【社区】</td>
+      <td><center>【昇腾】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="examples/README.md">Grok1</a></td>
-      <td>40B</td>
+      <td rowspan="1"><a href="https://github.com/xai-org/grok-1">Grok1</a></td>
+      <td><a href="https://github.com/xai-org/grok-1">8x5B</a></td>
       <td> 8K </td>
+      <th>Mcore</th>
       <td> 2x8 </td>
       <td> BFP16 </td>
       <td> 1646 </td>
       <td> 2057 </td>
-      <td>【昇腾】</td>
+      <td><center>【昇腾】</td>
+      <td>【Pass】</td>
     </tr>
   </tbody>
 </table>
 
 ---
 
-## 加速算法与融合算子
+## Huggingface与Megatron-LM权重转换
 
-ModelLink支持张量并行、流水线并行、context并行、序列并行、重计算、分布式优化器等多种加速算法和融合算子，下表为各种加速特性对应的使能开关：
+ModelLink支持Huggingface、Megatron-Legacy以及Megatron-Core之间的权重格式互转，具体功能列表如下：
+
+
+<table>
+  <thead>
+    <tr>
+      <th>源格式</th>
+      <th>目标格式</th>
+      <th>支持特性</th>
+      <th>特性入参</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="12">HuggingFace </td>
+      <td rowspan="4">Megatron-Legacy</td>
+      <td>张量并行</td>
+      <td>--target-tensor-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行</td>
+      <td>--target-pipeline-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行动态划分</td>
+      <td>--num-layer-list</td>
+    </tr>
+    <tr>
+      <td>虚拟流水并行</td>
+      <td>--num-layers-per-virtual-pipeline-stage</td>
+    </tr>
+    <tr>
+      <td rowspan="8">Megatron-Core</td>
+      <td>张量并行</td>
+      <td>--target-tensor-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行</td>
+      <td>--target-pipeline-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行动态划分</td>
+      <td>--num-layer-list</td>
+    </tr>
+    <tr>
+      <td>虚拟流水并行</td>
+      <td>--num-layers-per-virtual-pipeline-stage</td>
+    </tr>
+    <tr>
+      <td>专家并行</td>
+      <td>--expert-model-parallel-size</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td rowspan="20">Megatron-Legacy </td>
+      <td rowspan="8">Huggingface</td>
+      <td>张量并行</td>
+      <td>--target-tensor-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行</td>
+      <td>--target-pipeline-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行动态划分</td>
+      <td>--num-layer-list</td>
+    </tr>
+    <tr>
+      <td>虚拟流水并行</td>
+      <td>--num-layers-per-virtual-pipeline-stage</td>
+    </tr>
+    <tr>
+      <td>LoRA训练模块</td>
+      <td>--lora-target-modules</td>
+    </tr>
+    <tr>
+      <td>LoRA权重</td>
+      <td>--lora-load</td>
+    </tr>
+    <tr>
+      <td>LoRA r</td>
+      <td>--lora-r</td>
+    </tr>
+    <tr>
+      <td>LoRA alpa</td>
+      <td>--lora-alpha</td>
+    </tr>
+    <tr>
+      <td rowspan="4">Megatron-Core</td>
+      <td>张量并行</td>
+      <td>--target-tensor-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行</td>
+      <td>--target-pipeline-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行动态划分</td>
+      <td>--num-layer-list</td>
+    </tr>
+    <tr>
+      <td>虚拟流水并行</td>
+      <td>--num-layers-per-virtual-pipeline-stage</td>
+    </tr>
+    <tr>
+      <td rowspan="4">Megatron-Legacy</td>
+      <td>张量并行</td>
+      <td>--target-tensor-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行</td>
+      <td>--target-pipeline-parallel-size</td>
+    </tr>
+  </tbody>
+  <tbody>
+    <tr>
+      <td rowspan="13">Megatron-Core </td>
+      <td rowspan="4">Huggingface</td>
+      <td>张量并行</td>
+      <td>--target-tensor-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行</td>
+      <td>--target-pipeline-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行动态划分</td>
+      <td>--num-layer-list</td>
+    </tr>
+    <tr>
+      <td>虚拟流水并行</td>
+      <td>--num-layers-per-virtual-pipeline-stage</td>
+    </tr>
+    <tr>
+      <td rowspan="4">Megatron-Legacy</td>
+      <td>张量并行</td>
+      <td>--target-tensor-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行</td>
+      <td>--target-pipeline-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行动态划分</td>
+      <td>--num-layer-list</td>
+    </tr>
+    <tr>
+      <td>虚拟流水并行</td>
+      <td>--num-layers-per-virtual-pipeline-stage</td>
+    </tr>
+    <tr>
+      <td rowspan="5">Megatron-Core</td>
+      <td>张量并行</td>
+      <td>--target-tensor-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行</td>
+      <td>--target-pipeline-parallel-size</td>
+    </tr>
+    <tr>
+      <td>专家并行</td>
+      <td>--expert-model-parallel-size</td>
+    </tr>
+  </tbody>
+</table>
+
+具体的权重转换功能命令介绍见[examples/README.md](./examples/README.md)
+
+---
+
+## 预训练加速算法与融合算子
+
+ModelLink预训练支持张量并行、流水线并行等多种加速算法和融合算子，下表为各种加速特性对应的使能开关：
 
 <table><thead>
   <tr>
     <th>使用场景</th>
     <th>特性名称</th>
     <th>具体参数</th>
-    <th>Mcore支持</th>
-    <th>Legacy支持</th>
+    <th>Mcore</th>
+    <th>Legacy</th>
   </tr></thead>
 <tbody>
   <tr>
@@ -611,28 +868,6 @@ ModelLink支持张量并行、流水线并行、context并行、序列并行、�
   </tr>
 </tbody></table>
 
-
-
-```bash
-torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
-    --use-mcore-models \
-    --tensor-model-parallel-size ${TP} \
-    --pipeline-model-parallel-size ${PP} \
-    --num-layer-list 5,6,6,6,6,5 \
-    --context-parallel-size ${CP} \
-    --context-parallel-algo ${CP_ALGO} \
-    --ulysses-degree-in-cp 2 \
-    --sequence-parallel \
-    --use-distributed-optimizer \
-    --use-flash-attn \
-    --use-fused-rmsnorm \
-    --use-fused-swiglu \
-    --overlap-grad-reduce \
-    --use-fused-rotary-pos-emb \
-    --use-mc2 \
-    ... \
-    ...
-```
 ```bash
 注意：
 如果需要开启 mc2，需保证:
@@ -640,6 +875,9 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
 2. 将 modellink\arguments.py 中 validate_args_decorator 函数中的第431行进行注释
    #args.use_mc2 = False
 ```
+
+具体的预训练方法见[examples/README.md](./examples/README.md)
+
 ---
 
 ## 基于昇腾芯片采集Profiling数据
@@ -705,9 +943,9 @@ ModelLink由华为公司的下列部门联合贡献 ：
 - 昇腾计算产品部
 - 计算算法部
 - 计算研究部
-- 开源计算工具部
-- 公共开发部
-- 全球技术服务部
+- 开源计算工具部: OCK
+- 公共开发部：NAIE
+- 全球技术服务部：GTS
 
 感谢来自社区的每一个PR，欢迎贡献 ModelLink
 
