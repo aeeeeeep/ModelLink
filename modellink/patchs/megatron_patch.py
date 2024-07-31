@@ -303,8 +303,8 @@ def patch_high_availability_feature():
     PatchManager.register_patch('megatron.training.training.setup_model_and_optimizer', setup_model_and_optimizer_wrapper)
 
 def patch_reuse_fp32_param():
-    # from modellink.core.optimizer.optimizer import optimizer_wrapper
-    from ..optimizer.optimizer import mixed_precision_optimizer_step, reuse_fp32_param_init_wrapper, \
+
+    from mindspeed.optimizer.optimizer import mixed_precision_optimizer_step, reuse_fp32_param_init_wrapper, \
         optimizer_config_init_wrapper
     from ..optimizer.distrib_optimizer import reuse_fp32_param_distrib_optimizer_init_wrapper
     megatron.core.optimizer.optimizer.MixedPrecisionOptimizer.step = mixed_precision_optimizer_step

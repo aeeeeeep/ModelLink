@@ -424,8 +424,6 @@ def _validate_instruction_finetune(args):
 def _validate_optimizer(args):
     if args.reuse_fp32_param and not args.bf16:
         raise AssertionError('--reuse-fp32-param only support for `bf16`')
-    if args.reuse_fp32_param and not args.use_distributed_optimizer:
-        raise AssertionError('--reuse-fp32-param only support for `use-distributed-optimizer`')
 
 def validate_args_decorator(megatron_validate_args):
     @wraps(megatron_validate_args)
