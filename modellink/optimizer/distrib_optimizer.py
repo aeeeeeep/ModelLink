@@ -91,7 +91,6 @@ def reuse_fp32_param_distrib_optimizer_init_wrapper(init_func):
             self.get_parameter_state_dp_zero = types.MethodType(get_parameter_state_dp_zero, self)
             self.fp16_tensor_convert_to_fp32_tensor = types.MethodType(fp16_tensor_convert_to_fp32_tensor_wrapper(fp16_tensor_convert_to_fp32_tensor), self)
             self.fp32_tensor_convert_to_fp16_tensor = types.MethodType(fp32_tensor_convert_to_fp16_tensor_wrapper(fp32_tensor_convert_to_fp16_tensor), self)
-
     return reuse_fp32_param_distrib_optimizer_init
 
 def load_parameter_state_from_dp_zero(self, state_dict):
@@ -108,7 +107,6 @@ def load_parameter_state_from_dp_zero(self, state_dict):
         return
     for i, shard_main_param_res_buffer in enumerate(self.shard_main_param_res_buffers):
         shard_res_numel = shard_main_param_res_buffer.numel()
-        recv_tensor = torch.empty((shard_res_numel,), dtype=torch.float16, device="cpu")
         if data_parallel_rank == 0:
             send_tensors = [
                 state_dict["shard_main_param_res"][i][
@@ -137,7 +135,6 @@ def get_parameter_state_dp_zero(self):
     )
     if data_parallel_world_size == 1 or not hasattr(self, "shard_main_param_res_buffers"):
         return state
-   
     # gather buffer res
     buffer_res_full_shard = []
     for shard_main_param_res_buffer in self.shard_main_param_res_buffers:
@@ -145,7 +142,6 @@ def get_parameter_state_dp_zero(self):
             recv_tensors = [torch.empty((shard_main_param_res_buffer.numel(),), dtype=torch.float16, device="cpu") for _ in range(data_parallel_world_size)]
         else:
             recv_tensors = None
-       
         send_tensor = torch.empty((shard_main_param_res_buffer.numel(),), dtype=torch.float16, device="cpu")
         send_tensor_bf16_view = torch.tensor(send_tensor.data.untyped_storage(), dtype=torch.bfloat16, device=send_tensor.device)
         send_tensor_bf16_view.copy_(shard_main_param_res_buffer.detach().cpu())
@@ -157,7 +153,6 @@ def get_parameter_state_dp_zero(self):
         )
         if data_parallel_rank == 0:
             buffer_res_full_shard.append(torch.cat(recv_tensors))
-   
     state['shard_main_param_res'] = buffer_res_full_shard
     return state
 
@@ -171,31 +166,26 @@ def fp16_tensor_convert_to_fp32_tensor_wrapper(init_func):
             for shard_fp32_param_fp16_view in self.shard_fp32_param_fp16_view_group:
                 shard_fp32_param_fp16_view.copy_(
                         shard_fp32_param_fp16_view.view(2, -1).transpose(1, 0).reshape(-1).contiguous())
-
             for shard_res_and_buffer_model_param in self.shard_main_param_res_buffers:
                 shard_main_param_int32_view_buffer = self.model_param_bucket_and_shard_main_param_int32_view_map[shard_res_and_buffer_model_param]
                 if not self.first_sub_flag:
                     shard_main_param_int32_view_buffer.sub_(32768)
         else:
             init_func(self)
-
     return fp16_tensor_convert_to_fp32_tensor_func
     
 def fp32_tensor_convert_to_fp16_tensor_wrapper(init_func):
     @wraps(init_func)
     def fp32_tensor_convert_to_fp16_tensor_func(self):
         data_parallel_world_size = torch.distributed.get_world_size(self.data_parallel_group)
-        # print(data_parallel_world_size ,'------------------------------------------------------')
         if data_parallel_world_size == 1:
             for shard_res_and_buffer_model_param in self.shard_main_param_res_buffers:
                 shard_main_param_int32_view_buffer = self.model_param_bucket_and_shard_main_param_int32_view_map[shard_res_and_buffer_model_param]
                 shard_main_param_int32_view_buffer.add_(32768)
                 self.first_sub_flag = False
-    
             for shard_fp32_param_fp16_view in self.shard_fp32_param_fp16_view_group:
                 shard_fp32_param_fp16_view.copy_(
                         shard_fp32_param_fp16_view.view(-1, 2).transpose(1, 0).reshape(-1).contiguous())
         else:
             init_func(self)
-
     return fp32_tensor_convert_to_fp16_tensor_func

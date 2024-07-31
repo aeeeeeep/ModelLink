@@ -410,11 +410,9 @@ def _validate_position_embedding(args):
     if args.tokenizer_padding_side == 'left' and args.position_embedding_type == 'alibi':
         raise AssertionError('Alibi is not support tokenizer-padding-side left now.')
 
-
 def _validate_high_availability(args):
     if args.enable_optimizer_state_local_copy and not args.enable_high_availability:
         raise AssertionError('switch of the high availability feature is unsupported')
-
 
 def _validate_instruction_finetune(args):
     if args.variable_seq_lengths:
@@ -433,9 +431,7 @@ def validate_args_decorator(megatron_validate_args):
         variable_seq_lengths = args.variable_seq_lengths
         megatron_validate_args(args, defaults)
         args.variable_seq_lengths = variable_seq_lengths
-
         args.use_mc2 = False
-
         _validate_cp_args(args)
         _validate_create_attention_mask_in_dataloader(args)
         _validate_instruction_finetune(args)
