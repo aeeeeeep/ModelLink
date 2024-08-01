@@ -202,7 +202,7 @@ ModelLink已发布版本维护策略：
       <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="https://huggingface.co/THUDM">ChatGLM3</a></td>
+      <td rowspan="4"><a href="https://huggingface.co/THUDM">ChatGLM3</a></td>
       <td><a href="https://huggingface.co/THUDM/chatglm3-6b/tree/main">6B</a></td>
       <td> 8K </td>
       <th>Legacy</th>
@@ -211,6 +211,38 @@ ModelLink已发布版本维护策略：
       <td> 4297 </td>
       <td> 4267 </td>
       <td><center>【昇腾】</td>
+      <td>【Test】</td>
+    <tr>
+      <td>6B</td>
+      <td>8K</td>
+      <th>Mcore</th>
+      <td >1x8</td>
+      <td> FP16 </td>
+      <td> 4611 </td>
+      <td> 4543 </td>
+      <td>【昇腾】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td>6B</td>
+      <td>32K</td>
+      <th>Mcore</th>
+      <td >1x8</td>
+      <td> FP16 </td>
+      <td> 2650 </td>
+      <td> 2887 </td>
+      <td>【昇腾】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td>6B</td>
+      <td>64K</td>
+      <th>Mcore</th>
+      <td >2x8</td>
+      <td> FP16 </td>
+      <td> 1724 </td>
+      <td> 2097 </td>
+      <td>【昇腾】</td>
       <td>【Test】</td>
     </tr>
     <tr>
