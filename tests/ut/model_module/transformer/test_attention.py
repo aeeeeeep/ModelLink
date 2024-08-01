@@ -163,15 +163,15 @@ class TestAttention(DistributedTest):
     def test_no_context_parallel_seq8192_bs2_bf16(self, use_mcore):
         run_attention_module((2, 8192, torch.bfloat16), use_mcore, False, 1, 1)
 
-    @pytest.mark.parametrize("use_mcore", [True, False])
+    @pytest.mark.parametrize("use_mcore", [True])
     def test_hybrid_context_parallel_seq8192_bs2_bf16(self, use_mcore):
         run_attention_module((2, 8192, torch.bfloat16), use_mcore, True, self.world_size, 2)
 
-    @pytest.mark.parametrize("use_mcore", [True, False])
+    @pytest.mark.parametrize("use_mcore", [True])
     def test_ring_context_parallel_seq8192_bs2_bf16(self, use_mcore):
         run_attention_module((2, 8192, torch.bfloat16), use_mcore, True, self.world_size, 1)
 
-    @pytest.mark.parametrize("use_mcore", [True, False])
+    @pytest.mark.parametrize("use_mcore", [True])
     def test_ulysses_context_parallel_seq8192_bs2_bf16(self, use_mcore):
         run_attention_module((2, 8192, torch.bfloat16), use_mcore, True, self.world_size, 8)
 

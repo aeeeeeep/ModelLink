@@ -5,9 +5,9 @@ import subprocess
 from pathlib import Path
 import torch
 
-from utils import judge_expression
-from utils import weight_compare
 import modellink
+from ut.utils import judge_expression
+from ut.utils import weight_compare
 
 
 class CovertCkptFromHuggingfaceArgs:
