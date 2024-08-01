@@ -15,7 +15,6 @@ CKPT_LOAD_DIR="your model ckpt path"
 
 TP=1
 PP=2
-CP=1
 MBS=1
 GBS=128
 SEQ_LEN=8192
@@ -41,8 +40,6 @@ GPT_ARGS="
     --seq-length ${SEQ_LEN} \
     --micro-batch-size ${MBS} \
     --global-batch-size ${GBS} \
-    --context-parallel-algo megatron_cp_algo \
-    --context-parallel-size ${CP} \
     --max-position-embeddings ${SEQ_LEN} \
     --padded-vocab-size 65024 \
     --make-vocab-size-divisible-by 1 \
