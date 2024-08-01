@@ -4,8 +4,9 @@ import os
 import subprocess
 from pathlib import Path
 import torch
-from utils import judge_expression
+
 import modellink
+from ut.utils import judge_expression
 
 
 class CovertCkptFromMegatronArgs:

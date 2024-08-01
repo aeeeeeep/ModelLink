@@ -6,8 +6,9 @@ from pathlib import Path
 import numpy as np
 import torch
 from transformers import AutoModelForCausalLM
-from utils import judge_expression
+
 import modellink
+from ut.utils import judge_expression
 
 
 class CovertCkptToHuggingfaceArgs:
