@@ -43,7 +43,7 @@ GPT_ARGS="
     --global-batch-size ${GBS} \
     --context-parallel-algo megatron_cp_algo \
     --context-parallel-size ${CP} \
-    --max-position-embeddings 65536 \
+    --max-position-embeddings ${SEQ_LEN} \
     --padded-vocab-size 65024 \
     --make-vocab-size-divisible-by 1 \
     --group-query-attention \
