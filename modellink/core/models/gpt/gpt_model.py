@@ -26,7 +26,8 @@ def gpt_model_forward(self, input_ids: Tensor,
                       labels: Tensor = None,
                       inference_params: InferenceParams = None,
                       packed_seq_params: PackedSeqParams = None,
-                      extra_block_kwargs: dict = None) -> Tensor:
+                      extra_block_kwargs: dict = None,
+                      tokentype_ids=None) -> Tensor:
     """
     Forward function of the GPT Model This function passes the input tensors
     through the embedding layer, and then the decoeder and finally into the post
