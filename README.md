@@ -496,10 +496,10 @@ ModelLink已发布版本维护策略：
       <td rowspan="1"><a href="https://huggingface.co/mistralai">Mistral</a></td>
       <td><a href="https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2/tree/main">7B</a></td>
       <td> 32K</td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 2806 </td>
+      <td> 2900 </td>
       <td> 2734 </td>
       <td><center>【NAIE】</td>
       <td>【Pass】</td>
