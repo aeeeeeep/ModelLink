@@ -440,6 +440,7 @@ def _validate_moe_expert_capacity_factor(args):
             raise ValueError(f'moe_expert_capacity_factor only works with alltoall token dispatcher')
         if args.moe_expert_capacity_factor < 0:
             args.moe_expert_capacity_factor = None
+            print_rank0_by_args(f'When moe_expert_capacity_factor < 0, no token would be drop, so moe_expert_capacity_factor should be set to false.')
         if args.moe_router_load_balancing_type not in ["aux_loss", "none"]:
             raise ValueError(f'moe_expert_capacity_factor only works with aux_loss or none load balancing')
         if args.moe_expert_capacity_factor is None and args.moe_pad_expert_input_to_capacity:

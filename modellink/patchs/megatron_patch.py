@@ -107,6 +107,7 @@ def patch_fusions():
 
 
 def patch_core_models(args):
+    from megatron.core.tensor_parallel import ColumnParallelLinear, RowParallelLinear
     from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec
     from mindspeed.core.models.common.embeddings.rotary_pos_embedding import get_pos_emb_on_this_cp_rank
     from mindspeed.core.fusions.rotary_pos_embedding import rotary_embedding_init_wrapper
@@ -116,7 +117,6 @@ def patch_core_models(args):
     from ..core.transformer.dot_product_attention import dot_product_attention_init_wrapper, \
         dot_product_attention_forward_wrapper
     from ..core.transformer.attention import attention_init_wrapper, attention_forward
-    from megatron.core.tensor_parallel import ColumnParallelLinear, RowParallelLinear
 
     # Embedding
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.get_pos_emb_on_this_cp_rank', get_pos_emb_on_this_cp_rank)
