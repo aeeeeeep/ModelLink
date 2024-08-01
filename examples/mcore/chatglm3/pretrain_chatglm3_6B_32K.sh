@@ -15,11 +15,9 @@ CKPT_LOAD_DIR="your model ckpt path"
 
 TP=1
 PP=1
-CP=8
 MBS=1
 GBS=32
 SEQ_LEN=32768
-CP_ALGO=ulysses_cp_algo
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
@@ -42,8 +40,6 @@ GPT_ARGS="
     --seq-length ${SEQ_LEN} \
     --micro-batch-size ${MBS} \
     --global-batch-size ${GBS} \
-    --context-parallel-algo ${CP_ALGO} \
-    --context-parallel-size ${CP} \
     --max-position-embeddings ${SEQ_LEN} \
     --padded-vocab-size 65024 \
     --make-vocab-size-divisible-by 1 \
@@ -96,7 +92,7 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 10000 \
+    --save-interval 1000 \
     --eval-interval 1000 \
     --eval-iters 10 \
 "
