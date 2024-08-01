@@ -193,7 +193,18 @@ def _add_moe_args(parser):
     group.add_argument('--moe-z-loss-coeff', type=float, default=0.0,
                        help='Scaling coefficient for the z-loss: a starting value of 1e-3 is recommended.')
     group.add_argument('--moe-train-capacity-factor', type=float, default=1.0,
-                       help='The capacity of the MoE expert at training time')
+                       help='The capacity of the MoE expert at training time used in legacy moe layer called SwitchMLP.')
+
+    # For megatron_moe drop
+    group.add_argument('--moe-expert-capacity-factor', type=float, default=None,
+                       help='The capacity factor for each expert, None means no token will be dropped.')
+    group.add_argument('--moe-pad-expert-input-to-capacity', action='store_true',
+                       help='Pads the input for each expert to match the expert capacity length, effective only after the --moe-expert-capacity-factor is set.')
+    group.add_argument('--moe-token-drop-policy', type=str, default='probs', choices=['probs', 'position'],
+                       help='The policy to drop tokens. Can be either "prob" or "position". If "prob", the tokens with the lowest probabilities will be dropped. If "position", tokens at the end of each batch will be dropped.')
+    group.add_argument('--moe-token-dispatcher-type', type=str, choices=['allgather', 'alltoall'], default='allgather',
+                       help='The dispatcher type for moe token dispatching.')
+
     group.add_argument('--noisy-gate-policy', type=str, default=None,
                        help="noisy gate policy, valid options are 'Jitter', 'RSample' or 'None'.")
     group.add_argument('--enable-token-rearrange-opt', action='store_true',
@@ -420,6 +431,33 @@ def _validate_instruction_finetune(args):
             raise AssertionError('Context parallelism is forbidden when use variable seq lengths.')
 
 
+def _validate_moe_expert_capacity_factor(args):
+    if args.moe_expert_capacity_factor is not None:
+        if args.moe_token_dispatcher_type != "alltoall":
+            raise ValueError(f'moe_expert_capacity_factor only works with alltoall token dispatcher')
+        if args.moe_expert_capacity_factor < 0:
+            args.moe_expert_capacity_factor = None
+        if args.moe_router_load_balancing_type not in ["aux_loss", "none"]:
+            raise ValueError(f'moe_expert_capacity_factor only works with aux_loss or none load balancing')
+        if args.moe_expert_capacity_factor is None and args.moe_pad_expert_input_to_capacity:
+            raise ValueError(f'moe_expert_capacity_factor must be set to use moe_pad_expert_input_to_capacity')
+
+
+def core_transformer_config_from_args_wrapper(fn):
+    @wraps(fn)
+    def wrapper(args):
+        config = fn(args)
+        # moe_expert_capacity_factor (float): The capacity factor for each expert, None means no token will be dropped. The default is None.
+        config.moe_expert_capacity_factor = args.moe_expert_capacity_factor
+        # moe_pad_expert_input_to_capacity (bool): If True, pads the input for each expert to match the expert capacity length, effective only after the moe_expert_capacity_factor is set. The default setting is False.
+        config.moe_pad_expert_input_to_capacity = args.moe_pad_expert_input_to_capacity
+        # The policy to drop tokens. Can be either "prob" or "position". If "prob", the tokens with the lowest probabilities will be dropped. If "position", tokens at the end of each batch will be dropped.
+        config.moe_token_drop_policy = args.moe_token_drop_policy
+        return config
+
+    return wrapper
+
+
 def validate_args_decorator(megatron_validate_args):
     @wraps(megatron_validate_args)
     def wrapper(args, defaults=None):
@@ -436,10 +474,10 @@ def validate_args_decorator(megatron_validate_args):
         _validate_instruction_finetune(args)
         _validate_position_embedding(args)
         _validate_high_availability(args)
+        _validate_moe_expert_capacity_factor(args)
 
         from modellink.utils import print_args
         print_args('ModelLink Arguments', args)
         return args
 
     return wrapper
-
