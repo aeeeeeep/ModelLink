@@ -310,6 +310,11 @@ def _add_training_args(parser):
     group.add_argument('--transformer-impl', default='local',
                        choices=['local', 'transformer_engine'],
                        help='Which Transformer implementation to use.')
+    group.add_argument('--enable-recompute-layers-per-pp-rank',
+                       action='store_true', default=False,
+                       help='If enabled, --recompute-num-layers will mean the number of '
+                            'layers recomputed in each pp rank. Otherwise it means the number '
+                            'of layers recomputed in each vpp rank.')
     group.add_argument('--pre-tockens', type=int, default=65536,
                        help='pre-tockens is used by Flash attention')
     group.add_argument('--next-tockens', type=int, default=0,
