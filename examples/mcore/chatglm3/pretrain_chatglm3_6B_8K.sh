@@ -78,7 +78,6 @@ GPT_ARGS="
     --no-load-optim \
     --no-load-rng \
     --fp16 \
-    --kv-head-repeat-before-uly-alltoall \
     --overlap-grad-reduce \
     --overlap-param-gather \
 "
