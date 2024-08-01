@@ -112,6 +112,9 @@ def _validate_cp_args(args):
                         'for ulysses alltoall as well as memory usage.')
 
     if args.context_parallel_size <= 1:
+        if args.kv_head_repeat_before_uly_alltoall:
+            args.kv_head_repeat_before_uly_alltoall = False
+            print_rank0_by_args(args, f"When context_parallel is not activated, kv_head_repeat_before_uly_alltoall would be set to False for reducing memory usage.")
         return
 
     # In context parallel we use FA
