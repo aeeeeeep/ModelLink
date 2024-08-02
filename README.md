@@ -13,7 +13,7 @@
     </a>
 </p>
 
-ModelLink旨在为华为 [昇腾芯片](https://open.codehub.huawei.com/OpenBaize/Ascend/ascendspeed/files?ref=master&filePath=examples%2Fbaichuan%2Fpretrain_baichuan_zero_7B.sh&isFile=true) 上提供端到端的大语言模型方案, 包含模型，算法，以及下游任务。
+ModelLink旨在为华为 [昇腾芯片](https://www.hiascend.com/) 上提供端到端的大语言模型方案, 包含模型，算法，以及下游任务。
 
 ---
 
@@ -868,6 +868,13 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
     <td>--sliding-window</td>
     <td>Yes</td>
     <td>Yes</td>
+  </tr>
+ <tr>
+    <td>显存 </td>
+    <td>参数副本复用</td>
+    <td>--reuse-fp32-param</td>
+    <td>Yes</td>
+    <td> Yes</td>
   </tr>
   <tr>
     <td rowspan="3">通信</td>
