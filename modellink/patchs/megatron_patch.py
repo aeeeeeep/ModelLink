@@ -112,6 +112,7 @@ def patch_core_models(args):
     from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec
     from mindspeed.core.models.common.embeddings.rotary_pos_embedding import get_pos_emb_on_this_cp_rank
     from mindspeed.core.fusions.rotary_pos_embedding import rotary_embedding_init_wrapper
+    from ..core import build_layers_wrapper
     from ..utils import get_batch_on_this_cp_rank
     from ..core import rotary_embedding_forward, apply_rotary_pos_emb_bshd_wrapper
     from ..core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper
