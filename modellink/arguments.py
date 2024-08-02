@@ -290,7 +290,9 @@ def _add_network_size_args(parser):
 def _add_algorithm_args(parser):
     group = parser.add_argument_group(title='algorithm')
     group.add_argument('--rotary-base', type=float, help='rotary-base.')
-
+    group.add_argument('--reuse-fp32-param', action='store_true',
+                       help='The distributed training optimizer frees up '
+                            'param copies of FP32 to save memory.')
     return parser
 
 
@@ -462,6 +464,13 @@ def core_transformer_config_from_args_wrapper(fn):
     return wrapper
 
 
+def _validate_optimizer(args):
+    if args.reuse_fp32_param and not args.bf16:
+        raise AssertionError('--reuse-fp32-param only support for `bf16`')
+    if args.reuse_fp32_param and args.enable_high_availability:
+        raise AssertionError('reuse-fp32-param and enable-high-availability do not support enabling together.')
+
+
 def validate_args_decorator(megatron_validate_args):
     @wraps(megatron_validate_args)
     def wrapper(args, defaults=None):
@@ -480,6 +489,7 @@ def validate_args_decorator(megatron_validate_args):
         _validate_high_availability(args)
         _validate_moe_expert_capacity_factor(args)
 
+        _validate_optimizer(args)
         from modellink.utils import print_args
         print_args('ModelLink Arguments', args)
         return args

@@ -869,6 +869,13 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
     <td>Yes</td>
     <td>Yes</td>
   </tr>
+ <tr>
+    <td>显存 </td>
+    <td>参数副本复用</td>
+    <td>--reuse-fp32-param</td>
+    <td>Yes</td>
+    <td> Yes</td>
+  </tr>
   <tr>
     <td rowspan="3">通信</td>
     <td>梯度reduce通算掩盖</td>
