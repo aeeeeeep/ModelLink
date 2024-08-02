@@ -23,7 +23,7 @@ TRANSPOSE_BF16_BLOCK_SIZE = 4096 * 4096
 def reuse_fp32_param_distrib_optimizer_init_wrapper(init_func):
     @wraps(init_func)
     def reuse_fp32_param_distrib_optimizer_init(self, *args, **kwargs):
-        init_func(*args, **kwargs)
+        init_func(self, *args, **kwargs)
         global_args = get_args()
         self.reuse_fp32_param = global_args.reuse_fp32_param if hasattr(global_args, "reuse_fp32_param") else False
         # A flag that disables the value subtraction when the `fp16_tensor_convert_to_fp32_tensor` function is invoked for the first time.
