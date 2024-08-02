@@ -319,10 +319,10 @@ ModelLink已发布版本维护策略：
       <td rowspan="4"><a href="https://huggingface.co/meta-llama">LLaMA2</td>
       <td><a href="https://huggingface.co/daryl149/llama-2-7b-hf/tree/main">7B</a></td>
       <td>4K</td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 4200 </td>
+      <td> 4672 </td>
       <td> 3850 </td>
       <td><center>【NAIE】</td>
       <td>【Pass】</td>
@@ -330,10 +330,10 @@ ModelLink已发布版本维护策略：
     <tr>
       <td><a href="https://huggingface.co/NousResearch/Llama-2-13b-hf/tree/main">13B</a></td>
       <td>4K</td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 1990 </td>
+      <td> 2016 </td>
       <td> 1920 </td>
       <td><center>【NAIE】</td>
       <td>【Pass】</td>
@@ -578,7 +578,7 @@ ModelLink已发布版本维护策略：
       <td> 8K </td>
       <th>Mcore</th>
       <td> 2x8 </td>
-      <td> BFP16 </td>
+      <td> BF16 </td>
       <td> 1646 </td>
       <td> 2057 </td>
       <td><center>【昇腾】</td>
