@@ -75,8 +75,8 @@ MODEL_ARGS="
     --swiglu \
     --group-query-attention \
     --num-query-groups 4 \
-    --seq-length 65536 \
-    --max-position-embeddings 65536 \
+    --seq-length 32768 \
+    --max-position-embeddings 32768 \
     --micro-batch-size 1 \
 "
 
@@ -125,8 +125,8 @@ DATA_ARGS="
 # add --finetune arguments here to solve checkpoint problem
 OUTPUT_ARGS="
     --log-interval 1 \
-    --train-iters 15 \
-    --save-interval 10000 \
+    --train-iters 1 \
+    --save-interval 1 \
     --eval-interval 10000 \
     --eval-iters 1 \
     --finetune
@@ -142,6 +142,6 @@ torchrun $DISTRIBUTED_ARGS $basepath/pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --save $CKPT_SAVE_DIR \
+    --save $CKPT_LOAD_DIR \
     --load $CKPT_LOAD_DIR \
     | tee ${log_dir}
