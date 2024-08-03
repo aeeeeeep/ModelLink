@@ -23,7 +23,6 @@ from mindspeed.core.fusions.fused_softmax import (is_kernel_available, ScaledUpp
 from mindspeed.core.fusions.fused_bias_swiglu import SwiGLUFunction, BiasSwiGLUFunction
 from mindspeed.core.tensor_parallel.random import _set_cuda_rng_state
 from mindspeed.core.tensor_parallel.cross_entropy import vocab_parallel_cross_entropy_forward
-from mindspeed.core.transformer.moe.router import aux_loss_load_balancing
 from mindspeed.initialize import _compile_dependencies
 
 from ..model import (
@@ -34,9 +33,8 @@ from ..model import (
     ParallelAttentionForward, parallel_transformer_forward, parallel_mlp_init_wrapper,
     rms_norm_init_wrapper, rms_norm_forward
 )
-from ..core import (vocab_embedding_wrapper, initialize_model_parallel_decorator,
+from ..core import (initialize_model_parallel_decorator,
                    build_generic_dataset, _build_document_sample_shuffle_indices,
-                   topk_router_forward, topk_router_routing, z_loss_func,
                    TransformerLayerSubmodules, transformer_layer_init_wrapper,
                    transformer_layer_forward, gpt_model_forward, get_num_layers_to_build_wrapper,
                    start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
@@ -76,7 +74,7 @@ def patch_megatron_core():
     modellink_args = get_modellink_args()
     patch_fusions()
     patch_core_models(modellink_args)
-    patch_core_transformers()
+    patch_core_transformers(modellink_args)
     patch_pipeline_parallel()
     patch_tensor_parallel()
     patch_parallel_state()
@@ -91,6 +89,7 @@ def patch_megatron_noncore():
     patch_training()
     patch_log_handler()
     patch_high_availability_feature()
+    patch_optimizer()
 
 
 def patch_fusions():
@@ -109,10 +108,11 @@ def patch_fusions():
 
 
 def patch_core_models(args):
-    from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec
     from megatron.core.tensor_parallel import ColumnParallelLinear, RowParallelLinear
+    from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec
     from mindspeed.core.models.common.embeddings.rotary_pos_embedding import get_pos_emb_on_this_cp_rank
     from mindspeed.core.fusions.rotary_pos_embedding import rotary_embedding_init_wrapper
+    from ..core import build_layers_wrapper
     from ..utils import get_batch_on_this_cp_rank
     from ..core import rotary_embedding_forward, apply_rotary_pos_emb_bshd
     from ..core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper
@@ -157,11 +157,13 @@ def patch_core_models(args):
         # MoE MLP not use mc2 linear
         from megatron.core.transformer.transformer_block import TransformerBlock
         TransformerBlock._build_layers = build_layers_wrapper(TransformerBlock._build_layers, ColumnParallelLinear.forward,
-            RowParallelLinear.forward)
+                                                              RowParallelLinear.forward)
 
 
-def patch_core_transformers():
-    from ..core import PTNorm
+def patch_core_transformers(args):
+    from mindspeed.core.transformer.moe.router import aux_loss_load_balancing
+    from ..core import (PTNorm, topk_router_forward, topk_router_routing, z_loss_func, \
+                        allgather_token_permutation, allgather_token_unpermutation)
 
     PatchManager.register_patch('megatron.core.transformer.transformer_block.TENorm', PTNorm)
     PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.routing', topk_router_routing)
@@ -173,6 +175,27 @@ def patch_core_transformers():
     PatchManager.register_patch('megatron.core.transformer.transformer_block.get_num_layers_to_build',
                                 get_num_layers_to_build_wrapper)
 
+    # For mcore moe
+    if args.moe_permutation_async_comm and args.moe_token_dispatcher_type == 'allgather':
+        PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAllGatherTokenDispatcher.token_permutation', allgather_token_permutation)
+        PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAllGatherTokenDispatcher.token_unpermutation', allgather_token_unpermutation)
+        PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.aux_loss_load_balancing', aux_loss_load_balancing)
+
+    # For drop and pad feature in all2all dispatcher
+    if args.moe_expert_capacity_factor:
+        from ..core.transformer.moe.router import aux_loss_load_balancing, apply_load_balancing_loss
+        from ..core.transformer.moe.moe_utils import topk_softmax_with_capacity
+        from ..arguments import core_transformer_config_from_args_wrapper
+        # balancing strategy relies on moe_expert_capacity_factor
+        PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.aux_loss_load_balancing', aux_loss_load_balancing)
+        PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.apply_load_balancing_loss', apply_load_balancing_loss)
+        PatchManager.register_patch('megatron.core.transformer.moe.moe_utils.topk_softmax_with_capacity', topk_softmax_with_capacity)
+        PatchManager.register_patch('megatron.training.arguments.core_transformer_config_from_args', core_transformer_config_from_args_wrapper)
+
+        if args.moe_token_dispatcher_type == 'alltoall':
+            from ..core.transformer.moe.token_dispatcher import MoEAlltoAllTokenDispatcher
+            PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAlltoAllTokenDispatcher', MoEAlltoAllTokenDispatcher)
+
 
 def patch_pipeline_parallel():
     # solve send recv bug
@@ -181,7 +204,7 @@ def patch_pipeline_parallel():
 
 def patch_tensor_parallel():
     from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
-
+    from ..core import vocab_embedding_wrapper
     # default_generators need replace after set_device
     PatchManager.register_patch('megatron.core.tensor_parallel.random._set_cuda_rng_state', _set_cuda_rng_state)
     # change masked_target for better performance
@@ -300,3 +323,14 @@ def patch_high_availability_feature():
     PatchManager.register_patch('megatron.core.optimizer.optimizer.clip_grad_norm_fp32', clip_grad_norm_fp32_wrapper)
     PatchManager.register_patch('megatron.core.optimizer.distrib_optimizer.DistributedOptimizer.__init__', distributed_optimizer_init_wrapper)
     PatchManager.register_patch('megatron.training.training.setup_model_and_optimizer', setup_model_and_optimizer_wrapper)
+
+
+def patch_optimizer():
+    if get_modellink_args().reuse_fp32_param:
+        from mindspeed.optimizer.optimizer import mixed_precision_optimizer_step, reuse_fp32_param_init_wrapper, \
+            optimizer_config_init_wrapper
+        from ..core.optimizer.distrib_optimizer import reuse_fp32_param_distrib_optimizer_init_wrapper
+        PatchManager.register_patch('megatron.core.optimizer.optimizer.MixedPrecisionOptimizer.step', mixed_precision_optimizer_step)
+        PatchManager.register_patch('megatron.core.optimizer.optimizer.Float16OptimizerWithFloat16Params.__init__', reuse_fp32_param_init_wrapper)
+        PatchManager.register_patch('megatron.core.optimizer.optimizer_config.OptimizerConfig.__init__', optimizer_config_init_wrapper)
+        PatchManager.register_patch('megatron.core.optimizer.distrib_optimizer.DistributedOptimizer.__init__', reuse_fp32_param_distrib_optimizer_init_wrapper)

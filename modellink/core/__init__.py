@@ -35,4 +35,4 @@ from .optimizer import get_megatron_optimizer_wrapper
 from .optimizer.clip_grads import clip_grad_norm_fp32_wrapper
 from .optimizer.distrib_optimizer import distributed_optimizer_init_wrapper
 from .transformer.custom_layers.transformer_engine import PTNorm
-from .transformer.custom_layers.token_dispatcher import allgather_token_permutation, allgather_token_unpermutation
+from .transformer.moe.token_dispatcher import allgather_token_permutation, allgather_token_unpermutation

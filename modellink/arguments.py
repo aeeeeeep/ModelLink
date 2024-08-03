@@ -160,6 +160,9 @@ def _validate_cp_args(args):
                         'for ulysses alltoall as well as memory usage.')
 
     if args.context_parallel_size <= 1:
+        if args.kv_head_repeat_before_uly_alltoall:
+            args.kv_head_repeat_before_uly_alltoall = False
+            print_rank0_by_args(args, f"When context_parallel is not activated, kv_head_repeat_before_uly_alltoall would be set to False for reducing memory usage.")
         return
 
     # In context parallel we use FA
@@ -242,7 +245,18 @@ def _add_moe_args(parser):
     group.add_argument('--moe-z-loss-coeff', type=float, default=0.0,
                        help='Scaling coefficient for the z-loss: a starting value of 1e-3 is recommended.')
     group.add_argument('--moe-train-capacity-factor', type=float, default=1.0,
-                       help='The capacity of the MoE expert at training time')
+                       help='The capacity of the MoE expert at training time used in legacy moe layer called SwitchMLP.')
+
+    # For megatron_moe drop
+    group.add_argument('--moe-expert-capacity-factor', type=float, default=None,
+                       help='The capacity factor for each expert, None means no token will be dropped.')
+    group.add_argument('--moe-pad-expert-input-to-capacity', action='store_true',
+                       help='Pads the input for each expert to match the expert capacity length, effective only after the --moe-expert-capacity-factor is set.')
+    group.add_argument('--moe-token-drop-policy', type=str, default='probs', choices=['probs', 'position'],
+                       help='The policy to drop tokens. Can be either "prob" or "position". If "prob", the tokens with the lowest probabilities will be dropped. If "position", tokens at the end of each batch will be dropped.')
+    group.add_argument('--moe-token-dispatcher-type', type=str, choices=['allgather', 'alltoall'], default='allgather',
+                       help='The dispatcher type for moe token dispatching.')
+
     group.add_argument('--noisy-gate-policy', type=str, default=None,
                        help="noisy gate policy, valid options are 'Jitter', 'RSample' or 'None'.")
     group.add_argument('--enable-token-rearrange-opt', action='store_true',
@@ -325,7 +339,9 @@ def _add_network_size_args(parser):
 def _add_algorithm_args(parser):
     group = parser.add_argument_group(title='algorithm')
     group.add_argument('--rotary-base', type=float, help='rotary-base.')
-
+    group.add_argument('--reuse-fp32-param', action='store_true',
+                       help='The distributed training optimizer frees up '
+                            'param copies of FP32 to save memory.')
     return parser
 
 
@@ -509,6 +525,39 @@ def _validate_group_limited_greedy(args):
         elif args.topk_group >= args.expert_model_parallel_size:
             raise AssertionError('The topk group ({}) should be less than n-group(EP)({}).'.format(args.topk_group, 
             args.expert_model_parallel_size))
+def _validate_moe_expert_capacity_factor(args):
+    if args.moe_expert_capacity_factor is not None:
+        if args.moe_token_dispatcher_type != "alltoall":
+            raise ValueError(f'moe_expert_capacity_factor only works with alltoall token dispatcher')
+        if args.moe_expert_capacity_factor < 0:
+            args.moe_expert_capacity_factor = None
+            print_rank0_by_args(f'When moe_expert_capacity_factor < 0, no token would be drop, so moe_expert_capacity_factor should be set to false.')
+        if args.moe_router_load_balancing_type not in ["aux_loss", "none"]:
+            raise ValueError(f'moe_expert_capacity_factor only works with aux_loss or none load balancing')
+        if args.moe_expert_capacity_factor is None and args.moe_pad_expert_input_to_capacity:
+            raise ValueError(f'moe_expert_capacity_factor must be set to use moe_pad_expert_input_to_capacity')
+
+
+def core_transformer_config_from_args_wrapper(fn):
+    @wraps(fn)
+    def wrapper(args):
+        config = fn(args)
+        # moe_expert_capacity_factor (float): The capacity factor for each expert, None means no token will be dropped. The default is None.
+        config.moe_expert_capacity_factor = args.moe_expert_capacity_factor
+        # moe_pad_expert_input_to_capacity (bool): If True, pads the input for each expert to match the expert capacity length, effective only after the moe_expert_capacity_factor is set. The default setting is False.
+        config.moe_pad_expert_input_to_capacity = args.moe_pad_expert_input_to_capacity
+        # The policy to drop tokens. Can be either "prob" or "position". If "prob", the tokens with the lowest probabilities will be dropped. If "position", tokens at the end of each batch will be dropped.
+        config.moe_token_drop_policy = args.moe_token_drop_policy
+        return config
+
+    return wrapper
+
+
+def _validate_optimizer(args):
+    if args.reuse_fp32_param and not args.bf16:
+        raise AssertionError('--reuse-fp32-param only support for `bf16`')
+    if args.reuse_fp32_param and args.enable_high_availability:
+        raise AssertionError('reuse-fp32-param and enable-high-availability do not support enabling together.')
 
 
 def validate_args_decorator(megatron_validate_args):
@@ -531,10 +580,11 @@ def validate_args_decorator(megatron_validate_args):
         _validate_yarn(args)
         _validate_transformer_block_build_layers(args)
         _validate_group_limited_greedy(args)
+        _validate_moe_expert_capacity_factor(args)
 
+        _validate_optimizer(args)
         from modellink.utils import print_args
         print_args('ModelLink Arguments', args)
         return args
 
     return wrapper
-
