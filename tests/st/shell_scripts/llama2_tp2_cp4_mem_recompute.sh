@@ -19,11 +19,13 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 basepath=$(cd `dirname $0`; cd ../../../; pwd)
 
+rm -rf /home/r00803854/llama-2-mcore-tp2-test
 
 CKPT_SAVE_DIR=/data/ckpt
-CKPT_LOAD_DIR=/home/r00803854/llama-2-mcore-tp2-test
+CKPT_LOAD_DIR=/data/llama-2-mcore-tp2-cp4-test
 DATA_PATH=/data/pretrain_dataset/alpaca_text_document
 TOKENIZER_MODEL=/data/llama-2-7b-hf/tokenizer.model
+
 
 NUM_LAYER=8
 GBS=16
