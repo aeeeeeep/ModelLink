@@ -64,11 +64,11 @@ ModelLink已发布版本维护策略：
 |           软件            | [版本](https://www.hiascend.com/zh/) |
 | :-----------------------: |:----------------------------------:|
 |          Python           |                3.8                 |
-|          driver           |         在研版本          |
-|         firmware          |         在研版本          |
+|          Driver           |         在研版本          |
+|         Firmware          |         在研版本          |
 |           CANN            |             在研版本             |
-|           torch           |            2.1.0、2.2.0             |
-|         torch_npu         |           在研版本           |
+|           Torch           |            2.1.0、2.2.0             |
+|         Torch_npu         |           在研版本           |
 
 
 【现版本实测性能（硬件信息：Atlas 900 A2 PODc）】
@@ -382,6 +382,29 @@ ModelLink已发布版本维护策略：
       <td> 355 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="https://modelscope.cn/organization/LLM-Research">LLaMA3.1</td>
+      <td><a href="https://modelscope.cn/models/LLM-Research/Meta-Llama-3.1-8B">8B</a></td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2280 </td>
+      <td> 2520 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td><a href="https://modelscope.cn/models/LLM-Research/Meta-Llama-3.1-8B">8B</a></td>
+      <td>128K</td>
+      <th>Mcore</th>
+      <td>4x8</td>
+      <td>BF16 </td>
+      <td> 1297 </td>
+      <td> -- </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
       <td rowspan="3"><a href="https://huggingface.co/Qwen">Qwen</a></td>
