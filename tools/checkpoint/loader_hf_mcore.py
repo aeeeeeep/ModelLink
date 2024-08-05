@@ -17,9 +17,13 @@ import os
 import sys
 import types
 import torch
+import logging as logger
 import transformers
 from models import get_megatron_model
 from models import get_huggingface_model
+
+logger.basicConfig(format="")
+logger.getLogger().setLevel(logger.INFO)
 
 
 def add_arguments(parser):
@@ -51,8 +55,6 @@ def add_arguments(parser):
                             'This is added for computational efficiency reasons.')
     group.add_argument('--use-mcore-models', action='store_true',
                        help='Use the implementation from megatron core')
-    group.add_argument('--model-type-hf', type=str,
-                       help='huggingface model type e.g., llama2, qwen, ...')
 
 
 def verify_transformers_version():
@@ -98,14 +100,14 @@ def get_message_preprocess(model, md):
     }
 
     # bloom
-    if model.has_embedding_word_embeddings_norm():
+    if model.has_embedding_word_embeddings_norm_module():
         message["word embeddings norm_w"] = model.get_embedding_word_embeddings_norm_weight()
         message["word embeddings norm_b"] = model.get_embedding_word_embeddings_norm_bias()
 
     if md.position_embedding_type == 'learned_absolute':
         message["position embeddings"] = model.get_embedding_position_embeddings_weight()
     else:
-        if model.has_embedding_position_embeddings():
+        if model.has_embedding_position_embeddings_module():
             raise ValueError("model should have position_embeddings")
 
     return message
@@ -241,7 +243,7 @@ def _load_checkpoint(queue, args):
     model_mg.update_module(model_hf)
 
     def queue_put(name, msg):
-        print(f"sending {name}")
+        logger.info(f"sending {name}")
         msg["name"] = name
         queue.put(msg)
 
