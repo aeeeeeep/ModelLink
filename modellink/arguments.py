@@ -56,6 +56,54 @@ def process_args(parser):
     parser = _add_dataset_args(parser)
     parser = _add_high_availability_args(parser)
     parser = _add_cp_args(parser)
+    parser = _add_mla_args(parser)
+    parser = _add_yarn_args(parser)
+    parser = _add_deepseek_moe_args(parser)
+
+    return parser
+
+
+def _add_mla_args(parser):
+    group = parser.add_argument_group(title='multi-head latent attention')
+    group.add_argument('--multi-head-latent-attention', action='store_true', default=False,
+                       help='Use Multi-head Latent Attention(MLA)')
+    group.add_argument('--q-lora-rank', type=int, default=None, help='The low rank of q')
+    group.add_argument('--kv-lora-rank', type=int, default=None, help='The low rank of k and v')
+    group.add_argument('--v-head-dim', type=int, default=None, help='The head dim of v')
+    group.add_argument('--qk-rope-head-dim', type=int, default=None, help='The qk head dim for rope')
+    group.add_argument('--qk-nope-head-dim', type=int, default=None, help='The qk head dim for only self-attn')
+
+    return parser
+
+
+def _add_yarn_args(parser):
+    group = parser.add_argument_group(title='yarn')
+    group.add_argument('--rope-scaling-type', type=str, default=None, choices=['yarn', ],
+                       help='Set the rope scaling type, only support "yarn" type now')
+    group.add_argument('--rope-scaling-beta-fast', type=int, default=32, help='Yarn rope: rope beta fast')
+    group.add_argument('--rope-scaling-beta-slow', type=int, default=1, help='Yarn rope: rope beta slow')
+    group.add_argument('--rope-scaling-factor', type=float, default=1.0, help='Yarn rope: rope factor')
+    group.add_argument('--rope-scaling-mscale', type=float, default=1.0, help='Yarn rope: rope mscale')
+    group.add_argument('--rope-scaling-mscale-all-dim', type=float, default=0.0, help='Yarn rope: rope mscale all dim')
+    group.add_argument('--rope-scaling-original-max-position-embeddings', type=int, default=None,
+                       help='Yarn rope: rope original max position embeddings')
+    return parser
+
+
+def _add_deepseek_moe_args(parser):
+    group = parser.add_argument_group(title='deepseek moe')
+
+    group.add_argument('--moe-intermediate-size', type=int, default=None, help='The ffn hidden size of MoE layer')
+    group.add_argument('--n-shared-experts', type=int, default=None,
+                       help='This value is the number of shared experts, which is equal to the intermediate_size '
+                            'of the shared experts divided by the moe_intermediate_size.')
+    group.add_argument('--topk-group', type=int, default=None,
+                       help='Choose topK group experts in group_limited_greedy_topK method')
+    group.add_argument('--routed-scaling-factor', type=float, default=None, help='The routed scaling factor')
+    group.add_argument('--norm-topk-prob', action='store_true', default=False, help='Normalize the topk weight')
+    group.add_argument('--seq-aux', action='store_true', default=False, help='Compute aux loss in seq_aux')
+    group.add_argument('--first-k-dense-replace', type=int, default=None, help='Set first k layer as dense layer')
+    group.add_argument('--moe-layer-freq', type=int, default=None, help='Set the occurrence frequency of the moe layer')
 
     return parser
 
@@ -182,12 +230,13 @@ def _add_moe_args(parser):
     group.add_argument('--moe-router-topk', type=int, default=2,
                        help='Number of experts to route to for each token. The default is 2.')
     group.add_argument('--moe-router-load-balancing-type', type=str,
-                       choices=['aux_loss'],
+                       choices=['aux_loss', "group_limited_greedy"],
                        default='aux_loss',
                        help='Determines the load balancing strategy for the router. "aux_loss" corresponds '
                             'to the load balancing loss used in GShard and SwitchTransformer, "sinkhorn" corresponds '
                             'to the balancing algorithm used in S-BASE, "softmax_topk" implies no load balancing and '
-                            'softmax before topk ,and "None" implies no load balancing. '
+                            'softmax before topk , "None" implies no load balancing, and "group_limited_greedy" corresponds '
+                            'to the Device-Limited Routing method in DeepSeekV2.'
                             'The default is "aux_loss".')
     group.add_argument('--expert-interval', type=int, default=1,
                        help='Use experts in every "expert-interval" layers')
@@ -447,6 +496,46 @@ def _validate_instruction_finetune(args):
             raise AssertionError('Context parallelism is forbidden when use variable seq lengths.')
 
 
+def _validate_mla(args):
+    if args.multi_head_latent_attention:
+        if args.q_lora_rank is None:
+            raise AssertionError('The parameter q-lora-rank should be set when use multi_head_latent_attention.')
+        elif args.kv_lora_rank is None:
+            raise AssertionError('The parameter kv-lora-rank should be set when use multi_head_latent_attention.')
+        elif args.v_head_dim is None:
+            raise AssertionError('The parameter v-head-dim should be set when use multi_head_latent_attention.')
+        elif args.qk_rope_head_dim is None:
+            raise AssertionError('The parameter qk-rope-head-dim should be set when use multi_head_latent_attention.')
+        elif args.qk_nope_head_dim is None:
+            raise AssertionError('The parameter qk-nope-head-dim should be set when use multi_head_latent_attention.')
+
+
+def _validate_yarn(args):
+    if args.rope_scaling_type == "yarn":
+        if args.rope_scaling_original_max_position_embeddings is None:
+            raise AssertionError('The parameter rope_scaling_original_max_position_embeddings should be set '
+                                 'when use yarn.')
+
+
+
+def _validate_transformer_block_build_layers(args):
+    if args.num_experts is None:
+        if args.first_k_dense_replace is not None or args.moe_layer_freq is not None:
+            raise AssertionError('First-k-dense-replace and moe-layer-freq must be None when not using MoEs')
+    else:
+        if (args.first_k_dense_replace is None) != (args.moe_layer_freq is None):
+            raise AssertionError('First-k-dense-replace and moe-layer-freq must be set together.')
+
+
+def _validate_group_limited_greedy(args):
+    if args.moe_router_load_balancing_type == "group_limited_greedy":
+        if args.topk_group is None:
+            raise AssertionError('The parameter topk-group should be set when use group_limited_greedy.')
+        elif args.routed_scaling_factor is None:
+            raise AssertionError('The parameter routed_scaling_factor should be set when use multi_head_latent_attention.')
+        elif args.topk_group >= args.expert_model_parallel_size:
+            raise AssertionError('The topk group ({}) should be less than n-group(EP)({}).'.format(args.topk_group, 
+            args.expert_model_parallel_size))
 def _validate_moe_expert_capacity_factor(args):
     if args.moe_expert_capacity_factor is not None:
         if args.moe_token_dispatcher_type != "alltoall":
@@ -498,6 +587,10 @@ def validate_args_decorator(megatron_validate_args):
         _validate_instruction_finetune(args)
         _validate_position_embedding(args)
         _validate_high_availability(args)
+        _validate_mla(args)
+        _validate_yarn(args)
+        _validate_transformer_block_build_layers(args)
+        _validate_group_limited_greedy(args)
         _validate_moe_expert_capacity_factor(args)
 
         _validate_optimizer(args)
