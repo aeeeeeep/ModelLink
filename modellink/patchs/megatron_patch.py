@@ -154,8 +154,13 @@ def patch_core_models(args):
 def patch_core_transformers(args):
     from mindspeed.core.transformer.moe.router import aux_loss_load_balancing
     from ..core import (PTNorm, topk_router_forward, topk_router_routing, z_loss_func, \
-                        allgather_token_permutation, allgather_token_unpermutation)
+                        allgather_token_permutation, allgather_token_unpermutation,
+                        apply_rotary_pos_emb_bshd_wrapper, rotary_embedding_init_wrapper)
 
+    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__',
+                                rotary_embedding_init_wrapper)
+    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.apply_rotary_pos_emb_bshd',
+                                apply_rotary_pos_emb_bshd_wrapper)
     PatchManager.register_patch('megatron.core.transformer.transformer_block.TENorm', PTNorm)
     PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.routing', topk_router_routing)
     PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.forward', topk_router_forward)

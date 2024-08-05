@@ -3,6 +3,7 @@
 # Copyright (c) 2024, Huawei Technologies Co., Ltd. All rights reserved.
 
 from functools import wraps
+import math
 
 import torch
 from torch import Tensor
@@ -10,6 +11,37 @@ import torch_npu
 from megatron.training import get_args
 from megatron.core import parallel_state
 from megatron.core.models.common.embeddings.rotary_pos_embedding import _rotate_half, get_pos_emb_on_this_cp_rank
+
+
+def apply_llama3_scaling(freqs: torch.Tensor):
+    args = get_args()
+    original_length = args.original_max_position_embeddings
+
+    low_freq_wavelen = original_length / args.low_freq_factor
+    high_freq_wavelen = original_length / args.high_freq_factor
+    new_freqs = []
+    for freq in freqs:
+        wavelen = 2 * math.pi / freq
+        if wavelen < high_freq_wavelen:
+            new_freqs.append(freq)
+        elif wavelen > low_freq_wavelen:
+            new_freqs.append(freq / args.rope_scaling_factor)
+        else:
+            smooth = (original_length / wavelen - args.low_freq_factor) / (
+                args.high_freq_factor - args.low_freq_factor
+            )
+            new_freqs.append((1 - smooth) * freq / args.rope_scaling_factor + smooth * freq)
+    return torch.tensor(new_freqs, dtype=freqs.dtype, device=freqs.device)
+
+
+def rotary_embedding_init_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        fn(self, *args, **kwargs)
+        _args = get_args()
+        if hasattr(_args, "rope_scaling_type") and _args.rope_scaling_type == "llama3":
+            self.inv_freq = apply_llama3_scaling(self.inv_freq)
+    return wrapper
 
 
 def rotary_embedding_forward(self, max_seq_len: int, offset: int = 0):

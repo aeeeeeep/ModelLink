@@ -290,6 +290,17 @@ def _add_network_size_args(parser):
 def _add_algorithm_args(parser):
     group = parser.add_argument_group(title='algorithm')
     group.add_argument('--rotary-base', type=float, help='rotary-base.')
+    group.add_argument('--rope-scaling-type', type=str, default=None, choices=["llama3"],
+                       help='The sub-variant of RoPE to use, support type llama3.')
+    group.add_argument('--rope-scaling-factor', type=float,
+                       help='rope scale factor.')
+    group.add_argument('--low-freq-factor', type=float,
+                       help='rope low freq factory for rope scaling type.')
+    group.add_argument('--high-freq-factor', type=float,
+                       help='rope high freq factor for rope scaling type.')
+    group.add_argument('--original-max-position-embeddings', type=float,
+                       help='original max position embeddings for rope scaling type')
+
     group.add_argument('--reuse-fp32-param', action='store_true',
                        help='The distributed training optimizer frees up '
                             'param copies of FP32 to save memory.')

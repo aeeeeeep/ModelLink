@@ -384,6 +384,29 @@ ModelLink已发布版本维护策略：
       <td>【Pass】</td>
     </tr>
     <tr>
+      <td rowspan="2"><a href="https://modelscope.cn/organization/LLM-Research">LLaMA3.1</td>
+      <td><a href="https://modelscope.cn/models/LLM-Research/Meta-Llama-3.1-8B">8B</a></td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2280 </td>
+      <td> 2520 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td><a href="https://modelscope.cn/models/LLM-Research/Meta-Llama-3.1-8B">8B</a></td>
+      <td>128K</td>
+      <th>Mcore</th>
+      <td>4x8</td>
+      <td>BF16 </td>
+      <td> 1297 </td>
+      <td> -- </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
       <td rowspan="3"><a href="https://huggingface.co/Qwen">Qwen</a></td>
       <td><a href="https://huggingface.co/Qwen/Qwen-7B/tree/main">7B</a></td>
       <td> 8K </td>
