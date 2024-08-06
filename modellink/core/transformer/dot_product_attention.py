@@ -14,6 +14,7 @@ from mindspeed.core.parallel_state import (get_context_parallel_group_for_hybrid
                                            get_context_parallel_for_hybrid_ring_rank,
                                            get_context_parallel_for_hybrid_ring_global_ranks)
 from modellink.model.transformer import get_attention_mask
+from modellink.core.models.common.embeddings.rotary_pos_embedding import yarn_get_mscale
 
 try:
     from einops import rearrange
@@ -57,6 +58,20 @@ def dot_product_attention_init_wrapper(fn):
         config.context_parallel_size = 1
         fn(self, *args, **kwargs)
         config.context_parallel_size = cp_size
+        
+        args = get_args()
+        if args.multi_head_latent_attention:
+            self.hidden_size_per_partition = args.num_attention_heads * args.v_head_dim
+            self.q_head_dim = args.qk_nope_head_dim + args.qk_rope_head_dim
+            self.softmax_scale = self.q_head_dim ** (-0.5)
+            
+            if args.rope_scaling_type is not None:
+                mscale_all_dim = args.rope_scaling_mscale_all_dim if args.rope_scaling_mscale_all_dim else 0
+                scaling_factor = args.rope_scaling_factor
+                
+                if mscale_all_dim:
+                    mscale = yarn_get_mscale(scaling_factor, mscale_all_dim)
+                    self.softmax_scale = self.softmax_scale * mscale * mscale
 
     return wrapper
 
