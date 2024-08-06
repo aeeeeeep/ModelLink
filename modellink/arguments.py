@@ -492,6 +492,16 @@ def _validate_position_embedding(args):
         raise AssertionError('Alibi is not support tokenizer-padding-side left now.')
 
 
+def _validate_recompute_args(args):
+    """
+    validate re-computation arguments.
+    """
+    enable_pp_vpp = args.num_layers_per_virtual_pipeline_stage
+    enable_recomputation = args.recompute_granularity is not None and args.recompute_method == 'block'
+    if args.enable_recompute_layers_per_pp_rank and not (enable_pp_vpp and enable_recomputation):
+        raise AssertionError("enable-recompute-layers-per-pp-rank should be works with pipeline and virtual pipeline, when enabling re-computation.")
+
+
 def _validate_high_availability(args):
     if args.enable_optimizer_state_local_copy and not args.enable_high_availability:
         raise AssertionError('switch of the high availability feature is unsupported')
@@ -535,7 +545,6 @@ def _validate_yarn(args):
         if args.rope_scaling_original_max_position_embeddings is None:
             raise AssertionError('The parameter rope_scaling_original_max_position_embeddings should be set '
                                  'when use yarn.')
-
 
 
 def _validate_transformer_block_build_layers(args):
@@ -592,6 +601,7 @@ def validate_args_decorator(megatron_validate_args):
         args.use_mc2 = False
 
         _validate_cp_args(args)
+        _validate_recompute_args(args)
         _validate_create_attention_mask_in_dataloader(args)
         _validate_instruction_finetune(args)
         _validate_position_embedding(args)
