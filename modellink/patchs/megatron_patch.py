@@ -255,7 +255,7 @@ def patch_model():
 
     # patch gptmodel
     PatchManager.register_patch('megatron.legacy.model.GPTModel', GPTModel)
-
+    PatchManager.register_patch('megatron.legacy.model.gpt_model.post_language_model_processing', post_language_model_processing)
     # patch language model
     PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.forward', transformer_language_model_forward_wrapper)
     PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.__init__', transformer_language_model_init)

@@ -147,7 +147,10 @@ def loss_func(loss_mask: torch.Tensor, output_tensor: torch.Tensor):
     args = get_args()
 
     losses = output_tensor.float()
-    loss_mask = loss_mask.view(-1).float()
+    if args.is_instruction_dataset:
+        loss_mask = loss_mask[..., 1:].view(-1).float()
+    else:
+        loss_mask = loss_mask.view(-1).float()
     if args.context_parallel_size > 1:
         loss = torch.cat([torch.sum(losses.view(-1) * loss_mask).view(1), loss_mask.sum().view(1)])
         torch.distributed.all_reduce(loss, group=mpu.get_context_parallel_group())

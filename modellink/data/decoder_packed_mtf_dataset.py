@@ -142,9 +142,9 @@ class DecoderPackedMTFDataset(torch.utils.data.Dataset):
         doc_idx = self.shuffle_index[idx]
         item = self.mtf_dataset[doc_idx]
         return {
-            "input_ids": self._cut_token(item["input_ids"][:-1], np.int64),
-            "attention_mask": self._cut_token(item["attention_mask"][:-1], np.int64),
-            "labels": self._cut_token(item["labels"][1:], np.int64),
+            "input_ids": self._cut_token(item["input_ids"][:], np.int64),
+            "attention_mask": self._cut_token(item["attention_mask"][:], np.int64),
+            "labels": self._cut_token(item["labels"][:], np.int64),
         }
     
     def _cut_token(self, token, dtype):

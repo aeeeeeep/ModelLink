@@ -16,9 +16,42 @@
 from megatron.training import get_args
 from megatron.legacy.model.module import MegatronModule
 from megatron.legacy.model.enums import AttnMaskType
-from megatron.legacy.model.language_model import get_language_model
-from megatron.legacy.model.gpt_model import post_language_model_processing
+from megatron.legacy.model.language_model import get_language_model, parallel_lm_logits
+from megatron.core.tensor_parallel.cross_entropy import vocab_parallel_cross_entropy
 from ..tasks.inference.text_generation import MegatronModuleForCausalLM
+
+
+def post_language_model_processing(lm_output, labels, logit_weights,
+                                   parallel_output,
+                                   fp16_lm_cross_entropy):
+
+    # Output. Format [s b h]
+    output = parallel_lm_logits(
+        lm_output,
+        logit_weights,
+        parallel_output)
+
+
+    if labels is None:
+        # [s b h] => [b s h]
+        return output.transpose(0,1).contiguous()
+    else:
+        # [b s] => [s b]
+        labels = labels.transpose(0,1).contiguous()
+
+        args = get_args()
+        if args.is_instruction_dataset:
+            labels = labels[1:, ...].contiguous()
+            output = output[:-1, : , :].contiguous()
+
+        if fp16_lm_cross_entropy:
+            assert output.dtype == torch.half
+            loss = tensor_parallel.vocab_parallel_cross_entropy(output, labels)
+        else:
+            loss = tensor_parallel.vocab_parallel_cross_entropy(output.float(), labels)
+        # [s b] => [b, s]
+        loss = loss.transpose(0,1).contiguous()
+        return loss
 
 
 class GPTModel(MegatronModule, MegatronModuleForCausalLM):
