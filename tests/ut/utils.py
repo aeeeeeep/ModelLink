@@ -4,6 +4,7 @@ the assert case in ut for ci.
 """
 import os
 import glob
+import hashlib
 import torch
 import torch_npu
 import megatron.core.parallel_state as mpu
@@ -63,3 +64,12 @@ def weight_compare(dir_1, dir_2, suffix="pt"):
             return False
 
     return True
+
+
+def get_md5sum(fpath):
+    if not os.path.isfile(fpath):
+        raise FileNotFoundError(f"{fpath} is not a file or not exists !")
+    md5sum = hashlib.md5()
+    with open(fpath, 'rb') as f:
+        md5sum.update(f.read())
+        return md5sum.hexdigest()
