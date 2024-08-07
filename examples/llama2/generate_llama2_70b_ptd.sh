@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# The number of parameters is not aligned
-export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
-export HCCL_CONNECT_TIMEOUT=1200
-export COMBINED_ENABLE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # please fill these path configurations
@@ -11,6 +7,7 @@ CHECKPOINT="your model directory path"
 TOKENIZER_PATH="your tokenizer directory path"
 TOKENIZER_MODEL="your tokenizer.model file path"
 
+# Change for multinode config
 MASTER_ADDR=localhost
 MASTER_PORT=6001
 NNODES=1
@@ -50,4 +47,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --no-gradient-accumulation-fusion \
        --exit-on-missing-checkpoint \
        --make-vocab-size-divisible-by 1 \
+       --use-kv-cache \
+       --use-flash-attn \
        | tee logs/generate_llama2_70b.log

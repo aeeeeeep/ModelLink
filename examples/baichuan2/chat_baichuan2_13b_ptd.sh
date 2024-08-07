@@ -5,7 +5,6 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1
 # please fill these path configurations
 CHECKPOINT="your model directory path"
 TOKENIZER_PATH="your tokenizer directory path"
-TOKENIZER_MODEL="your tokenizer.model file path"
 
 # Change for multinode config
 MASTER_ADDR=localhost
@@ -20,22 +19,30 @@ DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $
 python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --tensor-model-parallel-size 8  \
        --pipeline-model-parallel-size 1  \
+       --task chat \
+       --hf-chat-template \
+       --add-eos-token '<|im_end|>' \
+       --top-k 5 \
+       --top-p 0.85 \
+       --temperature 0.3 \
        --num-layers 40 \
        --hidden-size 5120  \
-       --ffn-hidden-size 13824 \
-       --position-embedding-type rope \
-       --seq-length 4096 \
+       --ffn-hidden-size 13696 \
+       --seq-length 1024 \
        --max-new-tokens 256 \
-       --micro-batch-size 2 \
+       --micro-batch-size 1 \
        --global-batch-size 16 \
        --num-attention-heads 40  \
-       --max-position-embeddings 4096 \
+       --max-position-embeddings 2048 \
+       --position-embedding-type alibi \
+       --square-alibi-mask \
+       --fill-neg-inf \
        --swiglu \
-       --load "${CHECKPOINT}"  \
+       --load $CHECKPOINT  \
        --tokenizer-type PretrainedFromHF  \
-       --tokenizer-name-or-path "${TOKENIZER_PATH}" \
+       --tokenizer-name-or-path $TOKENIZER_PATH \
        --tokenizer-not-use-fast \
-       --bf16 \
+       --fp16 \
        --normalization RMSNorm \
        --untie-embeddings-and-output-weights \
        --disable-bias-linear \
@@ -45,8 +52,8 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --no-masked-softmax-fusion \
        --no-gradient-accumulation-fusion \
        --exit-on-missing-checkpoint \
-       --make-vocab-size-divisible-by 1 \
+       --make-vocab-size-divisible-by 32 \
        --use-kv-cache \
        --use-flash-attn \
-       | tee logs/generate_llama2_13b.log
+       | tee logs/chat_baichuan2_13b.log
 

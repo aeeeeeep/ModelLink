@@ -13,29 +13,36 @@ MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
 NPUS_PER_NODE=8
-WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
 python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --tensor-model-parallel-size 8  \
        --pipeline-model-parallel-size 1  \
-       --num-layers 40 \
-       --hidden-size 5120  \
-       --ffn-hidden-size 13824 \
+       --task chat \
+       --hf-chat-template \
+       --add-eos-token '<|eot_id|>' \
+       --top-p 0.9 \
+       --temperature 1 \
+       --num-layers 32 \
+       --num-layers 80 \
+       --hidden-size 8192  \
+       --ffn-hidden-size 28672 \
        --position-embedding-type rope \
        --seq-length 4096 \
        --max-new-tokens 256 \
-       --micro-batch-size 2 \
-       --global-batch-size 16 \
-       --num-attention-heads 40  \
+       --micro-batch-size 1 \
+       --num-attention-heads 64  \
        --max-position-embeddings 4096 \
        --swiglu \
        --load "${CHECKPOINT}"  \
        --tokenizer-type PretrainedFromHF  \
        --tokenizer-name-or-path "${TOKENIZER_PATH}" \
+       --tokenizer-model "${TOKENIZER_MODEL}"  \
        --tokenizer-not-use-fast \
-       --bf16 \
+       --fp16 \
+       --group-query-attention \
+       --num-query-groups 8 \
        --normalization RMSNorm \
        --untie-embeddings-and-output-weights \
        --disable-bias-linear \
@@ -48,5 +55,4 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --make-vocab-size-divisible-by 1 \
        --use-kv-cache \
        --use-flash-attn \
-       | tee logs/generate_llama2_13b.log
-
+       | tee logs/chat_llama2_70b.log
