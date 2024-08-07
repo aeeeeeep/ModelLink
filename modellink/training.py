@@ -137,7 +137,7 @@ def get_profiler():
                          f" 1, and 2, but gets {args.profile_level}")
 
     experimental_config = torch_npu.profiler._ExperimentalConfig(
-        aic_metrics=torch_npu.profiler.AiCMetrics.ArithmeticUtilization,
+        aic_metrics=torch_npu.profiler.AiCMetrics.PipeUtilization,
         profiler_level=profiler_level,
     )
     skip_first = args.profile_step_start

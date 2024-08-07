@@ -12,24 +12,41 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import types
 from functools import wraps
+
 from megatron.core.transformer.moe.moe_layer import MoELayer
-from modellink.core.transformer.custom_layers.transformer_engine import PTNorm
 from megatron.training import get_args
+from megatron.core.tensor_parallel import ColumnParallelLinear, RowParallelLinear
+from megatron.core.transformer.attention import SelfAttentionSubmodules
+from megatron.core.transformer.dot_product_attention import DotProductAttention
+from megatron.core.transformer.identity_op import IdentityOp
+
+from modellink.core.transformer.custom_layers.transformer_engine import PTNorm
+from modellink.core.models.gpt.gpt_mla_layer_specs import get_gpt_mla_layer_spec
+
+
 
 
 def get_gpt_layer_local_spec_wrapper(fn):
     @wraps(fn)
     def wrapper(num_experts: int = None, moe_grouped_gemm: bool = False, qk_layernorm: bool = False):
-        res = fn(num_experts, moe_grouped_gemm, qk_layernorm)
-        args_pos_norm = get_args()
+        args = get_args()
+
+        if args.multi_head_latent_attention:
+            res = get_gpt_mla_layer_spec(num_experts, moe_grouped_gemm, args.qk_layernorm)
+        else:
+            res = fn(num_experts, moe_grouped_gemm, qk_layernorm)
+
         res.submodules.input_layernorm = PTNorm
+
         if qk_layernorm:
             res.submodules.self_attention.submodules.q_layernorm = PTNorm
             res.submodules.self_attention.submodules.k_layernorm = PTNorm
         res.submodules.pre_mlp_layernorm = PTNorm
-        if args_pos_norm.post_norm:
+        
+        if args.post_norm:
             res.submodules.post_attn_norm = PTNorm
             res.submodules.post_mlp_layernorm = PTNorm
         return res
