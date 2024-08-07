@@ -34,6 +34,31 @@ def apply_llama3_scaling(freqs: torch.Tensor):
     return torch.tensor(new_freqs, dtype=freqs.dtype, device=freqs.device)
 
 
+def apply_yarn_scaling(freqs: torch.Tensor):
+    args = get_args()
+    
+    scaling_factor = args.rope_scaling_factor
+    dim = args.qk_rope_head_dim if args.multi_head_latent_attention else (args.hidden_size // args.num_attention_heads)
+    rotary_ratio = args.rotary_base ** (torch.arange(0, dim, 2, dtype=torch.float32, device=freqs.device) / dim)
+    freq_extra = 1.0 / rotary_ratio
+    freq_inter = 1.0 / (scaling_factor * rotary_ratio)
+    low, high = yarn_find_correction_range(
+        args.rope_scaling_beta_fast,
+        args.rope_scaling_beta_slow,
+        dim,
+        args.rotary_base,
+        args.rope_scaling_original_max_position_embeddings,
+    )
+
+    inv_freq_mask = 1.0 - yarn_linear_ramp_mask(low, high, dim // 2).to(
+        device=freqs.device, dtype=torch.float32
+    )
+
+    inv_freq = freq_inter * (1 - inv_freq_mask) + freq_extra * inv_freq_mask
+
+    return inv_freq
+
+
 def rotary_embedding_init_wrapper(fn):
     @wraps(fn)
     def wrapper(self, *args, **kwargs):
@@ -41,6 +66,9 @@ def rotary_embedding_init_wrapper(fn):
         _args = get_args()
         if hasattr(_args, "rope_scaling_type") and _args.rope_scaling_type == "llama3":
             self.inv_freq = apply_llama3_scaling(self.inv_freq)
+        elif hasattr(_args, "rope_scaling_type") and _args.rope_scaling_type == "yarn":
+            self.inv_freq = apply_yarn_scaling(self.inv_freq)
+
     return wrapper
 
 
@@ -56,34 +84,13 @@ def rotary_embedding_forward(self, max_seq_len: int, offset: int = 0):
     """
     args = get_args()
 
-    if args.rope_scaling_type is None:
-        seq = (
-            torch.arange(max_seq_len, device=self.inv_freq.device, dtype=self.inv_freq.dtype)
-            + offset
-        )
+    seq = (
+        torch.arange(max_seq_len, device=self.inv_freq.device, dtype=self.inv_freq.dtype)
+        + offset
+    )
 
-        if self.seq_len_interpolation_factor is not None:
-            seq *= 1 / self.seq_len_interpolation_factor
-    elif args.rope_scaling_type == "yarn":
-        scaling_factor = args.rope_scaling_factor
-        dim = args.qk_rope_head_dim if args.multi_head_latent_attention else (args.hidden_size // args.num_attention_heads)
-        rotary_ratio = args.rotary_base ** (torch.arange(0, dim, 2, dtype=torch.float32, device=self.inv_freq.device) / dim)
-        freq_extra = 1.0 / rotary_ratio
-        freq_inter = 1.0 / (scaling_factor * rotary_ratio)
-        low, high = yarn_find_correction_range(
-            args.rope_scaling_beta_fast,
-            args.rope_scaling_beta_slow,
-            dim,
-            args.rotary_base,
-            args.rope_scaling_original_max_position_embeddings,
-        )
-        inv_freq_mask = 1.0 - yarn_linear_ramp_mask(low, high, dim // 2).to(
-            device=self.inv_freq.device, dtype=torch.float32
-        )
-        self.inv_freq = freq_inter * (1 - inv_freq_mask) + freq_extra * inv_freq_mask
-        seq = torch.arange(max_seq_len, device=self.inv_freq.device, dtype=torch.float32)
-    else:
-        raise ValueError(f"Unknown RoPE scaling type {args.rope_scaling_type}")
+    if self.seq_len_interpolation_factor is not None:
+        seq *= 1 / self.seq_len_interpolation_factor
 
     freqs = torch.outer(seq, self.inv_freq)
     # first part even vector components, second part odd vector components,
