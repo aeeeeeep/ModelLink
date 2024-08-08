@@ -574,8 +574,6 @@ def _validate_optimizer(args):
     if args.reuse_fp32_param and args.enable_high_availability:
         raise AssertionError('reuse-fp32-param and enable-high-availability do not support enabling together.')
 
-    # if args.recompute_activation_function and args.recompute_granularity == "selective":
-    #     raise AssertionError('--recompute-activation-function is not compatible with selective recomputation')
 
 def validate_args_decorator(megatron_validate_args):
     @wraps(megatron_validate_args)
