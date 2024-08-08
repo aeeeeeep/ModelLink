@@ -14,13 +14,11 @@
 # limitations under the License.
 
 import os
-import sys
 import json
 import logging
-import numpy as np
 from functools import partial
 from typing import Any, Dict, List
-from datasets import load_dataset, concatenate_datasets, interleave_datasets, Features
+from datasets import load_dataset, concatenate_datasets, interleave_datasets
 
 from modellink.tasks.preprocess.templates import Role
 from modellink.tasks.preprocess.parser import InstructionDatasetAttr
@@ -40,6 +38,56 @@ FILEEXT2TYPE = {
 }
 
 DATA_CONFIG = "dataset_info.json"
+
+
+def check_dataset_info_map(data_args, column_names, raw_datasets, tag_names=None):
+    if len(data_args.map_keys.keys()) > len(column_names):
+        raise ValueError("Please check map_keys")
+
+    for key in data_args.map_keys.keys():
+        if key not in column_names:
+            raise ValueError(f' {key} is unvalid, Please check map_keys')
+
+    if data_args.handler_name == "AlpacaStyleInstructionHandler":
+        for value in data_args.map_keys.values():
+            if value not in raw_datasets.format['columns']:
+                raise ValueError(f' {value} is unvalid, Please check map_keys')
+
+    if data_args.handler_name == "SharegptStyleInstructionHandler":
+        if "tags" in data_args.map_keys.keys():
+            for tag_name in data_args.map_keys["tags"].keys():
+                if tag_name not in tag_names:
+                    raise ValueError(f'tag_name {tag_name} is unvalid, Please check map_keys')
+
+
+def get_handler_dataset_attr(data_args, raw_datasets):
+    dataset_attr = None
+    if data_args.handler_name == "AlpacaStyleInstructionHandler":
+        dataset_attr = InstructionDatasetAttr("file", dataset_name=data_args.handler_name)
+        dataset_attr.formatting = "alpaca"
+
+        column_names = ["prompt", "query", "response", "history", "system"]
+        if data_args.map_keys is not None:
+            check_dataset_info_map(data_args, column_names, raw_datasets, None)
+            for column_name, target_name in data_args.map_keys.items():
+                setattr(dataset_attr, column_name, target_name)
+
+    elif data_args.handler_name == "SharegptStyleInstructionHandler":
+        dataset_attr = InstructionDatasetAttr("file", dataset_name=data_args.handler_name)
+        dataset_attr.formatting = "sharegpt"
+        tag_names = ["role_tag", "content_tag", "user_tag", "assistant_tag", "observation_tag", "function_tag", "system_tag"]
+        column_names = ["messages", "tags", "system", "tools"]
+
+        if data_args.map_keys is not None:
+            check_dataset_info_map(data_args, column_names, raw_datasets, tag_names)
+            for column_name, target_name in data_args.map_keys.items():
+                if column_name == "tags":
+                    for tag in tag_names:
+                        dataset_attr.set_attr(tag, data_args.map_keys["tags"])
+                else:
+                    setattr(dataset_attr, column_name, target_name)
+
+    return dataset_attr
 
 
 def get_dataset_list(data_args) -> List["InstructionDatasetAttr"]:
@@ -114,7 +162,7 @@ def get_dataset_list(data_args) -> List["InstructionDatasetAttr"]:
     return dataset_list
 
 
-def convert_alpaca_to_intermediate(sample: Dict[str, List[Any]], dataset_attr: "InstructionDatasetAttr", data_args: "DataArguments"):
+def convert_alpaca_to_intermediate(sample: Dict[str, List[Any]], dataset_attr: "InstructionDatasetAttr"):
     """
     format sample info
     {
@@ -172,8 +220,7 @@ def convert_alpaca_to_intermediate(sample: Dict[str, List[Any]], dataset_attr: "
 
 
 def convert_sharegpt_to_intermediate(
-    sample: Dict[str, List[Any]], dataset_attr: "InstructionDatasetAttr", data_args: "DataArguments"
-):
+    sample: Dict[str, List[Any]], dataset_attr: "InstructionDatasetAttr"):
     """
     convert sharegpt or openAI sharegpt to intermediate format
     sharegpt:
@@ -234,7 +281,7 @@ def convert_sharegpt_to_intermediate(
         system = messages[0][dataset_attr.content_tag]
         messages = messages[1:]
     else:
-        system = examples[dataset_attr.system][i] if dataset_attr.system else ""
+        system = sample[dataset_attr.system] if dataset_attr.system else ""
 
     if len(messages) == 0:
         return outputs
@@ -266,7 +313,7 @@ def convert_sharegpt_to_intermediate(
     outputs["prompt"] = prompt
     outputs["response"] = response
     outputs["system"].append(system)
-    outputs["tools"].append(examples[dataset_attr.tools][i] if dataset_attr.tools else "")
+    outputs["tools"].append(sample[dataset_attr.tools] if dataset_attr.tools else "")
 
     return outputs
 
@@ -295,9 +342,9 @@ def align_dataset(dataset, dataset_attr, data_args):
         )
     """
     if dataset_attr.formatting == "alpaca":
-        convert_func = partial(convert_alpaca_to_intermediate, dataset_attr=dataset_attr, data_args=data_args)
+        convert_func = partial(convert_alpaca_to_intermediate, dataset_attr=dataset_attr)
     else:
-        convert_func = partial(convert_sharegpt_to_intermediate, dataset_attr=dataset_attr, data_args=data_args)
+        convert_func = partial(convert_sharegpt_to_intermediate, dataset_attr=dataset_attr)
     column_names = list(next(iter(dataset)).keys())
 
     kwargs = dict(
