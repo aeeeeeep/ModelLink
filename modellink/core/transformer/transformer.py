@@ -62,8 +62,9 @@ def core_mlp_forward_wrapper(fn):
             if bias is not None:
                 intermediate = intermediate + bias
             if self.config.gated_linear_unit:
+
                 def glu(x):
-                    x=torch.chunk(x, 2, dim=-1)
+                    x = torch.chunk(x, 2, dim = -1)
                     return self.config.activation_func(x[0]) * x[1]
 
                 intermediate = glu(intermediate)
