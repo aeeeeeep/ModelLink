@@ -29,13 +29,14 @@ from megatron import core
 from megatron.core import tensor_parallel
 from megatron.core import parallel_state
 from megatron.core.enums import ModelType
-from megatron.core import mpu
+
 from megatron.legacy.model.enums import AttnMaskType, LayerType, AttnType
 from megatron.legacy.model.transformer import _get_layer_type
 from megatron.legacy.model.transformer import (
     ParallelTransformer, ParallelTransformerLayer, NoopTransformerLayer
 )
 from megatron.legacy.model.utils import get_norm
+from megatron.core import mpu
 from megatron.legacy.model.fused_bias_gelu import bias_gelu_impl
 from mindspeed.core.tensor_parallel.random import CheckpointWithoutOutput
 
@@ -1025,12 +1026,12 @@ def parallel_mlp_init_wrapper(fn):
             self.activation_func = fused_swiglu
 
         config = args[0]
-        is_expert = kwargs.get('is_expert') if 'is_expert' in kwargs.keys() else False
 
         ffn_hidden_size = config.ffn_hidden_size
         if config.gated_linear_unit:
             ffn_hidden_size *= 2
 
+        is_expert = kwargs.get("is_expert", False)
         self.dense_h_to_4h = tensor_parallel.ColumnParallelLinear(
             config.hidden_size,
             ffn_hidden_size,
