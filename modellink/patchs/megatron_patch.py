@@ -150,6 +150,10 @@ def patch_core_models(args):
         TransformerBlock._build_layers = build_layers_wrapper(TransformerBlock._build_layers, ColumnParallelLinear.forward,
                                                               RowParallelLinear.forward)
 
+    # For recomputation
+    from ..core.transformer.transformer_block import transformer_block_checkpointed_forward_wrapper
+    PatchManager.register_patch('megatron.core.transformer.transformer_block.TransformerBlock._checkpointed_forward', transformer_block_checkpointed_forward_wrapper)
+
 
 def patch_core_transformers(args):
     from mindspeed.core.transformer.moe.router import aux_loss_load_balancing

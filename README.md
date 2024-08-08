@@ -876,7 +876,7 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
     <td>No</td>
   </tr>
   <tr>
-    <td rowspan="4">显存优化</td>
+    <td rowspan="5">显存优化</td>
     <td>参数副本复用</td>
     <td>--reuse-fp32-param</td>
     <td>Yes</td>
@@ -897,6 +897,12 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
   <tr>
     <td>重计算方法</td>
     <td>--recompute-method</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>PP-Stage重计算</td>
+    <td>--enable-recompute-layers-per-pp-rank</td>
     <td>Yes</td>
     <td>Yes</td>
   </tr>

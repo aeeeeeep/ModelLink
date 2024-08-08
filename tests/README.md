@@ -12,10 +12,17 @@
         <th>Memory</th>
     </tr>
     <tr>
-        <td>ST</td>
-        <td>Pretrain</td>
-        <td>TP, PP, VPP</td>
+        <td rowspan="2">ST</td>
+        <td rowspan="2">Pretrain</td>
+        <td>TP，PP，VPP，重计算，enable-recompute-layers-per-pp-rank</td>
         <td>shell_scripts/llama2_tp2_pp4_vpp2.sh</td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>CP，分布式优化器，ReuseFP32Param，FusedRMSNorm，FusedSwiGlu，FusedRope，overlap-grad-reduce、overlap-param-gather</td>
+        <td>shell_scripts/llama2_tp2_cp4_mem_recompute.sh</td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>

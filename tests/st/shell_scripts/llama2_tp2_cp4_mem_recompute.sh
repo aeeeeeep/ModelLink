@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# A system test mainly for context parallel as well as pipeline parallel and tensor parallel.
+# A system test mainly for context parallel as well as tensor parallel and distributed optimizer.
 # Also, several overlap algorithm have applied such as overlap-grad-reduce, overlap-param-gather
 # and cp-send-recv-overlap.
 # In addition, several fused kernels have applied, such as Rope, Swiglu and RmsNorm.
