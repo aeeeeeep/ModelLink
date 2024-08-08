@@ -17,14 +17,11 @@
 
 import argparse
 import json
-import multiprocessing
 import os
 import sys
-import time
 import logging
 from typing import List
 
-import torch
 try:
     import nltk
 except ImportError:
@@ -123,6 +120,8 @@ def add_data_args(parser):
                        help="Random seed to be used with data mix.")
     group.add_argument("--cache-dir", type=str, default="~/tmp",
                        help="Where to store the cache of dataset from local.")
+    group.add_argument("--map-keys", type=json.loads, default=None,
+                       help="Dataset field mapping.")
 
 
 def add_tokenizer_args(parser):
@@ -191,8 +190,9 @@ def get_args():
 
 
 def validate_args(args):
-    if args.lla_fact_ins_template is not None and args.handler_name != "LlamaFactoryInstructionHandler":
-        raise AssertionError('If specify lla-fact-ins-template, handler name must be "LlamaFactoryInstructionHandler".')
+    support_prompt_type_handler = ["LlamaFactoryInstructionHandler", "AlpacaStyleInstructionHandler", "SharegptStyleInstructionHandler"]
+    if args.lla_fact_ins_template is not None and args.handler_name not in support_prompt_type_handler:
+        raise AssertionError('If specify lla_fact_ins_template , handler name must be "LlamaFactoryInstructionHandler"、"AlpacaStyleInstructionHandler"、"SharegptStyleInstructionHandler".')
 
 
 def main():
