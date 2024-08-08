@@ -221,7 +221,8 @@ def _add_lora_args(parser):
     group.add_argument('--lora-register-forward-hook', nargs='+', type=str,
                        default=['word_embeddings', 'input_layernorm'],
                        help='Lora register forward hook.')
-
+    group.add_argument('--lora-fusion', action='store_true',
+                       help='use fusion to accelerate lora.')
     return parser
 
 
@@ -509,6 +510,15 @@ def _validate_instruction_finetune(args):
             raise AssertionError('Context parallelism is forbidden when use variable seq lengths.')
 
 
+def _valid_lora(args):
+    """
+    check for LoRA
+    """
+    if args.lora_fusion:
+        if not args.sequence_parallel:
+            raise AssertionError('lora_fusion for CCLoRA is forbidden without sequence_parallel.')
+
+
 def _validate_moe_expert_capacity_factor(args):
     if args.moe_expert_capacity_factor is not None:
         if args.moe_token_dispatcher_type != "alltoall":
@@ -602,6 +612,7 @@ def validate_args_decorator(megatron_validate_args):
         _validate_instruction_finetune(args)
         _validate_position_embedding(args)
         _validate_high_availability(args)
+        _valid_lora(args)
         _validate_moe_expert_capacity_factor(args)
         _validate_mla(args)
         _validate_yarn(args)

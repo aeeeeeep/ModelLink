@@ -72,6 +72,11 @@ def model_provider_func_wrapper(model_provider_func):
                 setattr(peft.tuners.lora.LoraLayer, 'unmerge', peft.tuners.lora.Linear.unmerge)
                 setattr(peft.tuners.lora.LoraLayer, 'get_delta_weight', peft.tuners.lora.Linear.get_delta_weight)
 
+            if hasattr(args, 'lora_fusion') and args.lora_fusion:
+                from peft.tuners.lora.tp_layer import LoraParallelLinear
+                from modellink.tasks.finetune.lora.cc_lora_forward import CCLoraParallelLinearForward
+                LoraParallelLinear.forward = CCLoraParallelLinearForward
+
             config = core_transformer_config_from_args(args)
             lora_config = LoraConfig(
                 r=args.lora_r,
