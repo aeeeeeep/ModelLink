@@ -80,8 +80,6 @@ def _add_mla_args(parser):
 def _add_yarn_args(parser):
     group = parser.add_argument_group(title='yarn')
     
-    group.add_argument('--rope-scaling-type', type=str, default=None, choices=['yarn', ],
-                       help='Set the rope scaling type, only support "yarn" type now')
     group.add_argument('--rope-scaling-beta-fast', type=int, default=32, help='Yarn rope: rope beta fast')
     group.add_argument('--rope-scaling-beta-slow', type=int, default=1, help='Yarn rope: rope beta slow')
     group.add_argument('--rope-scaling-factor', type=float, default=1.0, help='Yarn rope: rope factor')
@@ -341,10 +339,8 @@ def _add_network_size_args(parser):
 def _add_algorithm_args(parser):
     group = parser.add_argument_group(title='algorithm')
     group.add_argument('--rotary-base', type=float, help='rotary-base.')
-    group.add_argument('--rope-scaling-type', type=str, default=None, choices=["llama3"],
-                       help='The sub-variant of RoPE to use, support type llama3.')
-    group.add_argument('--rope-scaling-factor', type=float,
-                       help='rope scale factor.')
+    group.add_argument('--rope-scaling-type', type=str, default=None, choices=["llama3", "yarn"],
+                       help='The sub-variant of RoPE to use, support type llama3 and yarn.')
     group.add_argument('--low-freq-factor', type=float,
                        help='rope low freq factory for rope scaling type.')
     group.add_argument('--high-freq-factor', type=float,

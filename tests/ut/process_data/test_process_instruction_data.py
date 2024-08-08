@@ -2,13 +2,17 @@ import sys
 import os
 import math
 
+import pandas as pd
+
 import modellink
-from ut.utils import judge_expression
+from ut.utils import judge_expression, get_md5sum
 from modellink.tokenizer import build_tokenizer
 from modellink.tokenizer.tokenizer import _AutoTokenizer
 from modellink.tasks.preprocess.data_handler import GeneralInstructionHandler
 from modellink.tasks.preprocess.data_handler import build_dataset, get_dataset_handler
 from preprocess_data import get_args, build_splitter
+from merge_datasets import get_args as get_args_mgd
+from merge_datasets import merge_datasets
 
 
 class TestProcessInstructionData:
@@ -88,3 +92,49 @@ class TestProcessInstructionData:
         judge_expression(bin_file == 3)
         judge_expression(idx_file == 3)
         judge_expression(math.isclose(total_size / (1024 * 1024), 48 * 2, abs_tol=3))
+        
+    def test_merge_datasets(self):
+        """
+        Test merge datasets, compare the `split-preprocess-merge` file and the `dirct-preprocess` file.
+        """
+        df = pd.read_parquet("/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet")
+        df.iloc[:18000, :].to_parquet("/data/0001-alpaca.parquet")
+        df.iloc[18000:36000, :].to_parquet("/data/0002-alpaca.parquet")
+        df.iloc[36000:, :].to_parquet("/data/0003-alpaca.parquet")
+        
+        if not os.path.isdir("/data/tune_dataset/test_merge/subs"):
+            os.makedirs("/data/tune_dataset/test_merge/subs")
+        for subid in ["0001", "0002", "0003"]:
+            sys.argv = [
+                sys.argv[0],
+                "--input", f"/data/{subid}-alpaca.parquet",
+                "--tokenizer-type", "PretrainedFromHF",
+                "--handler-name", "GeneralInstructionHandler",
+                "--output-prefix", f"/data/tune_dataset/test_merge/subs/{subid}-alpaca",
+                "--tokenizer-name-or-path", "/data/llama-2-7b-hf",
+                "--workers", "4",
+                "--log-interval", "1000",
+                "--append-eod"
+            ]
+            args = get_args()
+            tokenizer = build_tokenizer(args)
+            splitter = build_splitter(args)
+            raw_dataset = build_dataset(args)
+            handler = get_dataset_handler(args, raw_dataset, tokenizer, splitter)
+            handler.serialize_to_disk()
+        
+        sys.argv = [
+            sys.argv[0],
+            "--input", "/data/tune_dataset/test_merge/subs",
+            "--output-prefix", "/data/tune_dataset/test_merge/alpaca",
+            "--keys", "packed_attention_mask_document", "packed_input_ids_document", "packed_labels_document"
+        ]
+        args = get_args_mgd()
+        merge_datasets(args)
+        
+        judge_expression(get_md5sum("/data/tune_dataset/alpaca_packed_attention_mask_document.idx") == get_md5sum("/data/tune_dataset/test_merge/alpaca_packed_attention_mask_document.idx"))
+        judge_expression(get_md5sum("/data/tune_dataset/alpaca_packed_attention_mask_document.bin") == get_md5sum("/data/tune_dataset/test_merge/alpaca_packed_attention_mask_document.bin"))
+        judge_expression(get_md5sum("/data/tune_dataset/alpaca_packed_input_ids_document.idx") == get_md5sum("/data/tune_dataset/test_merge/alpaca_packed_input_ids_document.idx"))
+        judge_expression(get_md5sum("/data/tune_dataset/alpaca_packed_input_ids_document.bin") == get_md5sum("/data/tune_dataset/test_merge/alpaca_packed_input_ids_document.bin"))
+        judge_expression(get_md5sum("/data/tune_dataset/alpaca_packed_labels_document.idx") == get_md5sum("/data/tune_dataset/test_merge/alpaca_packed_labels_document.idx"))
+        judge_expression(get_md5sum("/data/tune_dataset/alpaca_packed_labels_document.bin") == get_md5sum("/data/tune_dataset/test_merge/alpaca_packed_labels_document.bin"))

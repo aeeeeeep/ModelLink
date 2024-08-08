@@ -22,7 +22,7 @@ import torch.nn.functional as F
 from megatron.training import get_args
 from megatron.core import parallel_state
 
-from .utils import pad_batch, top_k_logits
+from .utils import pad_batch, top_k_logits, InferenceParams
 from .forward_step import ForwardStep
 from .beam_utils import BeamHypotheses
 from .communication import broadcast_from_last_pipeline_stage
@@ -50,7 +50,15 @@ def beam_search(model, tokens, **kwargs):
     # ==========================
     # Forward step
     # ==========================
-    forward_step = ForwardStep(model, beam_size, final_sequence_length)
+    forward_step = ForwardStep(model)
+
+    # ==========================
+    # InferenceParams
+    # ==========================
+    if args.use_kv_cache:
+        inference_params = InferenceParams(beam_size, final_sequence_length)
+    else:
+        inference_params = None
 
     # ==========================
     # Build BeamHypotheses
@@ -66,7 +74,7 @@ def beam_search(model, tokens, **kwargs):
     # ==========================
     with torch.no_grad():
         tokens = tokens.repeat(beam_size, 1)
-        batch_size, seq_length = tokens.size()
+        _, seq_length = tokens.size()
 
         attention_mask = torch.tril(torch.ones(
             (args.micro_batch_size, seq_length, seq_length), device=tokens.device)).view(
@@ -89,7 +97,8 @@ def beam_search(model, tokens, **kwargs):
                                                                        context_lengths=context_lengths,
                                                                        scores=scores,
                                                                        stop_token=stop_token,
-                                                                       tokens=tokens)
+                                                                       tokens=tokens,
+                                                                       inference_params=inference_params)
 
         output_scores, output_tokens = _beam_search_post_process(beam_hyp=beam_hyp,
                                                                  beam_size=beam_size,
@@ -121,10 +130,25 @@ def forward_loop(args, **kwargs):
     scores = kwargs.pop("scores")
     stop_token = kwargs.pop("stop_token")
     tokens = kwargs.pop("tokens")
+    inference_params = kwargs.pop("inference_params")
     context_length = None
 
     for context_length in range(prompt_length, final_sequence_length):
-        logits = forward_step(tokens, position_ids, attention_mask)
+        if inference_params:
+            if context_length == prompt_length:
+                input_tokens = tokens[:, :context_length]
+                input_position_ids = position_ids[:, :context_length]
+                input_attention_mask = attention_mask[:, :, :context_length, :context_length]
+            else:
+                input_tokens = tokens[:, context_length - 1:context_length]
+                input_position_ids = position_ids[:, context_length - 1:context_length]
+                input_attention_mask = attention_mask[:, :, context_length - 1:context_length, :context_length]
+        else:
+            input_tokens = tokens
+            input_position_ids = position_ids
+            input_attention_mask = attention_mask
+
+        logits = forward_step(input_tokens, input_position_ids, input_attention_mask, inference_params)
 
         if parallel_state.is_pipeline_last_stage():
             vocab_size = logits.size(2)
@@ -136,7 +160,8 @@ def forward_loop(args, **kwargs):
                                                                                     prompt_length=prompt_length,
                                                                                     scores=scores,
                                                                                     stop_token=stop_token,
-                                                                                    vocab_size=vocab_size)
+                                                                                    vocab_size=vocab_size,
+                                                                                    inference_params=inference_params)
 
             done, scores, tokens = _beam_search_process(beam_hyp=beam_hyp,
                                                         beam_size=beam_size,
@@ -148,7 +173,8 @@ def forward_loop(args, **kwargs):
                                                         prompt_length=prompt_length,
                                                         scores=scores,
                                                         stop_token=stop_token,
-                                                        tokens=tokens)
+                                                        tokens=tokens,
+                                                        inference_params=inference_params)
 
         done = broadcast_from_last_pipeline_stage(1, torch.uint8, done)
         if done:
@@ -219,6 +245,7 @@ def _beam_search_process(**kwargs):
     scores = kwargs.pop("scores")
     stop_token = kwargs.pop("stop_token")
     tokens = kwargs.pop("tokens")
+    inference_params = kwargs.pop("inference_params")
 
     next_beams = []
     for beam_token_rank, (token_id, beam_score, beam_id) in enumerate(
@@ -248,6 +275,9 @@ def _beam_search_process(**kwargs):
     tokens[:, context_length] = tokens.new([item[0] for item in next_beams])
     scores = scores.new([item[1] for item in next_beams]).unsqueeze(1)
 
+    if inference_params:
+        inference_params.swap_key_value_dict(best_batches)
+
     return done, scores, tokens
 
 
@@ -259,11 +289,17 @@ def _beam_candidates_with_sampling(args, **kwargs):
     scores = kwargs.pop("scores")
     vocab_size = kwargs.pop("vocab_size")
     stop_token = kwargs.pop("stop_token")
+    inference_params = kwargs.pop("inference_params")
+
+    if inference_params:
+        index = -1
+    else:
+        index = context_length - 1
 
     try:
-        logits = logits[:, context_length - 1, :] / args.text_generation_config["temperature"]
+        logits = logits[:, index, :] / args.text_generation_config["temperature"]
     except ZeroDivisionError:
-        logits = logits[:, context_length - 1, :] * 10000
+        logits = logits[:, index, :] * 10000
 
     if args.text_generation_config["top_k"] > 1 and (0.0 < args.text_generation_config["top_p"] <= 1.0):
         logits = top_k_logits(logits,

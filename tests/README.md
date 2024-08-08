@@ -66,24 +66,25 @@
         <td></td>
     </tr>
     <tr>
-        <td rowspan="3">checkpoint</td>
-        <td>mcore_dynamic</td>
+        <td>checkpoint</td>
+        <td>mcore_dynamic, mcore_vpp, legacy_dynamic</td>
         <td>test_convert_ckpt_from_huggingface.py</td>
-        <td></td>
+        <td>Y</td>
         <td></td>
         <td></td>
     </tr>
-    <tr>
-        <td>mcore_vpp</td>
-        <td>test_convert_ckpt_from_huggingface.py</td>
-        <td></td>
+	<tr>
+        <td rowspan="2">process_data</td>
+        <td>pretrain_data_handler, pretrain_merge_datasets</td>
+        <td>test_process_pretrain_data.py</td>
+        <td>Y</td>
         <td></td>
         <td></td>
     </tr>
-    <tr>
-        <td>legacy_dynamic</td>
-        <td>test_convert_ckpt_from_huggingface.py</td>
-        <td></td>
+	<tr>
+        <td>instruction_data_handler, instruction_merge_datasets</td>
+        <td>test_process_instruction_data.py</td>
+        <td>Y</td>
         <td></td>
         <td></td>
     </tr>
