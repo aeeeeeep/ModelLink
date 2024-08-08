@@ -82,11 +82,12 @@ class TestProcessPretrainData:
         for file_name in os.listdir(folder_path):
             file_path = os.path.join(folder_path, file_name)
             if os.path.isfile(file_path):
-                if file_path.endswith(".bin"):
+                if file_path.endswith(".bin") and file_name.startswith('alpaca_'):
                     bin_file += 1
-                if file_path.endswith(".idx"):
+                    total_size += os.path.getsize(file_path)
+                if file_path.endswith(".idx") and file_name.startswith('alpaca_'):
                     idx_file += 1
-                total_size += os.path.getsize(file_path)
+                    total_size += os.path.getsize(file_path)
         judge_expression(bin_file == 1)
         judge_expression(idx_file == 1)
         judge_expression(math.isclose(total_size / (1024 * 1024), 13 * 2, abs_tol=1))
