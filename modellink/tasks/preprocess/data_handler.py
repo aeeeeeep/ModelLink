@@ -21,14 +21,14 @@ import json
 import logging
 import torch
 import numpy as np
-from typing import Any, Dict, List
+from typing import Dict, List
 from datasets import load_dataset
 
 from megatron.core.datasets import indexed_dataset
 
 from modellink.tasks.preprocess.templates import Prompter, AlpacaTemplate
-from modellink.tasks.preprocess.templates import get_templates, Role, get_template_and_fix_tokenizer
-from .utils import get_dataset_list, load_single_dataset, merge_dataset
+from modellink.tasks.preprocess.templates import get_template_and_fix_tokenizer
+from .utils import get_dataset_list, get_handler_dataset_attr, load_single_dataset, merge_dataset, align_dataset
 
 
 logging.basicConfig(level=logging.INFO)
@@ -201,7 +201,6 @@ class LlamaFactoryInstructionHandler(BaseDatasetHandler):
         self.args.output_prefix = self.args.output_prefix + "_packed"
         self.ignored_label = -100
         self.is_multi_turn = True
-        self.dataset_attr = get_dataset_list(args)
         self.llama_factory_template = get_template_and_fix_tokenizer(tokenizer.tokenizer, args.lla_fact_ins_template.strip())
 
     def _format_msg(self, sample):
@@ -209,9 +208,9 @@ class LlamaFactoryInstructionHandler(BaseDatasetHandler):
 
     def _tokenize_prompt(
         self,
-        example: Dict[str, List[Any]],
-        template: "Template",
-        tokenizer: "PreTrainedTokenizer",
+        example,
+        template,
+        tokenizer,
 ) -> Dict[str, List[List[int]]]:
         model_inputs = {"input_ids": [], "attention_mask": [], "labels": []}
         input_ids, labels = [], []
@@ -261,6 +260,24 @@ class LlamaFactoryInstructionHandler(BaseDatasetHandler):
         for key in self.args.json_keys:
             tokenized_full_prompt[key] = [tokenized_full_prompt[key]]
         return tokenized_full_prompt
+
+
+class AlpacaStyleInstructionHandler(LlamaFactoryInstructionHandler):
+    """
+    Handle alpaca style dataset format
+    a Llama-factory Alpaca style instruction dataset handler
+    """
+    def __init__(self, args, raw_datasets, tokenizer, splitter):
+        super().__init__(args, raw_datasets, tokenizer, splitter)
+
+
+class SharegptStyleInstructionHandler(LlamaFactoryInstructionHandler):
+    """
+    Handle sharegpt style dataset format
+    a Llama-factory sharegpt style instruction dataset handler
+    """
+    def __init__(self, args, raw_datasets, tokenizer, splitter):
+        super().__init__(args, raw_datasets, tokenizer, splitter)
 
 
 class GeneralInstructionHandler(BaseDatasetHandler):
@@ -542,7 +559,7 @@ def _has_py_script(input_name):
 def build_dataset(args):
     """loading dataset by huggingface"""
     raw_datasets = None
-    if (args.handler_name == "LlamaFactoryInstructionHandler"):
+    if args.handler_name == "LlamaFactoryInstructionHandler":
         all_datasets = []
         for dataset_attr in get_dataset_list(args):
             all_datasets.append(load_single_dataset(dataset_attr, args))
@@ -597,5 +614,11 @@ def build_dataset(args):
             )
         if raw_datasets is None:
             raise Exception("unknown data!")
+
+        if args.handler_name == "AlpacaStyleInstructionHandler" or args.handler_name == "SharegptStyleInstructionHandler":
+            handler_dataset_attr = get_handler_dataset_attr(args, raw_datasets)
+
+            return align_dataset(raw_datasets, handler_dataset_attr, args)
+
 
     return raw_datasets
