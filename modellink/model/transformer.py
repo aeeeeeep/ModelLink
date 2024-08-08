@@ -29,16 +29,17 @@ from megatron import core
 from megatron.core import tensor_parallel
 from megatron.core import parallel_state
 from megatron.core.enums import ModelType
-
+from megatron.core import mpu
 from megatron.legacy.model.enums import AttnMaskType, LayerType, AttnType
 from megatron.legacy.model.transformer import _get_layer_type
 from megatron.legacy.model.transformer import (
     ParallelTransformer, ParallelTransformerLayer, NoopTransformerLayer
 )
 from megatron.legacy.model.utils import get_norm
-from megatron.core import mpu
+from megatron.legacy.model.fused_bias_gelu import bias_gelu_impl
+from mindspeed.core.tensor_parallel.random import CheckpointWithoutOutput
 
-
+from ..core.transformer.transformer import should_recompute_activation
 from ..core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
 from ..error_utils import ensure_valid
 from ..model.alibi import Alibi, _build_alibi_tensor, _get_inverted_mask
@@ -970,37 +971,66 @@ def parallel_transformer_forward(
     return hidden_states
 
 
+def parallel_mlp_forward_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        is_recompute_activation = should_recompute_activation(self)
+
+        def activation_function(*function_args):
+            intermediate, bias = function_args
+
+            if self.bias_gelu_fusion:
+                assert self.add_bias is True
+                assert self.activation_func == F.gelu
+                intermediate = bias_gelu_impl(intermediate, bias)
+            else:
+                if bias_parallel is not None:
+                    intermediate = intermediate + bias
+                intermediate = self.activation_func(intermediate)
+            return intermediate
+
+        if not is_recompute_activation:
+            output, output_bias = fn(self, *args, **kwargs)
+        else:
+            hidden_states = args[0]
+            intermediate_parallel, bias_parallel = self.dense_h_to_4h(hidden_states)
+            self.activation_checkpoint_manager = CheckpointWithoutOutput()
+            intermediate_parallel = self.activation_checkpoint_manager.checkpoint(activation_function,
+                                                                                  False,
+                                                                                  intermediate_parallel,
+                                                                                  bias_parallel)
+            # [s, b, h]
+            output, output_bias = self.dense_4h_to_h(intermediate_parallel)
+
+            # discard the output of the activation function,
+            # which will be restored by recomputation during backward.
+            self.activation_checkpoint_manager.discard_output()
+
+            # when backward to output of dense_4h_to_h,
+            # recompute and restore the output of activation function.
+            if output.requires_grad:
+                output.register_hook(self.activation_checkpoint_manager.recompute)
+        return output, output_bias
+    return wrapper
+
+
 def parallel_mlp_init_wrapper(fn):
     @wraps(fn)
     def wrapper(self, *args, **kwargs):
         fn(self, *args, **kwargs)
         self.layer_number = None
         _args = get_args()
-        if _args.swiglu:
-            def swiglu(x):
-                if _args.use_fused_swiglu:
-                    return torch_npu.npu_swiglu(x, dim=-1)
-                x = torch.chunk(x, 2, dim=-1)
-                return F.silu(x[0]) * x[1]
-            self.activation_func = swiglu
+        if _args.swiglu and _args.use_fused_swiglu:
+            from mindspeed.core.fusions.fused_bias_swiglu import fused_swiglu
+            self.activation_func = fused_swiglu
 
-        # 适配geglu激活函数
         config = args[0]
-        if _args.geglu:
-            config.activation_func = F.gelu
-            config.gated_linear_unit = True
-            config.bias_gelu_fusion = False
-
-            def geglu(x):
-                x = torch.chunk(x, 2, dim=-1)
-                return F.gelu(x[0]) * x[1]
-            self.activation_func = geglu
+        is_expert = kwargs.get('is_expert') if 'is_expert' in kwargs.keys() else False
 
         ffn_hidden_size = config.ffn_hidden_size
         if config.gated_linear_unit:
             ffn_hidden_size *= 2
 
-        is_expert = kwargs.get("is_expert", False)
         self.dense_h_to_4h = tensor_parallel.ColumnParallelLinear(
             config.hidden_size,
             ffn_hidden_size,
