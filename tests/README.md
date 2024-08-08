@@ -21,24 +21,10 @@
         <td>Y</td>
     </tr>
     <tr>
-        <td rowspan="8">UT</td>
-        <td rowspan="3">CP</td>
-        <td>hybrid</td>
+        <td rowspan="6">UT</td>
+        <td>CP</td>
+        <td>hybrid, ring_attn, ulysses</td>
         <td>dist_algo/test_hybrid_context_parallel.py</td>
-        <td>Y</td>
-        <td></td>
-        <td></td>
-    </tr>
-    <tr>
-        <td>ring_attn</td>
-        <td>dist_algo/test_ringattn_context_parallel.py</td>
-        <td>Y</td>
-        <td></td>
-        <td></td>
-    </tr>
-    <tr>
-        <td>ulysses</td>
-        <td>dist_algo/test_ulysses_context_parallel.py</td>
         <td>Y</td>
         <td></td>
         <td></td>
@@ -90,51 +76,31 @@
 
 其余的再补充...
 
-### 目录说明
+### 开发规则
 
-#### st:
+#### ST:
 
-(1) 看护特性：
-**预训练功能**，主要包含各种**分布式并行特性算法**组合：
-
-① TP, PP, VPP
-
-② CP, EP（待上库）
-
-(2) 规则说明：
-
-##### 校验规则：
-
-① 加载权重提取前 15 步 **lm loss**，与 `baseline_results` 文件夹下的标杆数据进行对比。loss 在非确定性计算情况下单步差异在 0.01 以内；
-
-② 提取最后 10 步 **throughput**（消除 warm_up 影响）与 `baseline_results` 文件夹下的标杆数据进行平均吞吐对比，吞吐比标杆高可以直接通过，若劣化则保证劣化比在 %5 以内；
-
-③ 提取 8 卡的 **allocated memory** 与 **max allocated memory** 与`baseline_results` 文件夹下的标杆进行显存占用比对。给定分布式并行切分策略，理论上每个 rank 的显存分配是固定的，显存占用比标杆低可以直接通过，若劣化则保证劣化比在 10% 以内。
-
-##### 其余规则：
-
-① 贡献脚本用例请放置于 `st/shell_scripts` 文件夹下，命名规则为 **{模型名}_{切分策略}**，如 `llama2_tp2_pp4_vpp2_ptd.sh`，请贡献者严格对齐；
+① 贡献脚本用例请放置于 `st/shell_scripts` 文件夹下，命名规则为 **{模型名}_{切分策略}** 或者 **{模型名}_{特性名称}**， 如 `llama2_tp2_pp4_vpp2_ptd.sh`，请贡献者严格对齐；
 
 ② 标杆数据请放置于 `st/baseline_results` 文件夹下，**命名保证完全与 shell 脚本对齐**，否则自动化脚本执行将扫描不到；
 
-③ 如需增加看护指标，在 `st/st_utils/common.py` 下补充对应正则表达式与相应提取逻辑，在 `st/st_utils/test_ci_pipeline.py` 补充对应函数逻辑；
+③ 获取标杆数据：通过门禁任务执行获得首次数据，并将结果保存至本地 log 或者 txt 文件中，后通过本地执行 `st/st_utils/common.py` 中的 `transfer_logs_as_json` 函数进行提取，最后再连同用例脚本上仓即可；
 
-④ 为保证门禁执行时间，无特别场景，尽量不要增加 shell 脚本用例，建议在原有用例基础上补充该部分逻辑；若需要补充将审视其必要性。
+④ 在贡献时候需要考虑最终校验的具体指标，精度、性能、显存，在对应指标空白处填上 `Y`，如无校验的保留空白即可。
 
-#### ut：
 
-所有通过 `pytest` 拉起的用例建议放置于本文件夹。
+#### UT：
 
-`ckpt`：权重转换；
+① 建议所有 UT 用例通过分布式 `pytest` 来拉起，即继承 tests/common.py 文件下的 `DistributedTest`，指定 `world_size`，具体参照已有用例即可；
 
-`process_data`：数据处理相关；
+② 建议按照功能特性进行文件夹命名区分，至多不超过两层目录，所有用例以 `test` 作为命名前缀；
 
-`dist_algo`：分布式并行算法前向逻辑，例如现有 `CP` 特性用例；
+③ 新增用例可以在原有用例基础上做 `test_xxx` 的补充，尽量保证测试功能的集成性；
 
-`model_module`：与模型结构计算相关逻辑
+④ 在贡献时候需要考虑最终校验的具体指标，精度、性能、显存，在对应指标空白处填上 `Y`，如无校验的保留空白即可。
 
-...
 
-#### pipeline:
+
+#### Pipeline:
 
 待补充说明...
