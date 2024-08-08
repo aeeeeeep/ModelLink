@@ -399,7 +399,11 @@ def _add_training_args(parser):
                        help='enable deterministic computing for npu')
     group.add_argument('--jit-compile', action='store_true', default=False,
                        help='Setting jit compile mode to True')
-
+    group.add_argument('--recompute-activation-function', action='store_true',
+                       help='Recompute the activation function in MLP layers.')
+    group.add_argument('--recompute-activation-function-num-layers', type=int, default=None,
+                       help='Can be used together with "--recompute-method block." '
+                       'and "--recompute-num-layers". ')
     return parser
 
 
@@ -570,6 +574,8 @@ def _validate_optimizer(args):
     if args.reuse_fp32_param and args.enable_high_availability:
         raise AssertionError('reuse-fp32-param and enable-high-availability do not support enabling together.')
 
+    # if args.recompute_activation_function and args.recompute_granularity == "selective":
+    #     raise AssertionError('--recompute-activation-function is not compatible with selective recomputation')
 
 def validate_args_decorator(megatron_validate_args):
     @wraps(megatron_validate_args)
