@@ -185,7 +185,77 @@ ModelLink Megatron-Legacy到Huggingface的权重转换脚本命名风格及启�
 bash examples/llama2/ckpt_convert_llama2_legacy2hf.sh
 ```
 
+##### 2.3 lora权重与base权重合并
 
+在上述权重转换命令中，加入如下参数可以将训练的 lora 权重与base进行融合。
+
+```bash
+--lora-load ${CHECKPOINT_LORA}  \
+--lora-r 16 \
+--lora-alpha 32 \
+--lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
+```
+
+【合并后转换为Megatron-Legacy权重】
+
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+    --lora-load ./ckpt/llama-2-7b-lora \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ./model_weights/llama2-7b-lora2legacy
+```
+
+转换脚本命名风格及启动方法为：
+```shell
+bash examples/llama2/ckpt_convert_llama2_legacy2legacy_lora.sh
+```
+
+【合并后转换为Huggingface权重】
+
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+    --lora-load ./ckpt/llama-2-7b-lora \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ./model_from_hf/llama-2-7b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama2-hf/mg2hg/
+```
+
+转换脚本命名风格及启动方法为：
+```shell
+bash examples/llama2/ckpt_convert_llama2_legacy2hf_lora.sh
+```
+
+**注意：** lora参数值需与lora微调时的参数保持一致
+
+【lora权重评估】
+
+使用lora权重的评估脚本命名风格及启动方法为：
+
+```shell
+bash examples/llama2/evaluate_llama2_7B_lora_ptd.sh
+```
 
 ---
 
