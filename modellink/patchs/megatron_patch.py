@@ -34,11 +34,11 @@ from ..model import (
     rms_norm_init_wrapper, rms_norm_forward
 )
 from ..core import (initialize_model_parallel_decorator,
-                   build_generic_dataset, _build_document_sample_shuffle_indices,
-                   TransformerLayerSubmodules, transformer_layer_init_wrapper,
-                   transformer_layer_forward, gpt_model_forward, get_num_layers_to_build_wrapper,
-                   start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
-                   clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper)
+                    build_generic_dataset, _build_document_sample_shuffle_indices,
+                    TransformerLayerSubmodules, transformer_layer_init_wrapper,
+                    transformer_layer_forward, gpt_model_forward, get_num_layers_to_build_wrapper,
+                    start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
+                    clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper)
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
@@ -94,15 +94,21 @@ def patch_megatron_noncore():
 
 def patch_fusions():
     # use torch-npu fused layer norm
-    PatchManager.register_patch('megatron.core.fusions.fused_layer_norm.FusedLayerNormAffineFunction', FusedLayerNormAffineFunction)
+    PatchManager.register_patch('megatron.core.fusions.fused_layer_norm.FusedLayerNormAffineFunction',
+                                FusedLayerNormAffineFunction)
     # use torch-npu fused layer norm
     PatchManager.register_patch('megatron.core.fusions.fused_layer_norm.FastLayerNormFN', FastLayerNormFN)
     # use torch-npu npu_scaled_masked_softmax
-    PatchManager.register_patch('megatron.core.fusions.fused_softmax.ScaledUpperTriangMaskedSoftmax', ScaledUpperTriangMaskedSoftmax)
-    PatchManager.register_patch('megatron.core.fusions.fused_softmax.ScaledMaskedSoftmax', ScaledMaskedSoftmax)  # use torch-npu npu_scaled_masked_softmax
-    PatchManager.register_patch('megatron.core.fusions.fused_softmax.ScaledSoftmax', ScaledSoftmax)  # use torch-npu npu_scaled_masked_softmax
-    PatchManager.register_patch('megatron.core.fusions.fused_softmax.FusedScaleMaskSoftmax.is_kernel_available', is_kernel_available)  # replace kernel check
-    PatchManager.register_patch('megatron.core.fusions.fused_softmax.FusedScaleMaskSoftmax.forward_fused_softmax', forward_fused_softmax)
+    PatchManager.register_patch('megatron.core.fusions.fused_softmax.ScaledUpperTriangMaskedSoftmax',
+                                ScaledUpperTriangMaskedSoftmax)
+    PatchManager.register_patch('megatron.core.fusions.fused_softmax.ScaledMaskedSoftmax',
+                                ScaledMaskedSoftmax)  # use torch-npu npu_scaled_masked_softmax
+    PatchManager.register_patch('megatron.core.fusions.fused_softmax.ScaledSoftmax',
+                                ScaledSoftmax)  # use torch-npu npu_scaled_masked_softmax
+    PatchManager.register_patch('megatron.core.fusions.fused_softmax.FusedScaleMaskSoftmax.is_kernel_available',
+                                is_kernel_available)  # replace kernel check
+    PatchManager.register_patch('megatron.core.fusions.fused_softmax.FusedScaleMaskSoftmax.forward_fused_softmax',
+                                forward_fused_softmax)
     PatchManager.register_patch('megatron.core.fusions.fused_bias_swiglu.SwiGLUFunction', SwiGLUFunction)
     PatchManager.register_patch('megatron.core.fusions.fused_bias_swiglu.BiasSwiGLUFunction', BiasSwiGLUFunction)
 
@@ -121,24 +127,37 @@ def patch_core_models(args):
     from ..core.transformer.attention import attention_init_wrapper, attention_forward
 
     # Embedding
-    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.get_pos_emb_on_this_cp_rank', get_pos_emb_on_this_cp_rank)
+    PatchManager.register_patch(
+        'megatron.core.models.common.embeddings.rotary_pos_embedding.get_pos_emb_on_this_cp_rank',
+        get_pos_emb_on_this_cp_rank)
     # rotary support for Megatron-LM core 0.6.0
-    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.apply_rotary_pos_emb_bshd', apply_rotary_pos_emb_bshd)
-    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.forward', rotary_embedding_forward)
-    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__', rotary_embedding_init_wrapper)
+    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.apply_rotary_pos_emb_bshd',
+                                apply_rotary_pos_emb_bshd)
+    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.forward',
+                                rotary_embedding_forward)
+    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__',
+                                rotary_embedding_init_wrapper)
 
     # Attention
     PatchManager.register_patch('megatron.core.transformer.attention.Attention.forward', attention_forward)
     PatchManager.register_patch('megatron.core.transformer.attention.Attention.__init__', attention_init_wrapper)
-    PatchManager.register_patch('megatron.core.transformer.dot_product_attention.DotProductAttention.__init__', dot_product_attention_init_wrapper)
-    PatchManager.register_patch('megatron.core.transformer.dot_product_attention.DotProductAttention.forward', dot_product_attention_forward_wrapper)
-    PatchManager.register_patch('megatron.core.transformer.custom_layers.transformer_engine.TEDotProductAttention.__init__', dot_product_attention_init_wrapper)
-    PatchManager.register_patch('megatron.core.transformer.custom_layers.transformer_engine.TEDotProductAttention.forward', dot_product_attention_forward_wrapper)
+    PatchManager.register_patch('megatron.core.transformer.dot_product_attention.DotProductAttention.__init__',
+                                dot_product_attention_init_wrapper)
+    PatchManager.register_patch('megatron.core.transformer.dot_product_attention.DotProductAttention.forward',
+                                dot_product_attention_forward_wrapper)
+    PatchManager.register_patch(
+        'megatron.core.transformer.custom_layers.transformer_engine.TEDotProductAttention.__init__',
+        dot_product_attention_init_wrapper)
+    PatchManager.register_patch(
+        'megatron.core.transformer.custom_layers.transformer_engine.TEDotProductAttention.forward',
+        dot_product_attention_forward_wrapper)
 
     # Layer Definition
     # For NPU, we use local-mcore-structrue in te layer.
-    PatchManager.register_patch('megatron.core.models.gpt.gpt_layer_specs.get_gpt_layer_with_transformer_engine_spec', get_gpt_layer_local_spec)
-    PatchManager.register_patch('megatron.core.models.gpt.gpt_layer_specs.get_gpt_layer_local_spec', get_gpt_layer_local_spec_wrapper)
+    PatchManager.register_patch('megatron.core.models.gpt.gpt_layer_specs.get_gpt_layer_with_transformer_engine_spec',
+                                get_gpt_layer_local_spec)
+    PatchManager.register_patch('megatron.core.models.gpt.gpt_layer_specs.get_gpt_layer_local_spec',
+                                get_gpt_layer_local_spec_wrapper)
 
     PatchManager.register_patch('megatron.training.utils.get_batch_on_this_cp_rank', get_batch_on_this_cp_rank)
     PatchManager.register_patch('megatron.core.models.gpt.gpt_model.GPTModel.forward', gpt_model_forward)
@@ -147,7 +166,8 @@ def patch_core_models(args):
     if args.use_mc2:
         # MoE MLP not use mc2 linear
         from megatron.core.transformer.transformer_block import TransformerBlock
-        TransformerBlock._build_layers = build_layers_wrapper(TransformerBlock._build_layers, ColumnParallelLinear.forward,
+        TransformerBlock._build_layers = build_layers_wrapper(TransformerBlock._build_layers,
+                                                              ColumnParallelLinear.forward,
                                                               RowParallelLinear.forward)
 
 
@@ -164,9 +184,12 @@ def patch_core_transformers(args):
     PatchManager.register_patch('megatron.core.transformer.transformer_block.TENorm', PTNorm)
     PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.routing', topk_router_routing)
     PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.forward', topk_router_forward)
-    PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayerSubmodules', TransformerLayerSubmodules)
-    PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayer.__init__', transformer_layer_init_wrapper)
-    PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayer.forward', transformer_layer_forward)
+    PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayerSubmodules',
+                                TransformerLayerSubmodules)
+    PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayer.__init__',
+                                transformer_layer_init_wrapper)
+    PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayer.forward',
+                                transformer_layer_forward)
     PatchManager.register_patch('megatron.core.transformer.moe.router.z_loss_func', z_loss_func)
     PatchManager.register_patch('megatron.core.transformer.transformer_block.get_num_layers_to_build',
                                 get_num_layers_to_build_wrapper)
@@ -181,9 +204,14 @@ def patch_core_transformers(args):
     PatchManager.register_patch('megatron.core.transformer.moe.moe_layer.MoELayer.forward', moe_layer_forward)
 
     if args.moe_permutation_async_comm and args.moe_token_dispatcher_type == 'allgather':
-        PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAllGatherTokenDispatcher.token_permutation', allgather_token_permutation)
-        PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAllGatherTokenDispatcher.token_unpermutation', allgather_token_unpermutation)
-        PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.aux_loss_load_balancing', aux_loss_load_balancing)
+        PatchManager.register_patch(
+            'megatron.core.transformer.moe.token_dispatcher.MoEAllGatherTokenDispatcher.token_permutation',
+            allgather_token_permutation)
+        PatchManager.register_patch(
+            'megatron.core.transformer.moe.token_dispatcher.MoEAllGatherTokenDispatcher.token_unpermutation',
+            allgather_token_unpermutation)
+        PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.aux_loss_load_balancing',
+                                    aux_loss_load_balancing)
 
     # For drop and pad feature in all2all dispatcher
     if args.moe_expert_capacity_factor:
@@ -191,14 +219,19 @@ def patch_core_transformers(args):
         from ..core.transformer.moe.moe_utils import topk_softmax_with_capacity
         from ..arguments import core_transformer_config_from_args_wrapper
         # balancing strategy relies on moe_expert_capacity_factor
-        PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.aux_loss_load_balancing', aux_loss_load_balancing)
-        PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.apply_load_balancing_loss', apply_load_balancing_loss)
-        PatchManager.register_patch('megatron.core.transformer.moe.moe_utils.topk_softmax_with_capacity', topk_softmax_with_capacity)
-        PatchManager.register_patch('megatron.training.arguments.core_transformer_config_from_args', core_transformer_config_from_args_wrapper)
+        PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.aux_loss_load_balancing',
+                                    aux_loss_load_balancing)
+        PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.apply_load_balancing_loss',
+                                    apply_load_balancing_loss)
+        PatchManager.register_patch('megatron.core.transformer.moe.moe_utils.topk_softmax_with_capacity',
+                                    topk_softmax_with_capacity)
+        PatchManager.register_patch('megatron.training.arguments.core_transformer_config_from_args',
+                                    core_transformer_config_from_args_wrapper)
 
         if args.moe_token_dispatcher_type == 'alltoall':
             from ..core.transformer.moe.token_dispatcher import MoEAlltoAllTokenDispatcher
-            PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAlltoAllTokenDispatcher', MoEAlltoAllTokenDispatcher)
+            PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAlltoAllTokenDispatcher',
+                                        MoEAlltoAllTokenDispatcher)
 
 
 def patch_pipeline_parallel():
@@ -212,9 +245,12 @@ def patch_tensor_parallel():
     # default_generators need replace after set_device
     PatchManager.register_patch('megatron.core.tensor_parallel.random._set_cuda_rng_state', _set_cuda_rng_state)
     # change masked_target for better performance
-    PatchManager.register_patch('megatron.core.tensor_parallel.cross_entropy._VocabParallelCrossEntropy.forward', vocab_parallel_cross_entropy_forward)
-    PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward', vocab_parallel_embedding_forward)
-    PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward', vocab_embedding_wrapper)
+    PatchManager.register_patch('megatron.core.tensor_parallel.cross_entropy._VocabParallelCrossEntropy.forward',
+                                vocab_parallel_cross_entropy_forward)
+    PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward',
+                                vocab_parallel_embedding_forward)
+    PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward',
+                                vocab_embedding_wrapper)
     PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__', norm_wrapper)
 
 
@@ -225,14 +261,16 @@ def patch_parallel_state():
 
     # Bugfix for Megatron-LM core 0.6.0, to be removed for next version.
     PatchManager.register_patch('megatron.core.parallel_state.initialize_model_parallel', initialize_model_parallel)
-    PatchManager.register_patch('megatron.core.parallel_state.initialize_model_parallel', initialize_model_parallel_decorator)
+    PatchManager.register_patch('megatron.core.parallel_state.initialize_model_parallel',
+                                initialize_model_parallel_decorator)
 
     # For MoE
     PatchManager.register_patch('megatron.core.parallel_state.destroy_model_parallel', destroy_model_parallel_decorator)
 
     # For cp parallel state destroy
     PatchManager.register_patch('megatron.core.parallel_state.destroy_model_parallel', destroy_model_parallel_wrapper)
-    PatchManager.register_patch('megatron.core.parallel_state.get_context_parallel_group_for_send_recv_overlap', get_context_parallel_group_for_send_recv_overlap)
+    PatchManager.register_patch('megatron.core.parallel_state.get_context_parallel_group_for_send_recv_overlap',
+                                get_context_parallel_group_for_send_recv_overlap)
     PatchManager.register_patch('megatron.core.mpu', megatron.core.parallel_state)
 
 
@@ -240,16 +278,24 @@ def patch_model():
     from mindspeed.model.transformer import parallel_transformer_layer_init_wrapper
     from ..model.transformer import parallel_mlp_forward_wrapper
     # patch_fused_layer_norm
-    PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.FusedLayerNormAffineFunction', FusedLayerNormAffineFunction)  # use torch-npu fused layer norm
-    PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.FastLayerNormFN', FastLayerNormFN)  # use torch-npu fused layer norm
-    PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.fused_layer_norm_affine', fused_layer_norm_affine)  # use torch-npu fused layer norm
+    PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.FusedLayerNormAffineFunction',
+                                FusedLayerNormAffineFunction)  # use torch-npu fused layer norm
+    PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.FastLayerNormFN',
+                                FastLayerNormFN)  # use torch-npu fused layer norm
+    PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.fused_layer_norm_affine',
+                                fused_layer_norm_affine)  # use torch-npu fused layer norm
 
     # patch_fused_softmax
-    PatchManager.register_patch('megatron.legacy.model.fused_softmax.ScaledUpperTriangMaskedSoftmax', ScaledUpperTriangMaskedSoftmax)  # use torch-npu npu_scaled_masked_softmax
-    PatchManager.register_patch('megatron.legacy.model.fused_softmax.ScaledMaskedSoftmax', ScaledMaskedSoftmax)  # use torch-npu npu_scaled_masked_softmax
-    PatchManager.register_patch('megatron.legacy.model.fused_softmax.ScaledSoftmax', ScaledSoftmax)  # use torch-npu npu_scaled_masked_softmax
-    PatchManager.register_patch('megatron.legacy.model.fused_softmax.FusedScaleMaskSoftmax.is_kernel_available', is_kernel_available)  # replace kernel check
-    PatchManager.register_patch('megatron.legacy.model.fused_softmax.FusedScaleMaskSoftmax.forward_fused_softmax', forward_fused_softmax)
+    PatchManager.register_patch('megatron.legacy.model.fused_softmax.ScaledUpperTriangMaskedSoftmax',
+                                ScaledUpperTriangMaskedSoftmax)  # use torch-npu npu_scaled_masked_softmax
+    PatchManager.register_patch('megatron.legacy.model.fused_softmax.ScaledMaskedSoftmax',
+                                ScaledMaskedSoftmax)  # use torch-npu npu_scaled_masked_softmax
+    PatchManager.register_patch('megatron.legacy.model.fused_softmax.ScaledSoftmax',
+                                ScaledSoftmax)  # use torch-npu npu_scaled_masked_softmax
+    PatchManager.register_patch('megatron.legacy.model.fused_softmax.FusedScaleMaskSoftmax.is_kernel_available',
+                                is_kernel_available)  # replace kernel check
+    PatchManager.register_patch('megatron.legacy.model.fused_softmax.FusedScaleMaskSoftmax.forward_fused_softmax',
+                                forward_fused_softmax)
 
     # patch_rms_norm
     PatchManager.register_patch('megatron.legacy.model.rms_norm.RMSNorm.__init__', rms_norm_init_wrapper)
@@ -258,13 +304,17 @@ def patch_model():
     # patch_transformer
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelMLP.__init__', parallel_mlp_init_wrapper)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelMLP.forward', parallel_mlp_forward_wrapper)
-    PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformerLayer.__init__', parallel_transformer_layer_init_wrapper)
+    PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformerLayer.__init__',
+                                parallel_transformer_layer_init_wrapper)
     PatchManager.register_patch('megatron.legacy.model.transformer.SwitchMLP', SwitchMLP)
-    PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.__init__', parallel_transformer_init)
-    PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.forward', parallel_transformer_forward)
+    PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.__init__',
+                                parallel_transformer_init)
+    PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.forward',
+                                parallel_transformer_forward)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.state_dict_for_save_checkpoint',
                                 state_dict_for_save_checkpoint_wrapper)
-    PatchManager.register_patch('megatron.legacy.model.transformer.ParallelAttention.__init__', ParallelAttention_wrapper)
+    PatchManager.register_patch('megatron.legacy.model.transformer.ParallelAttention.__init__',
+                                ParallelAttention_wrapper)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelAttention.forward', ParallelAttentionForward)
     PatchManager.register_patch('megatron.legacy.model.transformer.CoreAttention.__init__', core_attention_wrapper)
     PatchManager.register_patch('megatron.legacy.model.transformer.CoreAttention.forward', core_attention_forward)
@@ -274,12 +324,15 @@ def patch_model():
     PatchManager.register_patch('megatron.legacy.model.GPTModel', GPTModel)
 
     # patch language model
-    PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.forward', transformer_language_model_forward_wrapper)
-    PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.__init__', transformer_language_model_init)
+    PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.forward',
+                                transformer_language_model_forward_wrapper)
+    PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.__init__',
+                                transformer_language_model_init)
 
 
 def patch_initialize():
-    PatchManager.register_patch('megatron.training.initialize._compile_dependencies', _compile_dependencies)  # remove cuda kernel compile
+    PatchManager.register_patch('megatron.training.initialize._compile_dependencies',
+                                _compile_dependencies)  # remove cuda kernel compile
     PatchManager.register_patch('megatron.training.initialize.parse_args', parse_args_decorator)
     PatchManager.register_patch('megatron.training.initialize.initialize_megatron', initialize_megatron)
 
@@ -287,7 +340,8 @@ def patch_initialize():
 def patch_training():
     from ..training import get_model_wrapper, train
     PatchManager.register_patch('megatron.training.training.get_model', get_model_wrapper)
-    PatchManager.register_patch('megatron.training.training.build_pretraining_data_loader', build_pretraining_data_loader)
+    PatchManager.register_patch('megatron.training.training.build_pretraining_data_loader',
+                                build_pretraining_data_loader)
     PatchManager.register_patch('megatron.training.training.train', train)
     PatchManager.register_patch('megatron.training.training.load_checkpoint', load_checkpoint_wrapper)
 
@@ -325,12 +379,16 @@ def patch_utils():
 def patch_high_availability_feature():
     from ..training import setup_model_and_optimizer_wrapper
     from ..core import get_megatron_optimizer_wrapper
-    PatchManager.register_patch('megatron.core.distributed.distributed_data_parallel.DistributedDataParallel.__init__', distributed_data_parallel_init_wrapper)
-    PatchManager.register_patch('megatron.core.distributed.param_and_grad_buffer.Bucket.start_grad_sync', start_grad_sync_wrapper)
+    PatchManager.register_patch('megatron.core.distributed.distributed_data_parallel.DistributedDataParallel.__init__',
+                                distributed_data_parallel_init_wrapper)
+    PatchManager.register_patch('megatron.core.distributed.param_and_grad_buffer.Bucket.start_grad_sync',
+                                start_grad_sync_wrapper)
     PatchManager.register_patch('megatron.training.training.get_megatron_optimizer', get_megatron_optimizer_wrapper)
     PatchManager.register_patch('megatron.core.optimizer.optimizer.clip_grad_norm_fp32', clip_grad_norm_fp32_wrapper)
-    PatchManager.register_patch('megatron.core.optimizer.distrib_optimizer.DistributedOptimizer.__init__', distributed_optimizer_init_wrapper)
-    PatchManager.register_patch('megatron.training.training.setup_model_and_optimizer', setup_model_and_optimizer_wrapper)
+    PatchManager.register_patch('megatron.core.optimizer.distrib_optimizer.DistributedOptimizer.__init__',
+                                distributed_optimizer_init_wrapper)
+    PatchManager.register_patch('megatron.training.training.setup_model_and_optimizer',
+                                setup_model_and_optimizer_wrapper)
 
 
 def patch_optimizer():
@@ -338,7 +396,11 @@ def patch_optimizer():
         from mindspeed.optimizer.optimizer import mixed_precision_optimizer_step, reuse_fp32_param_init_wrapper, \
             optimizer_config_init_wrapper
         from ..core.optimizer.distrib_optimizer import reuse_fp32_param_distrib_optimizer_init_wrapper
-        PatchManager.register_patch('megatron.core.optimizer.optimizer.MixedPrecisionOptimizer.step', mixed_precision_optimizer_step)
-        PatchManager.register_patch('megatron.core.optimizer.optimizer.Float16OptimizerWithFloat16Params.__init__', reuse_fp32_param_init_wrapper)
-        PatchManager.register_patch('megatron.core.optimizer.optimizer_config.OptimizerConfig.__init__', optimizer_config_init_wrapper)
-        PatchManager.register_patch('megatron.core.optimizer.distrib_optimizer.DistributedOptimizer.__init__', reuse_fp32_param_distrib_optimizer_init_wrapper)
+        PatchManager.register_patch('megatron.core.optimizer.optimizer.MixedPrecisionOptimizer.step',
+                                    mixed_precision_optimizer_step)
+        PatchManager.register_patch('megatron.core.optimizer.optimizer.Float16OptimizerWithFloat16Params.__init__',
+                                    reuse_fp32_param_init_wrapper)
+        PatchManager.register_patch('megatron.core.optimizer.optimizer_config.OptimizerConfig.__init__',
+                                    optimizer_config_init_wrapper)
+        PatchManager.register_patch('megatron.core.optimizer.distrib_optimizer.DistributedOptimizer.__init__',
+                                    reuse_fp32_param_distrib_optimizer_init_wrapper)
