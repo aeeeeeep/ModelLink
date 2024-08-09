@@ -36,7 +36,7 @@
         <td>Y</td>
     </tr>
     <tr>
-        <td rowspan="6">UT</td>
+        <td rowspan="7">UT</td>
         <td>CP</td>
         <td>hybrid, ring_attn, ulysses</td>
         <td>test_hybrid_context_parallel.py</td>
@@ -68,7 +68,7 @@
         <td></td>
     </tr>
 	<tr>
-        <td rowspan="2">process_data</td>
+        <td rowspan="3">process_data</td>
         <td>pretrain_data_handler, pretrain_merge_datasets</td>
         <td>test_process_pretrain_data.py</td>
         <td>Y</td>
@@ -78,6 +78,16 @@
 	<tr>
         <td>instruction_data_handler, instruction_merge_datasets</td>
         <td>test_process_instruction_data.py</td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+	<tr>
+        <td>instruction_data_alpaca,
+        instruction_data_alpaca_history,
+        instruction_data_sharegpt,
+        instruction_data_openai,</td>
+        <td>test_process_instruction_data_lf.py</td>
         <td>Y</td>
         <td></td>
         <td></td>

@@ -57,7 +57,7 @@
 
 
 ## 公开接口声明
-ModelLink 暂时未发布wheel包，无正式对外公开接口，所有功能均通过shell脚本调用。5个入口脚本分别为[pretrain_gpt.py](https://gitee.com/ascend/ModelLink/blob/master/pretrain_gpt.py), [inference.py](https://gitee.com/ascend/ModelLink/blob/master/inference.py), [evaluation.py](https://gitee.com/ascend/ModelLink/blob/master/evaluation.py), [preprocess_data.py](https://gitee.com/ascend/ModelLink/blob/master/tools/preprocess_data.py) 和 [convert_ckpt.py](https://gitee.com/ascend/ModelLink/blob/master/tools/checkpoint/convert_ckpt.py)。
+ModelLink 暂时未发布wheel包，无正式对外公开接口，所有功能均通过shell脚本调用。5个入口脚本分别为[pretrain_gpt.py](https://gitee.com/ascend/ModelLink/blob/master/pretrain_gpt.py), [inference.py](https://gitee.com/ascend/ModelLink/blob/master/inference.py), [evaluation.py](https://gitee.com/ascend/ModelLink/blob/master/evaluation.py), [preprocess_data.py](https://gitee.com/ascend/ModelLink/blob/master/preprocess_data.py) 和 [convert_ckpt.py](https://gitee.com/ascend/ModelLink/blob/master/tools/checkpoint/convert_ckpt.py)。
 
 
 ## 通信安全加固
