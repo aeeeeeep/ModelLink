@@ -3,25 +3,28 @@
 
 export LD_LIBRARY_PATH=/usr/local:/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export WITHOUT_JIT_COMPILE=1
 export HCCL_CONNECT_TIMEOUT=1200
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 GPUS_PER_NODE=8
 # Change for multinode config
 MASTER_ADDR=localhost
-MASTER_PORT=6013
+MASTER_PORT=6014
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-CHECKPOINT_PATH=/home/dataset/ci_engineering/ckpt
+CHECKPOINT_PATH=/data/ckpt
+
+rm -rf $CHECKPOINT_PATH
+
 mkdir $CHECKPOINT_PATH
-DATA_PATH=/home/dataset/tune-dataset-llama2-7B/alpaca
-TOKENIZER_MODEL=/home/dataset/ci_engineering/llama-2-7b-hf/tokenizer.model
+DATA_PATH=/data/tune_dataset/alpaca
+TOKENIZER_PATH=/data/llama-2-7b-hf/
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 basepath=$(cd `dirname $0`; cd ../../; pwd)
 export PYTHONPATH=${basepath}:$PYTHONPATH
+
 python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       ${basepath}/pretrain_gpt.py \
       --tensor-model-parallel-size 2 \
@@ -31,8 +34,9 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --hidden-size 4096 \
       --ffn-hidden-size 11008 \
       --num-attention-heads 32 \
-      --tokenizer-type Llama2Tokenizer \
-      --tokenizer-model $TOKENIZER_MODEL \
+      --tokenizer-type PretrainedFromHF  \
+      --tokenizer-name-or-path $TOKENIZER_PATH \
+      --tokenizer-not-use-fast \
       --seq-length 4096 \
       --max-position-embeddings 4096 \
       --micro-batch-size 1 \
@@ -46,7 +50,7 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --attention-dropout 0.0 \
       --init-method-std 0.01 \
       --hidden-dropout 0.0 \
-      --position-embedding-type rope \
+      --position-embedding-type alibi \
       --normalization RMSNorm \
       --swiglu \
       --no-masked-softmax-fusion \
@@ -65,17 +69,14 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       --fp16 \
       --finetune \
       --is-instruction-dataset \
-      --position-embedding-type alibi \
+      --variable-seq-lengths \
       --square-alibi-mask \
       --distributed-backend nccl \
       --data-path $DATA_PATH \
-      --split 100,0,0 \
+      --split 90,5,5 \
       --log-interval 1 \
-      --save-interval 5 \
-      --save $CHECKPOINT_PATH \
       --eval-interval 1000 \
       --use-deter-comp \
       --eval-iters 1
 
-rm -rf $CHECKPOINT_PATH
 exit $?

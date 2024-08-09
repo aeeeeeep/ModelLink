@@ -2,7 +2,6 @@
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 export HCCL_CONNECT_TIMEOUT=1800
-export NPU_ASD_ENABLE=0
 
 MASTER_ADDR=localhost
 NPUS_PER_NODE=8
@@ -40,7 +39,7 @@ GPT_ARGS="
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --load ${CKPT_LOAD_DIR} \
     --seq-length 8192 \
-    --max-position-embeddings 32768 \
+    --max-position-embeddings 8192 \
     --micro-batch-size 1 \
     --global-batch-size 64 \
     --make-vocab-size-divisible-by 1 \

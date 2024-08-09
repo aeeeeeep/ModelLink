@@ -4,26 +4,27 @@ import os
 import glob
 
 from utils import ParamConfig
-import modellink
 
 from modellink.tokenizer import build_tokenizer
 from modellink.tokenizer.tokenizer import _AutoTokenizer
-from modellink.data.data_handler import GeneralInstructionHandler
-from modellink.data.data_handler import build_dataset, get_dataset_handler
-from tools.preprocess_data import get_args, build_splitter
+from modellink.tasks.preprocess.data_handler import GeneralInstructionHandler
+from modellink.tasks.preprocess.data_handler import build_dataset, get_dataset_handler
+from preprocess_data import get_args, build_splitter
 
 
 class TestProcessInstructionData(unittest.TestCase):
-    def setUp(self, config=ParamConfig):
+    @classmethod
+    def setUpClass(self):
         # configure params, the index starts from 1
-        self.config = config
+        self.config = ParamConfig
         sys.argv = [sys.argv[0]] + self.config.instruction_data_param
         self.args = get_args()
         self.tokenizer = build_tokenizer(self.args)
         self.splitter = build_splitter(self.args)
         self.raw_dataset = build_dataset(self.args)
         self.handler = get_dataset_handler(self.args, self.raw_dataset, self.tokenizer, self.splitter)
-    
+
+
     def test_build_tokenizer(self):
         """
         Test normal function of the tokenizer:

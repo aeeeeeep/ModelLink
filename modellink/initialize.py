@@ -1,3 +1,18 @@
+# coding=utf-8
+# Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import time
 import torch
 import torch_npu
@@ -14,7 +29,7 @@ from megatron.training.initialize import (
     _warmup_jit_function
 )
 
-from modellink.arguments import parse_args_decorator, validate_args_decorator
+from modellink.arguments import parse_args_decorator
 from modellink.core.tensor_parallel.ascend_turbo.initialize import initialize_cfg_from_args
 from modellink.error_utils import ensure_valid
 from modellink.utils import seed_all
@@ -64,7 +79,6 @@ def initialize_megatron(
     if args.yaml_cfg is not None:
         args = validate_yaml(args, args_defaults)
     else:
-        validate_args = validate_args_decorator(megatron.training.arguments.validate_args)
         validate_args(args, args_defaults)
 
     # set global args, build tokenizer, and set adlr-autoresume,

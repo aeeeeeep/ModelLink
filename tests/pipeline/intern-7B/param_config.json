@@ -36,7 +36,7 @@
     ],
 
     "TRAINING_PARAM": [
-        "--save", "/home/dataset/save-weight-intern",
+        "--save", "/autotest/dataset/save-weight-intern",
         "--data-path", "/home/dataset/pretrain-dataset-intern/alpaca_text_document",
         "--train-iters", "15"
     ],

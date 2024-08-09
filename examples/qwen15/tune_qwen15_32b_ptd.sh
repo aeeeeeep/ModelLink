@@ -2,14 +2,13 @@
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 export HCCL_CONNECT_TIMEOUT=1800
-export NPU_ASD_ENABLE=0
 
 MASTER_ADDR=localhost
-NPUS_PRE_NODE=8
+NPUS_PER_NODE=8
 MASTER_PORT=6000
 NNODES=1
 NODE_RANK=0
-WORLD_SIZE=$(($NPUS_PRE_NODE*$NNODES))
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 # please fill these path configurations
 CKPT_LOAD_DIR="your model ckpt path"
@@ -40,7 +39,7 @@ GPT_ARGS="
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --load ${CKPT_LOAD_DIR} \
     --seq-length 8192 \
-    --max-position-embeddings 32768 \
+    --max-position-embeddings 8192 \
     --micro-batch-size 1 \
     --global-batch-size 64 \
     --make-vocab-size-divisible-by 1 \

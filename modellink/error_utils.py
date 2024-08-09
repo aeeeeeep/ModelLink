@@ -14,11 +14,6 @@
 # limitations under the License.
 
 
-def check_condition(cond):
-    if not cond:
-        raise RuntimeError
-
-
 class NotDivisibleError(Exception):
     def __init__(self, denominator, molecule, error_info):
         super().__init__()
@@ -31,18 +26,6 @@ class NotDivisibleError(Exception):
             return f"{self._denominator} is not divisible by {self._molecule}"
         else:
             return self._error_info.format(self._denominator, self._molecule)
-
-
-def check_divisible(denominator, molecule, error_info=None):
-    if denominator % molecule == 0:
-        return
-    raise NotDivisibleError(denominator, molecule, error_info)
-
-
-def check_divisible_by_zero(dividend, divisor):
-    if not isinstance(divisor, int) or divisor != 0:
-        return dividend / divisor
-    raise ZeroDivisionError
 
 
 class NotEqualError(Exception):
@@ -59,12 +42,6 @@ class NotEqualError(Exception):
             return self._error_info.format(self._tensor_a, self._tensor_b)
 
 
-def check_equal(tensor_a, tensor_b, error_info=None):
-    if tensor_a == tensor_b:
-        return
-    raise NotEqualError(tensor_a, tensor_b, error_info)
-
-
 class NotExistError(Exception):
     def __init__(self, item, container, error_info):
         super().__init__()
@@ -79,12 +56,6 @@ class NotExistError(Exception):
             return self._error_info.format(self._item, self._container)
 
 
-def check_exist(item, container, error_info=None):
-    if item in container:
-        return True
-    raise NotExistError(item, container, error_info)
-
-
 class NotExpectedTypeError(Exception):
     def __init__(self, variable, expected_type, error_message=None):
         super().__init__()
@@ -97,13 +68,6 @@ class NotExpectedTypeError(Exception):
             return self._error_message
         else:
             return f"expected {self._expected_type.__name__} find {type(self._variable).__name__}"
-
-
-def check_type(variable, expected_type, error_message=None):
-    if isinstance(variable, expected_type):
-        return
-    else:
-        raise NotExpectedTypeError(variable, expected_type, error_message)
 
 
 class IsNotNoneError(Exception):
@@ -130,6 +94,66 @@ class IsNoneError(Exception):
             return "expect not None variable"
 
 
+class IsNotValidError(Exception):
+    def __init__(self, error_message):
+        super().__init__()
+        self._error_message = error_message
+
+    def __repr__(self):
+        if self._error_message:
+            return self._error_message
+        else:
+            return "Expression is not valid"
+
+
+class GPTDatasetSampleIndexError(Exception):
+    def __init__(self, error_message):
+        super().__init__()
+        self._error_message = error_message
+
+    def __repr__(self):
+        if self._error_message:
+            return self._error_message
+        else:
+            return "Bad sample index."
+
+
+def check_condition(cond):
+    if not cond:
+        raise RuntimeError
+
+
+def check_divisible(denominator, molecule, error_info=None):
+    if denominator % molecule == 0:
+        return
+    raise NotDivisibleError(denominator, molecule, error_info)
+
+
+def check_divisible_by_zero(dividend, divisor):
+    if not isinstance(divisor, int) or divisor != 0:
+        return dividend / divisor
+    raise ZeroDivisionError
+
+
+def check_equal(tensor_a, tensor_b, error_info=None):
+    if tensor_a == tensor_b:
+        return
+    raise NotEqualError(tensor_a, tensor_b, error_info)
+
+
+def check_exist(item, container, error_info=None):
+    if item in container:
+        return True
+    raise NotExistError(item, container, error_info)
+
+
+def check_type(variable, expected_type, error_message=None):
+    if isinstance(variable, expected_type):
+        return
+    else:
+        raise NotExpectedTypeError(variable, expected_type, error_message)
+
+
 def ensure_var_is_not_none(variable, error_message=None):
     if variable is not None:
         return
@@ -142,18 +166,6 @@ def ensure_var_is_none(variable, error_message=None):
         return
     else:
         raise IsNotNoneError(error_message)
-
-
-class IsNotValidError(Exception):
-    def __init__(self, error_message):
-        super().__init__()
-        self._error_message = error_message
-
-    def __repr__(self):
-        if self._error_message:
-            return self._error_message
-        else:
-            return "Expression is not valid"
 
 
 def ensure_valid(expression, error_message=None):

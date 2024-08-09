@@ -18,10 +18,12 @@ import abc
 import logging
 from typing import Optional, Union
 
+
 import torch
 from torch import distributed as dist
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 
+from megatron.core.models.gpt.gpt_model import GPTModel
 from megatron.training import get_args, global_vars
 from megatron.core import parallel_state
 
@@ -212,6 +214,8 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         from megatron.core.distributed import DistributedDataParallel as LocalDDP
         from megatron.legacy.model import Float16Module as MegatronFloat16Module
         from megatron.training.utils import unwrap_model
+        from modellink.training import model_provider_func_wrapper
+        model_provider = model_provider_func_wrapper(model_provider)
 
         args = get_args()
 
@@ -445,3 +449,12 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
             return full_output
         else:
             return token_stream
+        
+        
+class GPTModelInfer(GPTModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.infer_model = MegatronModuleForCausalLM()
+
+    def generate(self, input_ids=None, **kwargs):
+        return self.infer_model.generate(input_ids=input_ids, **kwargs)

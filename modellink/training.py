@@ -1,4 +1,5 @@
 # coding=utf-8
+# Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 # Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +16,7 @@
 
 import gc
 import sys
+import json
 from functools import wraps
 
 import time
@@ -42,8 +44,7 @@ from megatron.training.training import (
     training_log, evaluate_and_print_results,
     save_checkpoint_and_time, print_datetime,
     num_floating_point_operations, get_one_logger,
-    append_to_progress_log, setup_model_and_optimizer,
-    build_train_valid_test_data_iterators
+    append_to_progress_log, build_train_valid_test_data_iterators
 )
 import megatron.training.utils
 from megatron.training.utils import (
@@ -53,8 +54,7 @@ from megatron.training.utils import (
 from megatron.core.distributed import DistributedDataParallel as DDP
 from megatron.core.distributed import finalize_model_grads
 from modellink.initialize import set_jit_fusion_options
-
-from .tasks.finetune.lora.utils import is_enable_lora
+from modellink.tasks.finetune.lora.utils import is_enable_lora
 
 
 def model_provider_func_wrapper(model_provider_func):
@@ -64,7 +64,19 @@ def model_provider_func_wrapper(model_provider_func):
         args = get_args()
 
         if is_enable_lora():
+            import peft
+            from packaging import version
             from peft import LoraConfig, get_peft_model, PeftModel, LoraModel
+            if version.parse(peft.__version__) <= version.parse('0.11.1'):
+                setattr(peft.tuners.lora.LoraLayer, 'merge', peft.tuners.lora.Linear.merge)
+                setattr(peft.tuners.lora.LoraLayer, 'unmerge', peft.tuners.lora.Linear.unmerge)
+                setattr(peft.tuners.lora.LoraLayer, 'get_delta_weight', peft.tuners.lora.Linear.get_delta_weight)
+
+            if hasattr(args, 'lora_fusion') and args.lora_fusion:
+                from peft.tuners.lora.tp_layer import LoraParallelLinear
+                from modellink.tasks.finetune.lora.cc_lora_forward import CCLoraParallelLinearForward
+                LoraParallelLinear.forward = CCLoraParallelLinearForward
+
             config = core_transformer_config_from_args(args)
             lora_config = LoraConfig(
                 r=args.lora_r,
@@ -76,9 +88,10 @@ def model_provider_func_wrapper(model_provider_func):
                 megatron_core="megatron.core",
             )
 
-            model_item = get_peft_model(model, lora_config)
-            model_item.print_trainable_parameters()
-            for module in model_item.modules():
+            model = get_peft_model(model, lora_config)
+            model.add_module('module', model.get_base_model())
+            model.print_trainable_parameters()
+            for module in model.modules():
                 # LoRA Linear Layer need all reduce
                 if isinstance(module, torch.nn.Linear):
                     setattr(module.weight, 'sequence_parallel', config.sequence_parallel)
@@ -104,6 +117,17 @@ def get_model_wrapper(fn):
     return wrapper
 
 
+def is_profile_enabled():
+    args = get_args()
+    if not args.profile:
+        return False
+    if args.profile_ranks == [-1]:
+        return True
+    if torch.distributed.get_rank() in args.profile_ranks:
+        return True
+    return False
+
+
 def get_profiler():
     args = get_args()
 
@@ -118,7 +142,7 @@ def get_profiler():
                          f" 1, and 2, but gets {args.profile_level}")
 
     experimental_config = torch_npu.profiler._ExperimentalConfig(
-        aic_metrics=torch_npu.profiler.AiCMetrics.ArithmeticUtilization,
+        aic_metrics=torch_npu.profiler.AiCMetrics.PipeUtilization,
         profiler_level=profiler_level,
     )
     skip_first = args.profile_step_start
@@ -137,7 +161,76 @@ def get_profiler():
         on_trace_ready=torch_npu.profiler.tensorboard_trace_handler(args.profile_save_path),
         experimental_config=experimental_config)
 
+    prof.add_metadata_json('distributed_args', json.dumps({
+        'tensor_model_parallel_size': args.tensor_model_parallel_size,
+        'pipeline_model_parallel_size': args.pipeline_model_parallel_size,
+        'data_parallel_size': args.data_parallel_size,
+        'context_parallel_size': args.context_parallel_size,
+        'expert_model_parallel_size': args.expert_model_parallel_size,
+        'sequence_parallel': args.sequence_parallel,
+        'rank': args.rank,
+        'world_size': args.world_size
+    }))
     return prof
+
+
+def setup_model_and_optimizer_wrapper(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        model, optimizer, opt_param_scheduler = fn(*args, **kwargs)
+        argument = get_args()
+        if argument.enable_high_availability and hasattr(optimizer, "set_current_step"):
+            optimizer.set_current_step(argument.iteration)
+        return model, optimizer, opt_param_scheduler
+
+    return wrapper
+
+
+def build_train_args(*input_args):
+    args, timers, train_valid_test_dataset_provider, model_provider, model_type, forward_step_func, process_non_loss_data_func = input_args
+
+    from megatron.training.training import setup_model_and_optimizer
+    # Model, optimizer, and learning rate.
+    timers('model-and-optimizer-setup', log_level=0).start(barrier=True)
+    model, optimizer, opt_param_scheduler = setup_model_and_optimizer(
+        model_provider, model_type)
+
+    timers('model-and-optimizer-setup').stop()
+    print_datetime('after model, optimizer, and learning rate '
+                   'scheduler are built')
+    config = get_model_config(model[0])
+
+    # Data stuff.
+    timers('train/valid/test-data-iterators-setup', log_level=0).start(
+        barrier=True)
+    if args.virtual_pipeline_model_parallel_size is not None:
+        train_data_iterator = []
+        valid_data_iterator = []
+        test_data_iterator = []
+        for i in range(len(model)):
+            mpu.set_virtual_pipeline_model_parallel_rank(i)
+            iterators = build_train_valid_test_data_iterators(
+                train_valid_test_dataset_provider)
+            train_data_iterator.append(iterators[0])
+            valid_data_iterator.append(iterators[1])
+            test_data_iterator.append(iterators[2])
+    else:
+        train_data_iterator, valid_data_iterator, test_data_iterator \
+            = build_train_valid_test_data_iterators(
+            train_valid_test_dataset_provider)
+    timers('train/valid/test-data-iterators-setup').stop()
+    print_datetime('after dataloaders are built')
+
+    # Print setup timing.
+    print_rank_0('done with setup ...')
+    timers.log(['model-and-optimizer-setup',
+                'train/valid/test-data-iterators-setup'], barrier=True)
+
+    train_args = [forward_step_func,
+                  model, optimizer, opt_param_scheduler,
+                  train_data_iterator, valid_data_iterator, process_non_loss_data_func, config]
+    test_data_iterator_list = [test_data_iterator]
+    return train_args, test_data_iterator_list
 
 
 def pretrain(train_valid_test_dataset_provider,
@@ -212,41 +305,9 @@ def pretrain(train_valid_test_dataset_provider,
             'train_iterations_warmup': 5
         })
 
-    # Model, optimizer, and learning rate.
-    timers('model-and-optimizer-setup', log_level=0).start(barrier=True)
-    model, optimizer, opt_param_scheduler = setup_model_and_optimizer(
-        model_provider, model_type)
-
-    timers('model-and-optimizer-setup').stop()
-    print_datetime('after model, optimizer, and learning rate '
-                   'scheduler are built')
-    config = get_model_config(model[0])
-
-    # Data stuff.
-    timers('train/valid/test-data-iterators-setup', log_level=0).start(
-        barrier=True)
-    if args.virtual_pipeline_model_parallel_size is not None:
-        train_data_iterator = []
-        valid_data_iterator = []
-        test_data_iterator = []
-        for i in range(len(model)):
-            mpu.set_virtual_pipeline_model_parallel_rank(i)
-            iterators = build_train_valid_test_data_iterators(
-                train_valid_test_dataset_provider)
-            train_data_iterator.append(iterators[0])
-            valid_data_iterator.append(iterators[1])
-            test_data_iterator.append(iterators[2])
-    else:
-        train_data_iterator, valid_data_iterator, test_data_iterator \
-            = build_train_valid_test_data_iterators(
-                train_valid_test_dataset_provider)
-    timers('train/valid/test-data-iterators-setup').stop()
-    print_datetime('after dataloaders are built')
-
-    # Print setup timing.
-    print_rank_0('done with setup ...')
-    timers.log(['model-and-optimizer-setup',
-                'train/valid/test-data-iterators-setup'], barrier=True)
+    train_args, test_data_iterator_list = build_train_args(args, timers, train_valid_test_dataset_provider,
+                                                           model_provider,
+                                                           model_type, forward_step_func, process_non_loss_data_func)
 
     if not args.skip_train:
         print_rank_0('training ...')
@@ -258,11 +319,18 @@ def pretrain(train_valid_test_dataset_provider,
 
         iteration = 0
         if args.do_train and args.train_iters > 0:
-            iteration, num_floating_point_operations_so_far = train(
-                forward_step_func,
-                model, optimizer, opt_param_scheduler,
-                train_data_iterator, valid_data_iterator,
-                process_non_loss_data_func, config)
+            if args.enable_high_availability:
+                try:
+                    from mindio_ttp.adaptor import ttp_init_controller_processor, ttp_train
+                except ModuleNotFoundError:
+                    sys.exit("The mindio_ttp package is not installed. Exiting.")
+                ttp_init_controller_processor(train_valid_test_dataset_provider, model_provider, model_type)
+                iteration, num_floating_point_operations_so_far = ttp_train(train_args, test_data_iterator_list)
+            else:
+                iteration, num_floating_point_operations_so_far = train(*train_args)
+
+            test_data_iterator = test_data_iterator_list[0]
+            forward_step_func, model, optimizer, opt_param_scheduler, train_data_iterator, valid_data_iterator, process_non_loss_data_func, config = train_args
 
         print_datetime('after training is done')
 
@@ -325,7 +393,7 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
     # Setup some training config params
     config.grad_scale_func = optimizer.scale_loss
     config.timers = timers
-    if isinstance(model[0], DDP) and args.overlap_grad_reduce:
+    if isinstance(model[0], DDP) and args.overlap_grad_reduce and config.no_sync_func is None:
         assert config.no_sync_func is None, \
             ('When overlap_grad_reduce is True, config.no_sync_func must be None; '
              'a custom no_sync_func is not supported when overlapping grad-reduce')
@@ -381,10 +449,9 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
                 'validation_iterations_time_msecs_avg': validation_iterations_time_msecs_avg
             })
 
-    if args.profile and (torch.distributed.get_rank() in args.profile_ranks):
+    if is_profile_enabled():
         prof = get_profiler()
         prof.start()
-
 
     while iteration < args.train_iters:
 
@@ -416,6 +483,16 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
                      get_num_microbatches()
         args.consumed_train_samples += batch_size
         num_floating_point_operations_so_far += num_floating_point_operations(args, batch_size)
+
+        if args.enable_high_availability:
+            try:
+                from mindio_ttp.framework_ttp import ttp_set_ckpt_args
+            except ModuleNotFoundError:
+                sys.exit("The mindio_ttp package is not installed. Exiting.")
+            args.num_floating_point_operations_so_far = num_floating_point_operations_so_far
+            ttp_set_ckpt_args(
+                [iteration, model, optimizer, opt_param_scheduler, args.num_floating_point_operations_so_far])
+            args.iteration = iteration
 
         # Logging.
         loss_scale = optimizer.get_loss_scale().item()
@@ -524,10 +601,10 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
             if args.manual_gc_interval != 0 and iteration % args.manual_gc_interval == 0:
                 gc.collect()
 
-        if args.profile and (torch.distributed.get_rank() in args.profile_ranks):
+        if is_profile_enabled():
             prof.step()
 
-    if args.profile and (torch.distributed.get_rank() in args.profile_ranks):
+    if is_profile_enabled():
         prof.stop()
     
     track_e2e_metrics()

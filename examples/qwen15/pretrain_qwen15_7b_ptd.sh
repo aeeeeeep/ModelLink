@@ -1,7 +1,6 @@
 #!/bin/bash
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export NPU_ASD_ENABLE=0
 
 NPUS_PER_NODE=8
 MASTER_ADDR=localhost
@@ -39,7 +38,7 @@ GPT_ARGS="
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --seq-length 8192 \
-    --max-position-embeddings 32768 \
+    --max-position-embeddings 8192 \
     --micro-batch-size 2 \
     --global-batch-size 64 \
     --make-vocab-size-divisible-by 16 \

@@ -1,5 +1,6 @@
 # coding=utf-8
 # Copyright (c) 2024, HUAWEI CORPORATION.  All rights reserved.
+# Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,14 +19,21 @@ import os
 import sys
 import time
 import logging
+from typing import Union
+
 from torch import distributed as dist
 from transformers import AutoTokenizer
 import modellink
+from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_with_transformer_engine_spec, \
+    get_gpt_layer_local_spec
+from megatron.core.transformer.spec_utils import import_module
 from megatron.training.initialize import initialize_megatron
-from megatron.training import get_args
+from megatron.training import get_args, print_rank_0
 from megatron.legacy.model import GPTModel
 from megatron.training.arguments import core_transformer_config_from_args
+from megatron.training.yaml_arguments import core_transformer_config_from_yaml
 
+from modellink.tasks.inference.text_generation.module import GPTModelInfer, MegatronModuleForCausalLM
 from modellink.tasks.evaluation.utils import add_text_generate_args
 from modellink.tasks.evaluation.eval_api.chat import Chat
 from modellink.tasks.evaluation.eval_impl.boolq_eval import BoolqEval
@@ -41,17 +49,63 @@ logging.getLogger().setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def model_provider(pre_process=True, post_process=True):
-    config = core_transformer_config_from_args(get_args())
+def model_provider(pre_process=True, post_process=True) -> Union[GPTModelInfer, GPTModel]:
+    """Builds the model.
 
-    """Build the model."""
-    init_model = GPTModel(
-        config,
-        parallel_output=False,
-        pre_process=pre_process,
-        post_process=post_process
-    )
-    return init_model
+    If you set the use_mcore_models to True, it will return the mcore GPT model and if not the legacy GPT model.
+
+    Args:
+        pre_process (bool, optional): Set to true if you need to compute embedings. Defaults to True.
+        post_process (bool, optional): Set to true if you need to want to compute output logits/loss. Defaults to True.
+
+
+    Returns:
+        Union[GPTModelInfer, GPTModel]: The returned model
+    """
+    args = get_args()
+    use_te = args.transformer_impl == "transformer_engine"
+
+    print_rank_0('building GPT model ...')
+    # Experimental loading arguments from yaml
+    if args.yaml_cfg is not None:
+        config = core_transformer_config_from_yaml(args, "language_model")
+    else:
+        config = core_transformer_config_from_args(args)
+
+    if args.use_mcore_models:
+        if args.spec is not None:
+            transformer_layer_spec = import_module(args.spec)
+        else:
+            if use_te:
+                transformer_layer_spec = get_gpt_layer_with_transformer_engine_spec(args.num_experts, args.moe_grouped_gemm)
+            else:
+                transformer_layer_spec = get_gpt_layer_local_spec(args.num_experts, args.moe_grouped_gemm)
+
+        model = GPTModelInfer(
+            config=config,
+            transformer_layer_spec=transformer_layer_spec,
+            vocab_size=args.padded_vocab_size,
+            max_sequence_length=args.max_position_embeddings,
+            pre_process=pre_process,
+            post_process=post_process,
+            fp16_lm_cross_entropy=args.fp16_lm_cross_entropy,
+            parallel_output=False,
+            share_embeddings_and_output_weights=not args.untie_embeddings_and_output_weights,
+            position_embedding_type=args.position_embedding_type,
+            rotary_percent=args.rotary_percent,
+        )
+    else:
+        if not args.context_parallel_size == 1:
+            raise ValueError("Context parallelism is only supported with Megatron Core!")
+
+        model = GPTModel(
+            config,
+            parallel_output=False,
+            pre_process=pre_process,
+            post_process=post_process
+        )
+
+    return model
 
 
 def get_result(result, tokenizer):
@@ -85,7 +139,7 @@ class LLMChat(Chat):
         self.template = "{instruction}"
 
     def chat(self, instruction, history):
-        instruction_temp = [self.template.format(instruction=ins) if (self.tokenizer.chat_template is None or args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": ins}]) for ins in instruction]
+        instruction_temp = [self.template.format(instruction=ins) if (self.tokenizer.chat_template is None or self.args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": ins}]) for ins in instruction]
         result = self.model.generate(
             instruction_temp,
             do_sample=False,
@@ -93,14 +147,14 @@ class LLMChat(Chat):
             stream=False,
             return_output_log_probs=True
         )
-        return get_result(result), dist.get_rank()
+        return get_result(result, self.tokenizer), dist.get_rank()
 
     def beam_search_chat(self, instruction, history):
-        instruction_temp = self.template.format(instruction=instruction) if (tokenizer.chat_template is None or args.no_chat_template) else tokenizer.apply_chat_template([{"role": "user", "content": instruction}])
-        result = model.generate(
+        instruction_temp = self.template.format(instruction=instruction) if (self.tokenizer.chat_template is None or self.args.no_chat_template) else self.tokenizer.apply_chat_template([{"role": "user", "content": instruction}])
+        result = self.model.generate(
             instruction_temp,
             do_sample=False,
-            max_new_tokens=max_new_tokens,
+            max_new_tokens=self.args.max_new_tokens,
             stream=False,
             num_beams=4,
             top_k=50,
@@ -119,7 +173,7 @@ def mmlu(eval_args, agent):
         if data_path:
             mmlu_eval = MmluEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = mmlu_eval.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -134,7 +188,7 @@ def gsm8k(eval_args, agent):
         if data_path:
             gsm8k_eval = Gsm8kEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = gsm8k_eval.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -149,7 +203,7 @@ def boolq(eval_args, agent):
         if data_path:
             boolq_eval = BoolqEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = boolq_eval.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -164,7 +218,7 @@ def ceval(eval_args, agent):
         if data_path:
             ceval_exam = CEvalExam(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = ceval_exam.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -179,7 +233,7 @@ def human_eval(eval_args, agent):
         if data_path:
             human_eval_exam = HumanEval(test_dir=data_path, instruction_template=eval_args.instruction_template)
             answer, score_df = human_eval_exam.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -194,7 +248,7 @@ def agi_eval(eval_args, agent):
         if data_path:
             agieval_exam = AGIEvalExam(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = agieval_exam.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -209,7 +263,7 @@ def bbh_eval(eval_args, agent):
         if data_path:
             bbh = BBHEval(test_dir=data_path, batch_size=eval_args.evaluation_batch_size)
             answer, score_df = bbh.eval(chat=agent)
-            if rank == 0:
+            if dist.get_rank() == 0:
                 logger.info('\n{}'.format(score_df))
     except Exception as e:
         logger.info(e)
@@ -220,7 +274,7 @@ def main():
                         args_defaults={'no_load_rng': True,
                                        'no_load_optim': True})
     args = get_args()
-    model = GPTModel.from_pretrained(
+    model = MegatronModuleForCausalLM.from_pretrained(
         model_provider=model_provider,
         pretrained_model_name_or_path=args.load
     )
@@ -266,3 +320,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

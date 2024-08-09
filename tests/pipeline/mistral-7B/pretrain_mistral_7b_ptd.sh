@@ -14,6 +14,7 @@ DATA_PATH=/home/dataset/pretrain-dataset-mistral-7B/alpaca_text_document
 TOKENIZER_MODEL=/home/dataset/mistral-7B
 TP=8
 PP=1
+NUM_LAYERS=32
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -66,8 +67,6 @@ GPT_ARGS="
     --no-gradient-accumulation-fusion \
     --no-load-optim \
     --no-load-rng \
-    --save ${CKPT_SAVE_DIR} \
-    --load ${CKPT_LOAD_DIR} \
     --use-mc2 \
     --use-fused-swiglu \
     --use-rotary-position-embeddings \
@@ -76,6 +75,8 @@ GPT_ARGS="
     --overlap-grad-reduce \
     --bf16
 "
+    # --save ${CKPT_SAVE_DIR} \
+    # --load ${CKPT_LOAD_DIR} \
 
 DATA_ARGS="
     --data-path $DATA_PATH \

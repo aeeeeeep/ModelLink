@@ -32,7 +32,7 @@ from megatron.core.models.gpt.gpt_layer_specs import (
     get_gpt_layer_with_transformer_engine_spec,
 )
 from modellink.data.decoder_packed_mtf_dataset import build_train_valid_test_datasets as build_instruction_dataset
-from modellink.utils import get_tune_attention_mask
+from modellink.utils import get_tune_attention_mask, get_finetune_data_on_this_tp_rank
 
 
 def model_provider(pre_process=True, post_process=True) -> Union[GPTModel, megatron.legacy.model.GPTModel]:
@@ -98,12 +98,16 @@ def model_provider(pre_process=True, post_process=True) -> Union[GPTModel, megat
 def get_batch(data_iterator):
     """Generate a batch."""
 
-    if (not mpu.is_pipeline_first_stage()) and (not mpu.is_pipeline_last_stage()):
-        return None, None, None, None, None
-
     args = get_args()
 
     if args.is_instruction_dataset:
+        if (not mpu.is_pipeline_first_stage()) and (not mpu.is_pipeline_last_stage()):
+            if args.variable_seq_lengths and args.pipeline_model_parallel_size > 2:
+                tokens, attention_mask = get_finetune_data_on_this_tp_rank(data_iterator)
+
+                return tokens, None, None, attention_mask, None
+            else:
+                return None, None, None, None, None
         # Items and their type.
         keys = ['input_ids', 'attention_mask', 'labels']
         data_type = torch.int64
@@ -118,9 +122,12 @@ def get_batch(data_iterator):
         # ignored label -100
         loss_mask = torch.where(labels == -100, 0, 1)
 
-        attention_mask = get_tune_attention_mask(attention_mask_1d, args.reset_attention_mask, args.tokenizer_padding_side)
+        attention_mask = get_tune_attention_mask(attention_mask_1d)
 
         return tokens, labels, loss_mask, attention_mask, None
+
+    if (not mpu.is_pipeline_first_stage()) and (not mpu.is_pipeline_last_stage()):
+        return None, None, None, None, None
 
     # get batches based on the TP rank you are on
     batch = get_batch_on_this_tp_rank(data_iterator)

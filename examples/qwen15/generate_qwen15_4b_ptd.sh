@@ -27,7 +27,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --hidden-size 2560 \
        --num-attention-heads 20  \
        --ffn-hidden-size 6912 \
-       --max-position-embeddings 32768 \
+       --max-position-embeddings 8192 \
        --seq-length 8192 \
        --make-vocab-size-divisible-by 1 \
        --untie-embeddings-and-output-weights \

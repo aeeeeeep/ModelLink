@@ -8,7 +8,7 @@ from utils import ParamConfig, assert_judge
 from transformers import AutoTokenizer
 import modellink
 from megatron.legacy.model import GPTModel
-from tests.pipeline.common import DistributedTest
+from tests.common import DistributedTest
 from modellink.tasks.evaluation.utils import add_text_generate_args
 
 

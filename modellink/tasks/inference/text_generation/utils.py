@@ -34,6 +34,42 @@ from megatron.core.utils import get_model_config
 
 from .communication import broadcast_tensor
 from ...finetune.lora.utils import is_enable_lora, get_lora_model_classes
+from ....error_utils import check_equal
+
+
+class InferenceParams:
+    """
+    Inference parameters that are passed to the main model in order
+    to efficiently calculate and store the context during inference.
+    """
+
+    def __init__(self, max_batch_size, max_sequence_len):
+        """
+        Note that offsets are set to zero and we always set the
+        flag to allocate memory. After the first call, make sure to
+        set this flag to False.
+        """
+        self.max_sequence_length = max_sequence_len
+        self.max_batch_size = max_batch_size
+        self.sequence_len_offset = 0
+        self.batch_size_offset = 0
+        self.key_value_memory_dict = {}
+
+    def swap_key_value_dict(self, batch_idx):
+        if len(self.key_value_memory_dict) == 0:
+            raise ValueError("Should not swap when dict in empty")
+        
+        for layer_number in self.key_value_memory_dict.keys():
+            inference_key_memory, inference_value_memory = self.key_value_memory_dict[layer_number]
+            check_equal(len(batch_idx),
+                        inference_key_memory.shape[1],
+                        error_info="Please make sure batch size is the same.")
+
+            new_inference_key_memory = inference_key_memory[:, batch_idx]
+            new_inference_value_memory = inference_value_memory[:, batch_idx]
+            self.key_value_memory_dict[layer_number] = (
+                    new_inference_key_memory, new_inference_value_memory
+            )
 
 
 def get_batch(context_tokens):
@@ -172,6 +208,7 @@ def forward_step(model, tokens, **kwargs):
     attention_mask = kwargs.pop("attention_mask")
     tokentype_ids = kwargs.pop("tokentype_ids")
     model_latencies = kwargs.pop("model_latencies", None)
+    inference_params = kwargs.pop("inference_params", None)
 
     model_latencies = [] if model_latencies is None else model_latencies
 
@@ -181,7 +218,7 @@ def forward_step(model, tokens, **kwargs):
     orig_seq_length = args.seq_length
     args.micro_batch_size = tokens.shape[0]
     config = get_model_config(model)
-    tensor_shapes = [args.seq_length, args.micro_batch_size, args.hidden_size]
+    tensor_shapes = [tokens.shape[1], args.micro_batch_size, args.hidden_size]
 
     input_tensor = recv_forward(tensor_shapes, config)
 
@@ -191,7 +228,8 @@ def forward_step(model, tokens, **kwargs):
         input_ids=tokens,
         position_ids=position_ids,
         attention_mask=attention_mask,
-        tokentype_ids=tokentype_ids
+        tokentype_ids=tokentype_ids,
+        inference_params=inference_params
     )
 
     output_tensor = _check_forward_output(output_tensor)
@@ -236,32 +274,58 @@ def sample_sequence_batch(model, context_tokens, context_lengths, **kwargs):
     model.eval()
     with torch.no_grad():
         counter = 0
-        layer_past = None
+        logits = None
         batch_size = tokens.size(0)
         max_length = args.max_length_ori
         context_length = context_lengths.min().item()
         is_done = torch.zeros([batch_size]).byte().to(torch.cuda.current_device())
 
-        while context_length < max_length:
-            if args.text_generation_config['recompute']:
-                logits = _recompute_forward(model,
-                                            attention_mask=attention_mask,
-                                            context_length=context_length,
-                                            position_ids=position_ids,
-                                            tokens=tokens,
-                                            type_ids=type_ids)
-            else:
-                logits = _disable_recompute_forward(model,
-                                                    attention_mask=attention_mask,
-                                                    batch_size=batch_size,
-                                                    context_length=context_length,
-                                                    counter=counter,
-                                                    layer_past=layer_past,
-                                                    model_latencies=model_latencies,
-                                                    position_ids=position_ids,
-                                                    tokens=tokens,
-                                                    type_ids=type_ids)
+        if args.use_kv_cache:
+            inference_params = InferenceParams(batch_size, max_length)
+        else:
+            inference_params = None
 
+        while context_length < max_length:
+            if inference_params:
+                if counter == 0:
+                    query_sequence_length = context_length
+                    input_tokens = tokens[:, :context_length]
+                    input_position_ids = position_ids[:, :context_length]
+                    input_attention_mask = attention_mask[:, :, :context_length, :context_length]
+                    if type_ids is not None:
+                        input_type_ids = type_ids[:, :, :context_length].view(batch_size, -1)
+                    else:
+                        input_type_ids = type_ids
+                else:
+                    query_sequence_length = 1
+                    input_tokens = tokens[:, context_length - 1:context_length]
+                    input_position_ids = position_ids[:, context_length - 1:context_length]
+                    input_attention_mask = attention_mask[:, :, context_length - 1:context_length, :context_length]
+                    if type_ids is not None:
+                        input_type_ids = type_ids[:, :, context_length - 1:context_length].view(batch_size, -1)
+                    else:
+                        input_type_ids = type_ids
+            else:
+                input_tokens = tokens
+                input_position_ids = position_ids
+                input_attention_mask = attention_mask
+                input_type_ids = type_ids
+
+            output = forward_step(model,
+                          input_tokens,
+                          position_ids=input_position_ids,
+                          attention_mask=input_attention_mask,
+                          tokentype_ids=input_type_ids,
+                          inference_params=inference_params)
+
+            if parallel_state.is_pipeline_last_stage():
+                if output is None:
+                    raise ValueError("In pipeline_last_stage group, the forward output should not be None")
+                if inference_params:
+                    logits = output[:, -1].view(batch_size, -1).contiguous()
+                else:
+                    logits = output[:, context_length - 1, :].view(batch_size, -1).contiguous()
+            
             group, next_log_probs, prev, src, started, vocab_size = _sample_and_synchronize(
                 args, batch_size, (context_length, context_lengths), logits, tokens
             )
@@ -277,6 +341,14 @@ def sample_sequence_batch(model, context_tokens, context_lengths, **kwargs):
 
             context_length += 1
             counter += 1
+
+            if inference_params:
+                # Once we are done with all the micro-batches, we can
+                # adjust the sequence length offset.
+                inference_params.sequence_len_offset += query_sequence_length
+                # and reset the batch size offset
+                inference_params.batch_size_offset = 0
+
             if done:
                 break
 
@@ -384,63 +456,3 @@ def _sample_strategy(args, logits):
         logits = F.softmax(logits, dim=-1)
         prev = torch.multinomial(logits, num_samples=1).view(-1)
     return logits, prev
-
-
-def _disable_recompute_forward(model, **kwargs):
-    attention_mask = kwargs.pop("attention_mask")
-    batch_size = kwargs.pop("batch_size")
-    context_length = kwargs.pop("context_length")
-    counter = kwargs.pop("counter")
-    layer_past = kwargs.pop("layer_past")
-    model_latencies = kwargs.pop("model_latencies")
-    position_ids = kwargs.pop("position_ids")
-    tokens = kwargs.pop("tokens")
-    type_ids = kwargs.pop("type_ids")
-    types2use = None
-    logits = None
-
-    if counter == 0:
-        tokens2use = tokens[:, :context_length]
-        positions2use = position_ids[:, :context_length]
-        if type_ids is not None:
-            types2use = type_ids[:, :context_length]
-    else:
-        tokens2use = tokens[:, context_length - 1].view(
-            batch_size, -1)
-        positions2use = position_ids[:, context_length - 1].view(
-            batch_size, -1)
-        if type_ids is not None:
-            types2use = type_ids[:, context_length - 1].view(
-                batch_size, -1)
-    output = forward_step(model,
-                          tokens2use,
-                          position_ids=positions2use,
-                          attention_mask=attention_mask,
-                          tokentype_ids=types2use,
-                          model_latencies=model_latencies)
-    if parallel_state.is_pipeline_last_stage():
-        if output is None:
-            raise ValueError("In pipeline_last_stage group, the forward output should not be None")
-        logits = output[:, -1].view(batch_size, -1).contiguous()
-    return logits
-
-
-def _recompute_forward(model, **kwargs):
-    attention_mask = kwargs.pop("attention_mask")
-    context_length = kwargs.pop("context_length")
-    position_ids = kwargs.pop("position_ids")
-    tokens = kwargs.pop("tokens")
-    type_ids = kwargs.pop("type_ids")
-    logits = None
-
-    output = forward_step(model,
-                          tokens,
-                          position_ids=position_ids,
-                          attention_mask=attention_mask,
-                          tokentype_ids=type_ids)
-
-    if parallel_state.is_pipeline_last_stage():
-        if output is None:
-            raise ValueError("In pipeline_last_stage group, the forward output should not be None")
-        logits = output[:, context_length - 1, :]
-    return logits

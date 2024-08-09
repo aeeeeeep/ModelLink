@@ -2,10 +2,17 @@ import os
 import stat
 import sys
 from pathlib import Path
+import subprocess
+
+
+def acquire_exitcode(command):
+    exitcode = os.system(command)
+    real_code = os.WEXITSTATUS(exitcode)
+    return real_code
 
 
 # =============================
-# ST test, run with shell
+# UT test, run with pytest
 # =============================
 
 class UT_Test:
@@ -17,14 +24,18 @@ class UT_Test:
         self.ut_file = os.path.join(test_dir, "ut")
     
     def run_ut(self):
-        command = f"python3.8 -m pytest -k 'not allocator' {self.ut_file}"
-        ut_exitcode = os.system(command)
-        if ut_exitcode == 0:
+        command = f"pytest -x {self.ut_file}"
+        code = acquire_exitcode(command)
+        if code == 0:
             print("UT test success")
         else:
             print("UT failed")
             exit(1)
 
+
+# ===============================================
+# ST test, run with sh.
+# ===============================================
 
 class ST_Test:
     
@@ -34,48 +45,46 @@ class ST_Test:
         test_dir = os.path.join(base_dir, 'tests')
 
         st_dir = "st"
-        llama_pretrain_shell_file = os.path.join(
-            test_dir, st_dir, "test_llama_pretrain_ptd.sh")
+        self.pretrain_tp2_pp4_vpp2 = os.path.join(
+            test_dir, st_dir, "run.sh"
+        )
         llama_inference_shell_file = os.path.join(
             test_dir, st_dir, "test_llama_inference_ptd.sh")
-        gemma_pretrain_shell_file = os.path.join(
-            test_dir, st_dir, "test_gemma_pretrain_ptd.sh")
         gemma_inference_shell_file = os.path.join(
             test_dir, st_dir, "test_gemma_inference_ptd.sh")
-        llama_vpp_pretrain_shell_file = os.path.join(
-            test_dir, st_dir, "test_llama_vpp_pretrain_ptd.sh")
         llama_instruction_shell_file = os.path.join(
             test_dir, st_dir, "test_llama_instruction_ptd.sh")
+        llama_pretrain_ha_save_shell_file = os.path.join(
+            test_dir, st_dir, "test_llama_pretrain_ha_save_ptd.sh")
+        llama_pretrain_ha_load_shell_file = os.path.join(
+            test_dir, st_dir, "test_llama_pretrain_ha_load_ptd.sh")
 
         self.st_file_list = [
-            llama_pretrain_shell_file,
+            llama_instruction_shell_file,
             llama_inference_shell_file,
-            gemma_pretrain_shell_file,
-            gemma_inference_shell_file,
-            llama_vpp_pretrain_shell_file,
-            llama_instruction_shell_file
+            gemma_inference_shell_file
         ]
 
     def run_st(self):
+        rectify_case = f"bash {self.pretrain_tp2_pp4_vpp2}"
+        rectify_code = acquire_exitcode(rectify_case)
+        if rectify_code != 0:
+            print("rectify case failed, check it.")
+            exit(1)
         all_success = True
         for shell_file in self.st_file_list:
             command = f"sh {shell_file}"
-            st_exitcode = os.system(command)
+            st_exitcode = acquire_exitcode(command)
             if st_exitcode != 0:
                 all_success = False
                 print(f"ST run {shell_file} failed")
-                break
+                exit(1)
 
         if all_success:
             print("ST test success")
         else:
             print("ST failed")
             exit(1)
-
-
-# ===============================================
-# UT test, run with pytest, waiting for more ...
-# ===============================================
 
 
 if __name__ == "__main__":

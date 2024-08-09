@@ -23,14 +23,6 @@ import torch.multiprocessing as mp
 import modellink
 
 
-def is_enable_lora_wrapper(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        return False
-
-    return wrapper
-
-
 def load_plugin(plugin_type, name):
     module_name = f"{plugin_type}_{name}"
     try:
@@ -60,11 +52,9 @@ def main():
     parser.add_argument('--loader', type=str, default='megatron',
                         help='Module name to load checkpoint, should be on python path')
     parser.add_argument('--saver', type=str, default='megatron',
-                        help='Module name to save checkpoint, shdoul be on python path')
+                        help='Module name to save checkpoint, should be on python path')
     parser.add_argument('--load-dir', type=str, required=True,
                         help='Directory to load model checkpoint from')
-    parser.add_argument('--lora-dir', type=str,
-                        help='Directory to lora model checkpoint from')                
     parser.add_argument('--save-dir', type=str, required=True,
                         help='Directory to save model checkpoint to')
     parser.add_argument('--max-queue-size', type=int, default=50,
@@ -72,7 +62,6 @@ def main():
     parser.add_argument('--no-checking', action='store_false',
                         help='Do not perform checking on the name and ordering of weights',
                         dest='checking')
-    modellink.checkpointing.is_enable_lora = is_enable_lora_wrapper(modellink.checkpointing.is_enable_lora)
     known_args, _ = parser.parse_known_args()
     loader = load_plugin('loader', known_args.loader)
     saver = load_plugin('saver', known_args.saver)

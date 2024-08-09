@@ -23,10 +23,14 @@ from megatron.core.models.common.embeddings.rotary_pos_embedding import RotaryEm
 from megatron.core import tensor_parallel
 
 
-def seq_length_wrapper(fn):
+def transformer_language_model_forward_wrapper(fn):
     @wraps(fn)
     def wrapper(self, *args, **kwargs):
-        self.seq_length = get_args().seq_length
+        global_args = get_args()
+        if global_args.variable_seq_lengths:
+            self.seq_length = args[0].shape[1]
+        else:
+            self.seq_length = global_args.seq_length
         return fn(self, *args, **kwargs)
 
     return wrapper

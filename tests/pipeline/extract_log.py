@@ -64,7 +64,8 @@ class MegatronLogExtractor(BaseLogExtractor):
                 self.parameters[param] = int(line[blank_pos:])
 
     def _extract_iterline(self, line: str):
-        if not line.startswith(" iteration"):
+
+        if (len(line) < 23 or not line[22:].startswith(" iteration")) and (not line.startswith(" iteration")):
             return
 
         backslash_pos = line.find('/')

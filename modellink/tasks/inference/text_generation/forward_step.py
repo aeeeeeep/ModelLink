@@ -22,43 +22,7 @@ import torch
 from megatron.training import get_args
 from megatron.core import parallel_state
 
-from .utils import forward_step as _forward_step_helper
-from ....error_utils import check_equal
-
-
-class InferenceParams:
-    """
-    Inference parameters that are passed to the main model in order
-    to efficiently calculate and store the context during inference.
-    """
-
-    def __init__(self, max_batch_size, max_sequence_len):
-        """
-        Note that offsets are set to zero and we always set the
-        flag to allocate memory. After the first call, make sure to
-        set this flag to False.
-        """
-        self.max_sequence_len = max_sequence_len
-        self.max_batch_size = max_batch_size
-        self.sequence_len_offset = 0
-        self.batch_size_offset = 0
-        self.key_value_memory_dict = {}
-
-    def swap_key_value_dict(self, batch_idx):
-        if len(self.key_value_memory_dict) == 0:
-            raise ValueError("Should not swap when dict in empty")
-        
-        for layer_number in self.key_value_memory_dict.keys():
-            inference_key_memory, inference_value_memory = self.key_value_memory_dict[layer_number]
-            check_equal(len(batch_idx),
-                        inference_key_memory.shape[1],
-                        error_info="Please make sure batch size is the same.")
-
-            new_inference_key_memory = inference_key_memory[:, batch_idx]
-            new_inference_value_memory = inference_value_memory[:, batch_idx]
-            self.key_value_memory_dict[layer_number] = (
-                    new_inference_key_memory, new_inference_value_memory
-            )
+from .utils import forward_step
 
 
 class ForwardStep:
@@ -68,7 +32,7 @@ class ForwardStep:
     from the outside caller.
     """
 
-    def __init__(self, model, max_batch_size, max_sequence_len):
+    def __init__(self, model):
         """Set values so we don't need to do it multiple times."""
         # Make sure model is in eval mode.
         if isinstance(model, Iterable):
@@ -76,9 +40,7 @@ class ForwardStep:
 
         model.eval()
         self.model = model
-        # Initialize inference parameters.
-        self.inference_params = InferenceParams(max_batch_size,
-                                                max_sequence_len)
+
         # Pipelining arguments.
         args = get_args()
         self.pipeline_size_larger_than_one = (
@@ -87,8 +49,8 @@ class ForwardStep:
         self.pipelining_batch_x_seqlen = args.inference_batch_times_seqlen_threshold
         self.micro_batch_size = args.micro_batch_size
 
-    def __call__(self, tokens, position_ids, attention_mask):
-        """Invocation of the forward methods. Note that self.inference_params
+    def __call__(self, tokens, position_ids, attention_mask, inference_params):
+        """Invocation of the forward methods. Note that inference_params
         is being modified by the forward step."""
         # Pipelining case.
         if self.pipeline_size_larger_than_one:
@@ -96,14 +58,14 @@ class ForwardStep:
                                                  (tokens,
                                                   position_ids,
                                                   attention_mask),
-                                                 self.inference_params,
+                                                 inference_params,
                                                  self.micro_batch_size)
         else:
             return _no_pipelining_forward_step(self.model,
                                                (tokens,
                                                 position_ids,
                                                 attention_mask),
-                                               self.inference_params)
+                                               inference_params)
 
 
 def _get_recv_buffer_dtype(args):
@@ -130,14 +92,17 @@ def _no_pipelining_forward_step(model, inputs, inference_params):
     """If recv_buffer is none, we will allocate one on the fly."""
     # Run a simple forward pass.
     tokens, position_ids, attention_mask = inputs
-    output_tensor = _forward_step_helper(model,
-                                         tokens,
-                                         position_ids=position_ids,
-                                         attention_mask=attention_mask,
-                                         tokentype_ids=None,
-                                         inference_params=inference_params)
-    # Update the sequence length offset.
-    inference_params.sequence_len_offset += tokens.size(1)
+    sequence_length = tokens.size(1)
+    output_tensor = forward_step(model,
+                            tokens,
+                            position_ids=position_ids,
+                            attention_mask=attention_mask,
+                            tokentype_ids=None,
+                            inference_params=inference_params)
+    
+    if inference_params:
+        # Update the sequence length offset.
+        inference_params.sequence_len_offset += sequence_length
 
     logits = None
     if parallel_state.is_pipeline_last_stage():
@@ -174,12 +139,12 @@ def _with_pipelining_forward_step(model, inputs, inference_params, micro_batch_s
         tokens2use = tokens[start: end, ...]
         position_ids2use = position_ids[start: end, ...]
 
-        output = _forward_step_helper(model,
-                                      tokens2use,
-                                      position_ids=position_ids2use,
-                                      attention_mask=attention_mask,
-                                      tokentype_ids=None,
-                                      inference_params=inference_params)
+        output = forward_step(model,
+                         tokens2use,
+                         position_ids=position_ids2use,
+                         attention_mask=attention_mask,
+                         tokentype_ids=None,
+                         inference_params=inference_params)
 
         # Adjust the batch size offset to account for the micro-batch.
         inference_params.batch_size_offset += this_micro_batch_size
