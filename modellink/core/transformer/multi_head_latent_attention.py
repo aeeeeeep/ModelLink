@@ -171,6 +171,7 @@ class MultiHeadLatentAttention(SelfAttention):
         k_nope, value = torch.split(
             kv, [self.qk_nope_head_dim, self.v_head_dim], dim=-1
         )
+        
         if rotary_pos_emb is not None:
             q_pos_emb, k_pos_emb = rotary_pos_emb
 
@@ -188,14 +189,10 @@ class MultiHeadLatentAttention(SelfAttention):
             q_pe = apply_rotary_pos_emb(q_pe, q_pos_emb, config=self.config, cu_seqlens=cu_seqlens_q)
             k_pe = apply_rotary_pos_emb(k_pe, k_pos_emb, config=self.config, cu_seqlens=cu_seqlens_kv)
 
-        # query = torch.cat([q_nope, q_pe], dim=-1)
-        query = k_pe.new_empty(q_len, bsz, self.config.num_attention_heads, self.q_head_dim)
-        query[:, :, :, : self.qk_nope_head_dim] = q_nope
-        query[:, :, :, self.qk_nope_head_dim:] = q_pe
+        query = torch.cat([q_nope, q_pe], dim=-1)
 
-        key = k_pe.new_empty(q_len, bsz, self.config.num_attention_heads, self.q_head_dim)
-        key[:, :, :, : self.qk_nope_head_dim] = k_nope
-        key[:, :, :, self.qk_nope_head_dim:] = k_pe
+        k_pe = k_pe.repeat(1, 1, query.shape[2], 1)
+        key = torch.cat([k_nope, k_pe], dim=-1)
 
         # if self.use_flash_attn and self.q_head_dim != self.v_head_dim:
         #     value = F.pad(value, [0, self.q_head_dim - self.v_head_dim])
@@ -203,6 +200,7 @@ class MultiHeadLatentAttention(SelfAttention):
             query = F.pad(query, [0, 256 - self.q_head_dim])
             key = F.pad(key, [0, 256 - self.q_head_dim])
             value = F.pad(value, [0, 256 - self.v_head_dim])
+        
         # Do repeat KV to support GQA+Ulysses
         args = get_args()
         should_kv_repeat_before_uly = args.context_parallel_size > 1 and \
