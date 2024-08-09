@@ -25,7 +25,6 @@ from megatron.training import get_args
 
 @dataclass
 class TransformerLayerSubmodules:
-
     input_layernorm: Union[ModuleSpec, type] = IdentityOp
     self_attention: Union[ModuleSpec, type] = IdentityOp
     # add post_attn_norm for attention post norm
@@ -66,6 +65,7 @@ def transformer_layer_init_wrapper(fn):
                 eps=self.config.layernorm_epsilon,
             )
         self.mlp.layer_number = self.layer_number
+
     return wrapper
 
 
@@ -74,7 +74,6 @@ def transformer_layer_forward(self, hidden_states, attention_mask, context=None,
                               rotary_pos_emb=None,
                               inference_params=None,
                               packed_seq_params=None):
-
     # hidden_states: [s, b, h]
     args_pos_norm = get_args()
     # Residual connection.

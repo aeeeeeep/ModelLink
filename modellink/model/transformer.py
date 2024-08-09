@@ -48,7 +48,6 @@ from ..tasks.finetune.lora.utils import is_enable_lora
 from ..core.transformer import get_attention_mask, MUST_COMPRESS
 
 
-
 def state_dict_for_save_checkpoint(state_dict):
     state_dict_ = dict()
     for key in state_dict:
@@ -91,7 +90,7 @@ def _get_num_layers(args, model_type, is_decoder=False):
                 num_layers = (
                     0
                     if args.standalone_embedding_stage
-                    and mpu.get_pipeline_model_parallel_rank() == 0 else
+                       and mpu.get_pipeline_model_parallel_rank() == 0 else
                     args.encoder_num_layers // num_ranks_in_encoder
                 )
             else:
@@ -107,7 +106,7 @@ def _get_num_layers(args, model_type, is_decoder=False):
             num_layers = (
                 0
                 if args.standalone_embedding_stage
-                and mpu.get_pipeline_model_parallel_rank() == 0 else
+                   and mpu.get_pipeline_model_parallel_rank() == 0 else
                 args.num_layers // args.transformer_pipeline_model_parallel_size
             )
     else:
@@ -119,12 +118,12 @@ def _get_num_layers(args, model_type, is_decoder=False):
 
 
 def parallel_transformer_init(self, config,
-                 model_type, layer_type=LayerType.encoder,
-                 self_attn_mask_type=AttnMaskType.padding,
-                 post_norm=True,
-                 pre_process=True,
-                 post_process=True,
-                 drop_path_rate=0.0):
+                              model_type, layer_type=LayerType.encoder,
+                              self_attn_mask_type=AttnMaskType.padding,
+                              post_norm=True,
+                              pre_process=True,
+                              post_process=True,
+                              drop_path_rate=0.0):
     super(ParallelTransformer, self).__init__()
     args = get_args()
 
@@ -283,8 +282,8 @@ def parallel_transformer_init(self, config,
         # Stage 0: [0, 1]  [4, 5]
         # Stage 1: [2, 3]  [6, 7]
         offset = mpu.get_virtual_pipeline_model_parallel_rank() * (
-            config.num_layers // config.virtual_pipeline_model_parallel_size) + \
-            (mpu.get_pipeline_model_parallel_rank() * self.num_layers)
+                config.num_layers // config.virtual_pipeline_model_parallel_size) + \
+                 (mpu.get_pipeline_model_parallel_rank() * self.num_layers)
     else:
         # Each stage gets a contiguous set of layers.
         if args.model_type == ModelType.encoder_and_decoder and \
@@ -333,7 +332,7 @@ def parallel_transformer_init(self, config,
                     layer.self_attention.core_attention_flash.dropout_p = \
                         torch.nn.Dropout(args.retro_encoder_attention_dropout)
                 else:
-                    layer.self_attention.core_attention.attention_dropout.p =\
+                    layer.self_attention.core_attention.attention_dropout.p = \
                         args.retro_encoder_attention_dropout
                 layer.hidden_dropout = args.retro_encoder_hidden_dropout
 
@@ -380,6 +379,7 @@ def ParallelAttention_wrapper(fn):
                 causal=True, attention_dropout=config.attention_dropout,
                 layer_number=self.layer_number
             )
+
     return wrapper
 
 
@@ -394,6 +394,7 @@ class FlashSelfAttention(torch.nn.Module):
         attention_dropout: The dropout rate to apply to the attention
                            (default: 0.0)
     """
+
     def __init__(self, causal=False, softmax_scale=None, attention_dropout=0.0,
                  layer_number=None, device=None, dtype=None):
         super().__init__()
@@ -496,18 +497,16 @@ class FlashSelfAttention(torch.nn.Module):
 
         return output
 
-
     def alibi_fill_neg_inf(self, seq_length, batch_size):
         _alibi = self.alibi.alibi[:, :seq_length, :seq_length]
         # (b, 1, s, s)
-        if(len(self.attention_mask.size()) == 4):
+        if (len(self.attention_mask.size()) == 4):
             self.attention_mask = \
                 self.attention_mask[:batch_size, :, :, :]
         else:
             self.attention_mask = \
                 self.attention_mask.unsqueeze(0).unsqueeze(0).repeat(batch_size, 1, 1, 1)[:batch_size, :, :, :]
         self.alibi.matmul_result = _get_inverted_mask(self.attention_mask, _alibi).view(-1, seq_length, seq_length)
-
 
     def get_alibi(self, seq_length):
         args = get_args()
@@ -603,7 +602,7 @@ def core_attention_forward(self, query_layer, key_layer, value_layer, attention_
                 else:
                     attention_mask = attention_mask.repeat(output_size[0], 1, 1, 1)[:output_size[0], :, :, :]
                 self.alibi.matmul_result = _get_inverted_mask(attention_mask, _alibi).view(-1, output_size[2],
-                                                                                                output_size[2]).contiguous()
+                                                                                           output_size[2]).contiguous()
 
             if self.fill_neg_inf:
                 core_attention_fill_neg_inf(output_size, attention_mask)
@@ -678,8 +677,8 @@ def core_attention_forward(self, query_layer, key_layer, value_layer, attention_
 
 
 def ParallelAttentionForward(self, hidden_states, attention_mask,
-                encoder_output=None, inference_params=None,
-                rotary_pos_emb=None):
+                             encoder_output=None, inference_params=None,
+                             rotary_pos_emb=None):
     # hidden_states: [sq, b, h]
 
     # =================================================
@@ -716,21 +715,21 @@ def ParallelAttentionForward(self, hidden_states, attention_mask,
         new_tensor_shape = mixed_x_layer.size()[:-1] + (
             self.num_query_groups_per_partition,
             (
-                (self.num_attention_heads_per_partition // self.num_query_groups_per_partition + 2)
-                * self.hidden_size_per_attention_head
+                    (self.num_attention_heads_per_partition // self.num_query_groups_per_partition + 2)
+                    * self.hidden_size_per_attention_head
             ),
         )
         mixed_x_layer = mixed_x_layer.view(*new_tensor_shape)
 
         # [sq, b, ng, (np/ng + 2) * hn] --> [sq, b, ng, np/ng * hn], [sq, b, ng, hn], [sq, b, ng, hn]
         (query_layer,
-        key_layer,
-        value_layer) = torch.split(
+         key_layer,
+         value_layer) = torch.split(
             mixed_x_layer,
             [
                 (
-                    self.num_attention_heads_per_partition // self.num_query_groups_per_partition
-                    * self.hidden_size_per_attention_head
+                        self.num_attention_heads_per_partition // self.num_query_groups_per_partition
+                        * self.hidden_size_per_attention_head
                 ),
                 self.hidden_size_per_attention_head,
                 self.hidden_size_per_attention_head
@@ -738,27 +737,28 @@ def ParallelAttentionForward(self, hidden_states, attention_mask,
             dim=3)
 
         # [sq, b, ng, np/ng * hn] -> [sq, b, np, hn] -
-        query_layer = query_layer.view(query_layer.size(0), query_layer.size(1), -1, self.hidden_size_per_attention_head)
+        query_layer = query_layer.view(query_layer.size(0), query_layer.size(1), -1,
+                                       self.hidden_size_per_attention_head)
     else:
         # Attention heads [sk, b, h] --> [sk, b, (np * 2 * hn)]
         mixed_kv_layer, _ = self.key_value(encoder_output)
 
         # [sk, b, (np * 2 * hn)] --> [sk, b, np, 2 * hn]
         new_tensor_shape = mixed_kv_layer.size()[:-1] + \
-            (self.num_attention_heads_per_partition,
-            2 * self.hidden_size_per_attention_head)
+                           (self.num_attention_heads_per_partition,
+                            2 * self.hidden_size_per_attention_head)
         mixed_kv_layer = mixed_kv_layer.view(*new_tensor_shape)
 
         # [sk, b, np, 2 * hn] --> 2 [sk, b, np, hn]
         (key_layer,
-        value_layer) = tensor_parallel.split_tensor_along_last_dim(mixed_kv_layer, 2)
+         value_layer) = tensor_parallel.split_tensor_along_last_dim(mixed_kv_layer, 2)
 
         # Attention head [sq, b, h] --> [sq, b, hp]
         query_layer, _ = self.query(hidden_states)
         # [sq, b, hp] --> [sq, b, np, hn]
         new_tensor_shape = query_layer.size()[:-1] + \
-            (self.num_attention_heads_per_partition,
-            self.hidden_size_per_attention_head)
+                           (self.num_attention_heads_per_partition,
+                            self.hidden_size_per_attention_head)
         query_layer = query_layer.view(*new_tensor_shape)
 
     # ==================================
@@ -781,14 +781,13 @@ def ParallelAttentionForward(self, hidden_states, attention_mask,
         assert sequence_end <= inference_key_memory.size(0)
         # Copy key and values.
         inference_key_memory[sequence_start:sequence_end,
-                             batch_start:batch_end, ...] = key_layer
+        batch_start:batch_end, ...] = key_layer
         inference_value_memory[sequence_start:sequence_end,
-                               batch_start:batch_end, ...] = value_layer
+        batch_start:batch_end, ...] = value_layer
         key_layer = inference_key_memory[
-            :sequence_end, batch_start:batch_end, ...]
+                    :sequence_end, batch_start:batch_end, ...]
         value_layer = inference_value_memory[
-            :sequence_end, batch_start:batch_end, ...]
-
+                      :sequence_end, batch_start:batch_end, ...]
 
         # adjust the key rotary positional embedding
         if rotary_pos_emb is not None:
@@ -799,7 +798,7 @@ def ParallelAttentionForward(self, hidden_states, attention_mask,
                 # In inference, we compute one token at a time.
                 # Select the correct positional embedding
                 # (only the last token in the sequence)
-                q_pos_emb = q_pos_emb[sequence_end - 1 : sequence_end]
+                q_pos_emb = q_pos_emb[sequence_end - 1: sequence_end]
             else:
                 # In the first forward pass of inference,
                 # we use the entire provided prefix.
@@ -818,11 +817,11 @@ def ParallelAttentionForward(self, hidden_states, attention_mask,
     if self.num_attention_heads_per_partition // self.num_query_groups_per_partition > 1:
         key_layer = key_layer.repeat_interleave(
             self.num_attention_heads_per_partition // self.num_query_groups_per_partition,
-            dim = 2
+            dim=2
         )
         value_layer = value_layer.repeat_interleave(
             self.num_attention_heads_per_partition // self.num_query_groups_per_partition,
-            dim = 2
+            dim=2
         )
 
     # apply relative positional encoding (rotary embedding)
@@ -1012,6 +1011,7 @@ def parallel_mlp_forward_wrapper(fn):
             if output.requires_grad:
                 output.register_hook(self.activation_checkpoint_manager.recompute)
         return output, output_bias
+
     return wrapper
 
 
@@ -1024,8 +1024,8 @@ def parallel_mlp_init_wrapper(fn):
         if _args.swiglu:
             def swiglu(x):
                 if _args.use_fused_swiglu:
-                    return torch_npu.npu_swiglu(x, dim = -1)
-                x = torch.chunk(x, 2, dim = -1)
+                    return torch_npu.npu_swiglu(x, dim=-1)
+                x = torch.chunk(x, 2, dim=-1)
                 return F.silu(x[0]) * x[1]
 
             self.activation_func = swiglu
@@ -1038,7 +1038,7 @@ def parallel_mlp_init_wrapper(fn):
             config.bias_gelu_fusion = False
 
             def geglu(x):
-                x = torch.chunk(x, 2, dim = -1)
+                x = torch.chunk(x, 2, dim=-1)
                 return F.gelu(x[0]) * x[1]
 
             self.activation_func = geglu

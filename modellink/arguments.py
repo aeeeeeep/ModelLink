@@ -65,7 +65,7 @@ def process_args(parser):
 
 def _add_mla_args(parser):
     group = parser.add_argument_group(title='multi-head latent attention')
-    
+
     group.add_argument('--multi-head-latent-attention', action='store_true', default=False,
                        help='Use Multi-head Latent Attention(MLA)')
     group.add_argument('--q-lora-rank', type=int, default=None, help='The low rank of q')
@@ -79,7 +79,7 @@ def _add_mla_args(parser):
 
 def _add_yarn_args(parser):
     group = parser.add_argument_group(title='yarn')
-    
+
     group.add_argument('--rope-scaling-beta-fast', type=int, default=32, help='Yarn rope: rope beta fast')
     group.add_argument('--rope-scaling-beta-slow', type=int, default=1, help='Yarn rope: rope beta slow')
     group.add_argument('--rope-scaling-factor', type=float, default=1.0, help='Yarn rope: rope factor')
@@ -127,7 +127,8 @@ def _add_profile_args(parser):
 def _add_cp_args(parser):
     group = parser.add_argument_group(title='cp parallel')
     group.add_argument('--context-parallel-algo', type=str, default='ulysses_cp_algo',
-                       choices=['ulysses_cp_algo', 'megatron_cp_algo', 'hybrid_cp_algo'], help='context parallel algorithm')
+                       choices=['ulysses_cp_algo', 'megatron_cp_algo', 'hybrid_cp_algo'],
+                       help='context parallel algorithm')
     group.add_argument('--ulysses-degree-in-cp', type=int, default=None)
     group.add_argument('--cp-attention-mask-type', type=str, default='causal',
                        choices=['causal', 'full'], help='context parallel attention mask type')
@@ -162,12 +163,14 @@ def _validate_cp_args(args):
     if args.context_parallel_size <= 1:
         if args.kv_head_repeat_before_uly_alltoall:
             args.kv_head_repeat_before_uly_alltoall = False
-            print_rank0_by_args(args, f"When context_parallel is not activated, kv_head_repeat_before_uly_alltoall would be set to False for reducing memory usage.")
+            print_rank0_by_args(args,
+                                f"When context_parallel is not activated, kv_head_repeat_before_uly_alltoall would be set to False for reducing memory usage.")
         return
 
     # In context parallel we use FA
     args.use_flash_attn = True
-    print_rank0_by_args(args, f"[INFO] Setting args.use_flash_attn={args.use_flash_attn} since context parallel is enabled.")
+    print_rank0_by_args(args,
+                        f"[INFO] Setting args.use_flash_attn={args.use_flash_attn} since context parallel is enabled.")
     if not args.use_mcore_models:
         raise AssertionError(f"Context parallel is only supported in Mcore.")
 
@@ -178,7 +181,7 @@ def _validate_cp_args(args):
         assert head >= 1 and remainder == 0, f"num_attention_heads must be divisible by context_parallel_size * tensor_model_parallel_size"
     if args.context_parallel_algo == 'megatron_cp_algo':
         assert args.seq_length % (
-                    2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size"
+                2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size"
         _check_attention_head(args, args.context_parallel_size)
 
     if args.context_parallel_algo == 'hybrid_cp_algo':
@@ -190,7 +193,7 @@ def _validate_cp_args(args):
                                  args.ulysses_degree_in_cp * args.tensor_model_parallel_size)
         assert head >= 1 and remainder == 0, f"num_attention_heads must be divisible by ulysse-degree-in-cp * tensor_model_parallel_size in hybrid cp"
         assert args.seq_length % (
-                    2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size in hybrid cp"
+                2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size in hybrid cp"
         _check_attention_head(args, args.ulysses_degree_in_cp)
 
     if args.sliding_window:
@@ -200,9 +203,11 @@ def _validate_cp_args(args):
 def _validate_tocken(args):
     """To avoid invalid tocken configration."""
     if args.pre_tocken > args.seq_length:
-        print_rank0_by_args(args, f"[INFO] pre_tocken={args.pre_tocken} would be adjusted to {args.seq_length} for better performance.")
+        print_rank0_by_args(args,
+                            f"[INFO] pre_tocken={args.pre_tocken} would be adjusted to {args.seq_length} for better performance.")
     if args.next_tocken > args.seq_length:
-        print_rank0_by_args(args, f"[INFO] next_tocken={args.next_tocken} would be adjusted to {args.seq_length} for better performance.")
+        print_rank0_by_args(args,
+                            f"[INFO] next_tocken={args.next_tocken} would be adjusted to {args.seq_length} for better performance.")
 
 
 def _add_lora_args(parser):
@@ -268,7 +273,7 @@ def _add_moe_args(parser):
     group.add_argument('--output-multiplier-scale', type=float, default=None, help='Add scale for logits output.')
     group.add_argument("--moe-permutation-async-comm", action='store_true',
                        help="overlap moe permutation 3 all gather communications")
-                       
+
     return parser
 
 
@@ -279,7 +284,7 @@ def _add_data_args(parser):
     group.add_argument("--tokenizer-kwargs", type=str, nargs='+', default=None,
                        help="Kwargs of the huggingface tokenizer.")
     group.add_argument('--tokenizer-padding-side', type=str, default='right',
-            help="tokenizer padding side")
+                       help="tokenizer padding side")
     group.add_argument('--tokenizer-type', type=str,
                        default=None,
                        choices=['BertWordPieceLowerCase',
@@ -303,7 +308,7 @@ def _add_num_layer_allocation(parser):
     group = parser.add_argument_group(title='num_layer_allocation')
     group.add_argument('--num-layer-list',
                        type=str, help='a list of number of layers, '
-                                'seperated by comma; e.g., 4,4,4,4')
+                                      'seperated by comma; e.g., 4,4,4,4')
     return parser
 
 
@@ -322,7 +327,7 @@ def _add_network_size_args(parser):
                        action='store_true',
                        help='use partial rope in ChatGLM3.'
                        )
-    
+
     group.add_argument("--use-fused-rmsnorm", action='store_true',
                        help="Use fused rmsnorm.")
     group.add_argument("--use-fused-swiglu", action='store_true',
@@ -403,7 +408,7 @@ def _add_training_args(parser):
                        help='Recompute the activation function in MLP layers.')
     group.add_argument('--recompute-activation-function-num-layers', type=int, default=None,
                        help='Can be used together with "--recompute-method block." '
-                       'and "--recompute-num-layers". ')
+                            'and "--recompute-num-layers". ')
     return parser
 
 
@@ -470,9 +475,10 @@ def _validate_create_attention_mask_in_dataloader(args):
     alibi_without_flash_attn = args.position_embedding_type == 'alibi' and not args.use_flash_attn
     if reset_data or alibi_without_flash_attn or args.tokenizer_padding_side == "left":
         args.create_attention_mask_in_dataloader = True
-    print_rank0_by_args(args, f"[INFO] Setting args.create_attention_mask_in_dataloader to {args.create_attention_mask_in_dataloader} "
-                 f"since reset_data={reset_data} or alibi_without_flash_attn={alibi_without_flash_attn} or "
-                 f"args.tokenizer_padding_side={args.tokenizer_padding_side}")
+    print_rank0_by_args(args,
+                        f"[INFO] Setting args.create_attention_mask_in_dataloader to {args.create_attention_mask_in_dataloader} "
+                        f"since reset_data={reset_data} or alibi_without_flash_attn={alibi_without_flash_attn} or "
+                        f"args.tokenizer_padding_side={args.tokenizer_padding_side}")
 
 
 def _validate_position_embedding(args):
@@ -504,7 +510,8 @@ def _validate_moe_expert_capacity_factor(args):
             raise ValueError(f'moe_expert_capacity_factor only works with alltoall token dispatcher')
         if args.moe_expert_capacity_factor < 0:
             args.moe_expert_capacity_factor = None
-            print_rank0_by_args(f'When moe_expert_capacity_factor < 0, no token would be drop, so moe_expert_capacity_factor should be set to false.')
+            print_rank0_by_args(
+                f'When moe_expert_capacity_factor < 0, no token would be drop, so moe_expert_capacity_factor should be set to false.')
         if args.moe_router_load_balancing_type not in ["aux_loss", "none"]:
             raise ValueError(f'moe_expert_capacity_factor only works with aux_loss or none load balancing')
         if args.moe_expert_capacity_factor is None and args.moe_pad_expert_input_to_capacity:
@@ -532,7 +539,6 @@ def _validate_yarn(args):
                                  'when use yarn.')
 
 
-
 def _validate_transformer_block_build_layers(args):
     if args.num_experts is None:
         if args.first_k_dense_replace is not None or args.moe_layer_freq is not None:
@@ -547,10 +553,11 @@ def _validate_group_limited_greedy(args):
         if args.topk_group is None:
             raise AssertionError('The parameter topk-group should be set when use group_limited_greedy.')
         elif args.routed_scaling_factor is None:
-            raise AssertionError('The parameter routed_scaling_factor should be set when use multi_head_latent_attention.')
+            raise AssertionError(
+                'The parameter routed_scaling_factor should be set when use multi_head_latent_attention.')
         elif args.topk_group >= args.expert_model_parallel_size:
-            raise AssertionError('The topk group ({}) should be less than n-group(EP)({}).'.format(args.topk_group, 
-            args.expert_model_parallel_size))
+            raise AssertionError('The topk group ({}) should be less than n-group(EP)({}).'.format(args.topk_group,
+                                                                                                   args.expert_model_parallel_size))
 
 
 def core_transformer_config_from_args_wrapper(fn):
