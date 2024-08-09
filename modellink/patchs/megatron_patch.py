@@ -242,6 +242,8 @@ def patch_parallel_state():
 
 
 def patch_model():
+    from mindspeed.model.transformer import parallel_transformer_layer_init_wrapper
+    from ..model.transformer import parallel_mlp_forward_wrapper
     # patch_fused_layer_norm
     PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.FusedLayerNormAffineFunction', FusedLayerNormAffineFunction)  # use torch-npu fused layer norm
     PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.FastLayerNormFN', FastLayerNormFN)  # use torch-npu fused layer norm
@@ -260,6 +262,8 @@ def patch_model():
 
     # patch_transformer
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelMLP.__init__', parallel_mlp_init_wrapper)
+    PatchManager.register_patch('megatron.legacy.model.transformer.ParallelMLP.forward', parallel_mlp_forward_wrapper)
+    PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformerLayer.__init__', parallel_transformer_layer_init_wrapper)
     PatchManager.register_patch('megatron.legacy.model.transformer.SwitchMLP', SwitchMLP)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.__init__', parallel_transformer_init)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.forward', parallel_transformer_forward)
