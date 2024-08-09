@@ -86,6 +86,7 @@ def _load_checkpoint(queue, args):
     margs.embed_layernorm = args.embed_layernorm
     set_args(margs)
     margs, checkpoint_args = load_args_from_checkpoint(margs)
+    margs.geglu = checkpoint_args.geglu
     margs.add_qkv_bias = args.add_qkv_bias
     margs.add_dense_bias = args.add_dense_bias
     margs.num_layers_per_virtual_pipeline_stage = args.num_layers_per_virtual_pipeline_stage
@@ -249,6 +250,7 @@ def _load_checkpoint(queue, args):
     md.linear_bias = margs.add_bias_linear
     md.norm_has_bias = norm_has_bias
     md.swiglu = margs.swiglu
+    md.geglu = margs.geglu
     md.previous_tensor_parallel_size = margs.tensor_model_parallel_size
     md.previous_pipeline_parallel_size = margs.pipeline_model_parallel_size
     md.true_vocab_size = true_vocab_size
