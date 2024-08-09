@@ -66,6 +66,7 @@ def transformer_layer_init_wrapper(fn):
                 eps=self.config.layernorm_epsilon,
             )
         self.mlp.layer_number = self.layer_number
+
     return wrapper
 
 

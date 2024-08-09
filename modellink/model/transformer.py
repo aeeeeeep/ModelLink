@@ -1024,8 +1024,8 @@ def parallel_mlp_init_wrapper(fn):
         if _args.swiglu:
             def swiglu(x):
                 if _args.use_fused_swiglu:
-                    return torch_npu.npu_swiglu(x, dim = -1)
-                x = torch.chunk(x, 2, dim = -1)
+                    return torch_npu.npu_swiglu(x, dim=-1)
+                x = torch.chunk(x, 2, dim=-1)
                 return F.silu(x[0]) * x[1]
 
             self.activation_func = swiglu
@@ -1038,7 +1038,7 @@ def parallel_mlp_init_wrapper(fn):
             config.bias_gelu_fusion = False
 
             def geglu(x):
-                x = torch.chunk(x, 2, dim = -1)
+                x = torch.chunk(x, 2, dim=-1)
                 return F.gelu(x[0]) * x[1]
 
             self.activation_func = geglu

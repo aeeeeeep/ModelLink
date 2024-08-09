@@ -64,7 +64,7 @@ def core_mlp_forward_wrapper(fn):
             if self.config.gated_linear_unit:
 
                 def glu(x):
-                    x = torch.chunk(x, 2, dim = -1)
+                    x = torch.chunk(x, 2, dim=-1)
                     return self.config.activation_func(x[0]) * x[1]
 
                 intermediate = glu(intermediate)
@@ -95,4 +95,5 @@ def core_mlp_forward_wrapper(fn):
             if output.requires_grad:
                 output.register_hook(self.activation_checkpoint_manager.recompute)
         return output, output_bias
+
     return wrapper
