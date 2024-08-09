@@ -1,11 +1,6 @@
 #!/bin/bash
 
-# The number of parameters is not aligned
-export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
-export HCCL_CONNECT_TIMEOUT=1200
-export COMBINED_ENABLE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export WITHOUT_JIT_COMPILE=1
 
 # please fill these path configurations
 CHECKPOINT="your model directory path"
@@ -24,11 +19,7 @@ DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $
 torchrun $DISTRIBUTED_ARGS inference.py \
        --tensor-model-parallel-size 8  \
        --pipeline-model-parallel-size 1  \
-       --task chat \
-       --hf-chat-template \
-       --add-eos-token '<|eot_id|>' \
-       --top-p 0.9 \
-       --temperature 0.6 \
+       --use-mcore-models \
        --use-fused-swiglu \
        --use-rotary-position-embeddings \
        --use-fused-rotary-pos-emb \
@@ -49,6 +40,11 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --micro-batch-size 1 \
        --num-attention-heads 32  \
        --swiglu \
+       --rope-scaling-type llama3 \
+       --rope-scaling-factor 8.0 \
+       --low-freq-factor 1.0 \
+       --high-freq-factor 4.0 \
+       --original-max-position-embeddings 8192 \
        --normalization RMSNorm \
        --norm-epsilon 1e-5 \
        --hidden-dropout 0 \
@@ -57,8 +53,9 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --disable-bias-linear \
        --attention-softmax-in-fp32 \
        --exit-on-missing-checkpoint \
-       --make-vocab-size-divisible-by 16032 \
+       --make-vocab-size-divisible-by 1 \
+       --padded-vocab-size 128256 \
        --bf16 \
        --seed 42 \
-       | tee logs/generate_llama3_8b.log
+       | tee logs/generate_llama31_8b.log
 

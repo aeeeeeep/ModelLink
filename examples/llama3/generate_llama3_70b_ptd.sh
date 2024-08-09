@@ -1,11 +1,6 @@
 #!/bin/bash
 
-# The number of parameters is not aligned
-export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
-export HCCL_CONNECT_TIMEOUT=1200
-export COMBINED_ENABLE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export WITHOUT_JIT_COMPILE=1
 
 # please fill these path configurations
 CHECKPOINT="your model directory path"
@@ -53,6 +48,8 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --attention-softmax-in-fp32 \
        --exit-on-missing-checkpoint \
        --make-vocab-size-divisible-by 16032 \
+       --use-kv-cache \
+       --use-flash-attn \
        --bf16 \
        --seed 42 \
        | tee logs/generate_llama3_70b.log

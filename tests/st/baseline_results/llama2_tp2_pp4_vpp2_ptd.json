@@ -17,62 +17,62 @@
         1.266595
     ],
     "throughput": [
-        55.4,
-        121.6,
-        129.2,
-        129.2,
-        129.2,
-        129.2,
-        129.3,
-        129.3,
-        129.3,
-        129.2,
-        129.2,
-        129.3,
-        129.2,
-        129.2,
-        129.2
+        54.2,
+        110.8,
+        122.7,
+        122.7,
+        122.8,
+        122.7,
+        122.7,
+        122.7,
+        122.6,
+        122.7,
+        122.7,
+        122.6,
+        122.8,
+        122.6,
+        122.9
     ],
     "memo info": [
         {
             "rank": 0,
             "allocated memory": 15154.22998046875,
-            "max allocated memory": 20563.92822265625
+            "max allocated memory": 18450.72314453125
         },
         {
             "rank": 1,
             "allocated memory": 15154.22998046875,
-            "max allocated memory": 20563.92822265625
+            "max allocated memory": 18450.72314453125
         },
         {
             "rank": 2,
             "allocated memory": 14061.22900390625,
-            "max allocated memory": 18686.53759765625
+            "max allocated memory": 17195.41748046875
         },
         {
             "rank": 3,
             "allocated memory": 14061.22900390625,
-            "max allocated memory": 18686.53759765625
+            "max allocated memory": 17195.41748046875
         },
         {
             "rank": 4,
             "allocated memory": 14061.22900390625,
-            "max allocated memory": 17466.43798828125
+            "max allocated memory": 16222.34033203125
         },
         {
             "rank": 5,
             "allocated memory": 14061.22900390625,
-            "max allocated memory": 17466.43798828125
+            "max allocated memory": 16222.34033203125
         },
         {
             "rank": 6,
             "allocated memory": 15186.30419921875,
-            "max allocated memory": 17195.6591796875
+            "max allocated memory": 16015.5634765625
         },
         {
             "rank": 7,
             "allocated memory": 15186.30419921875,
-            "max allocated memory": 17195.595703125
+            "max allocated memory": 16015.5
         }
     ]
 }

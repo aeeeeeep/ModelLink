@@ -117,7 +117,7 @@ python tools/checkpoint/convert_ckpt.py \
     --saver megatron \
     --target-tensor-parallel-size 2 \
     --target-pipeline-parallel-size 4 \
-    --num-layer-list 8 8 8 8 \
+    --num-layer-list 8,8,8,8 \
     --load-dir ./model_from_hf/llama2-hf/ \
     --save-dir ./model_weights/llama2-legacy/ \
     --tokenizer-model ./model_from_hf/llama2-hf/tokenizer.model
@@ -278,6 +278,43 @@ bash examples/mcore/mixtral/data_convert_mixtral_pretrain.sh
 
 预训练时，数据集路径输入 ./dataset/enwiki_text_document 即可
 
+#### 3. 数据集合并
+
+若要对预处理好的多个数据集进行合并，须将待合并数据集放在一个单独文件夹里面，然后按如下调用命令：
+
+预训练：
+
+```shell
+python ./merge_datasets.py \
+    --input ./process_data/enwiki_subsets \
+    --output-prefix ./process_data/merge_enwiki
+    # --keys text_document # 默认值，可不传
+```
+
+微调：
+
+```shell
+python ./merge_datasets.py \
+    --input ./process_data/alpaca_tune_subsets \
+    --output-prefix ./process_data/merge_tune_alpaca
+    --keys packed_attention_mask_document packed_input_ids_document packed_labels_document
+```
+
+【--input】
+
+参数值为待合并数据集所在文件夹路径，里面应包含每个数据处理之后的.bin和.idx文件，例如有两个预训练数据集，则应包含四个文件（若为微调，则两个数据集应包含12个文件）：
+
+data1_xxx_text_document.idx, data1_xxx_text_document.bin, data2_xxx_text_document.idx, data2_xxx_text_document.bin
+
+【--output-prefix】
+
+参数值为合并之后数据集保存路径前缀
+
+【--keys】
+
+- 参数值为文件分类标识符列表，文件夹中文件名匹配到含有相同key的文件会被合并
+- 合并之后生成的数据集文件命名规则为：`output_prefix_key`。默认值为预训练场景的数据集文件后缀，即[`text_document`]。微调场景须手动指定keys，如上示例。
+
 
 ---
 
@@ -436,6 +473,7 @@ ModelLink已支持模型评估分数如下：
 | LLaMA2-7B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 45.7%     | 45.3%                                                                 | LLaMA2-13B   | [BoolQ](https://paperswithcode.com/dataset/boolq)                      | 82.2%     | [81.7](https://paperswithcode.com/sota/question-answering-on-boolq) |
 | LLaMA2-34B    | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 85.9%     | --                                                                    | LLaMA2-70B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 65.1%     | --                                                                  |
 | LLaMA3-8B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 65.3%     | 66.6%                                                                 | LLaMA3-70B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 78.3%     | 79.5%                                                               |
+| LLaMA3.1-8B   | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 65.26%    | 66.7%                                                                 | --           | --                                                                     | --        | --                                                                  |
 | Mistral-7B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 56.3%     | 56.3%                                                                 | Mixtral-8x7B | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 66.0%     | 65.8%                                                               |
 | QWen-7B       | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 58.1%     | [58.2%](https://huggingface.co/Qwen/Qwen-7B)                          | Qwen-14B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 65.3%     | [66.3%](https://huggingface.co/Qwen/Qwen-14B)                       |
 | QWen-72B      | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 74.6%     | [77.4%](https://huggingface.co/Qwen/Qwen-72B)                         | QWen1.5-0.5B | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                   | 31.8%     | 31.8%                                                               |

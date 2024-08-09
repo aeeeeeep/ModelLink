@@ -1,4 +1,4 @@
-  <p align="center"> <img src="sources/images/logo.png" height="90px" width="400px"> </p>
+  <p align="center"> <img src="sources/images/logo.png" height="103px" width="700px"> </p>
 
 <p align="center">
     <a href="https://gitee.com/ascend/MindSpeed/blob/master/LICENSE">
@@ -35,6 +35,7 @@ ModelLink旨在为华为 [昇腾芯片](https://www.hiascend.com/) 上提供端�
 
 ---
 
+
 ## ModelLink版本维护策略
 
 ModelLink版本有以下五个维护阶段：
@@ -64,12 +65,19 @@ ModelLink已发布版本维护策略：
 |           软件            | [版本](https://www.hiascend.com/zh/) |
 | :-----------------------: |:----------------------------------:|
 |          Python           |                3.8                 |
-|          driver           |         在研版本          |
-|         firmware          |         在研版本          |
+|          Driver           |         在研版本          |
+|         Firmware          |         在研版本          |
 |           CANN            |             在研版本             |
-|           torch           |            2.1.0、2.2.0             |
-|         torch_npu         |           在研版本           |
+|           Torch           |            2.1.0、2.2.0             |
+|         Torch_npu         |           在研版本           |
 
+【预训练集群性能与线性度】
+
+ModelLink 通过模型并行与数据并行来训练大语言模型，为了演示如何使用多个昇腾芯片和模型大小进行扩展性训练，我们使用 `GPT3-175B` 稠密大模型，从128颗 NPU 扩展到 7968颗 NPU 进行实验，下图是实验数据：
+<p align="center"> <img src="sources/images/linearity&mfu.png" height="485px" width="710px"> </p>
+报告的吞吐量是针对端到端训练进行测量的，涵盖所有操作，包括数据加载、优化器步骤、通信，甚至日志记录。请注意，示例大模型没有训练至收敛。
+
+图中呈现了对应集群规模下的 `MFU` 值与集群整体的 `线性度`情况. 计算公式已经放到社区，点击链接可进行参考：[MFU计算公式](https://gitee.com/ascend/ModelLink/wikis/%E6%9C%AF%E8%AF%AD%E5%AE%9A%E4%B9%89/%E5%A4%A7%E6%A8%A1%E5%9E%8B%20MFU%20%E8%AE%A1%E7%AE%97%E5%85%AC%E5%BC%8F)，[线性度计算公式](https://gitee.com/ascend/ModelLink/wikis/%E6%9C%AF%E8%AF%AD%E5%AE%9A%E4%B9%89/%E7%BA%BF%E6%80%A7%E5%BA%A6%E5%85%AC%E5%BC%8F)
 
 【现版本实测性能（硬件信息：Atlas 900 A2 PODc）】
 
@@ -382,6 +390,29 @@ ModelLink已发布版本维护策略：
       <td> 355 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="https://modelscope.cn/organization/LLM-Research">LLaMA3.1</td>
+      <td><a href="https://modelscope.cn/models/LLM-Research/Meta-Llama-3.1-8B">8B</a></td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2280 </td>
+      <td> 2520 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td><a href="https://modelscope.cn/models/LLM-Research/Meta-Llama-3.1-8B">8B</a></td>
+      <td>128K</td>
+      <th>Mcore</th>
+      <td>4x8</td>
+      <td>BF16 </td>
+      <td> 1297 </td>
+      <td> -- </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
       <td rowspan="3"><a href="https://huggingface.co/Qwen">Qwen</a></td>
@@ -776,7 +807,7 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
   </tr></thead>
 <tbody>
   <tr>
-    <td rowspan="5">PTD并行</td>
+    <td rowspan="6">PTD并行</td>
     <td>张量并行</td>
     <td>--tensor-model-parallel-size</td>
     <td>Yes</td>
@@ -791,6 +822,12 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
   <tr>
     <td>流水线并行动态划分</td>
     <td>--num-layer-list</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>虚拟流水并行</td>
+    <td>--num-layers-per-virtual-pipeline-stage</td>
     <td>Yes</td>
     <td>Yes</td>
   </tr>
@@ -826,8 +863,8 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
     <td>No</td>
   </tr>
   <tr>
-    <td rowspan="2">MOE并行</td>
-    <td>MOE并行</td>
+    <td rowspan="2">MOE</td>
+    <td>MOE专家并行</td>
     <td>--expert-model-parallel-size</td>
     <td>Yes</td>
     <td>No</td>
@@ -837,6 +874,37 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
     <td>--moe-permutation-async-comm</td>
     <td>Yes</td>
     <td>No</td>
+  </tr>
+  <tr>
+    <td rowspan="5">显存优化</td>
+    <td>参数副本复用</td>
+    <td>--reuse-fp32-param</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>重计算程度</td>
+    <td>--recompute-granularity</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>重计算层数</td>
+    <td>--recompute-num-layers</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>重计算方法</td>
+    <td>--recompute-method</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>PP-Stage重计算</td>
+    <td>--enable-recompute-layers-per-pp-rank</td>
+    <td>Yes</td>
+    <td>Yes</td>
   </tr>
   <tr>
     <td rowspan="5">融合算子</td>
@@ -869,13 +937,6 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
     <td>Yes</td>
     <td>Yes</td>
   </tr>
- <tr>
-    <td>显存 </td>
-    <td>参数副本复用</td>
-    <td>--reuse-fp32-param</td>
-    <td>Yes</td>
-    <td> Yes</td>
-  </tr>
   <tr>
     <td rowspan="3">通信</td>
     <td>梯度reduce通算掩盖</td>
@@ -901,7 +962,7 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
 注意：
 如果需要开启 mc2，需保证:
 1. 配套环境版本如本仓首页所述;
-2. 将 modellink\arguments.py 中 validate_args_decorator 函数中的第431行进行注释
+2. 将 modellink\arguments.py 文件下 validate_args_decorator 函数中的此处注释开启
    #args.use_mc2 = False
 ```
 

@@ -41,7 +41,7 @@ from megatron.core import mpu
 
 from ..core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
 from ..error_utils import ensure_valid
-from ..model.alibi import Alibi, _build_alibi_tensor, _get_inverted_mask
+from ..model.alibi import Alibi
 from ..tasks.finetune.lora.utils import is_enable_lora
 from ..core.transformer import get_attention_mask, MUST_COMPRESS
 
@@ -413,9 +413,9 @@ class FlashSelfAttention(torch.nn.Module):
 
         self.alibi = None
         if args.position_embedding_type == 'alibi':
-            self.get_alibi(args.seq_length)
+            self.alibi = Alibi()
 
-    def forward(self, q, k, v, attention_mask, pse=None):
+    def forward(self, q, k, v, attention_mask, inference_params=None, pse=None):
         """Implements the multihead softmax attention.
         Arguments
         ---------
@@ -423,7 +423,7 @@ class FlashSelfAttention(torch.nn.Module):
         """
         args = get_args()
 
-        batch_size, seq_length, head_num, head_dim = q.shape[1], q.shape[0], q.shape[2], q.shape[3]
+        batch_size, seq_length, head_num, head_dim = k.shape[1], k.shape[0], k.shape[2], k.shape[3]
 
         use_sliding_windows = (
                 getattr(args, "sliding_window", None) is not None
@@ -438,12 +438,12 @@ class FlashSelfAttention(torch.nn.Module):
         else:
             sparse_mode = 0
 
-        if not hasattr(self, 'attention_mask') or self.attention_mask.shape[0] != seq_length:
-            if use_sliding_windows:
-                self.attention_mask = get_attention_mask(mode=MUST_COMPRESS)
-            else:
-                if attention_mask is not None:
-                    self.attention_mask = attention_mask
+        if attention_mask is not None:
+            self.attention_mask = attention_mask
+        else:
+            if not hasattr(self, 'attention_mask'):
+                if use_sliding_windows:
+                    self.attention_mask = get_attention_mask(mode=MUST_COMPRESS)
                 else:
                     self.attention_mask = torch.triu(torch.ones(seq_length, seq_length), 1).bool().npu()
 
@@ -461,65 +461,63 @@ class FlashSelfAttention(torch.nn.Module):
         except Exception as e:
             raise ValueError('Invalid head_dim: {}'.format(head_dim)) from e
 
-        size_record = q.shape
+        size_record = k.shape
         if self.alibi is not None and (self.alibi.output_size != size_record) and pse is None:
             if args.shape_order != 'SBH':
                 raise ValueError(
                     'FlashAttention with Alibi requires for SBH shape_order, but is {}.'.format(args.shape_order))
 
             self.alibi.output_size = size_record
-            self.get_alibi(seq_length)
-            if self.fill_neg_inf:
-                self.alibi_fill_neg_inf(seq_length, batch_size)
-            else:
-                self.alibi.matmul_result = self.alibi.alibi[:, :, :seq_length].repeat(batch_size, 1, 1)
+            self.alibi.get_alibi_pse(self.attention_mask, batch_size, q.shape[0], k.shape[0])
 
         if self.alibi and pse is None:
-            pse = self.alibi.matmul_result.reshape(batch_size, head_num, seq_length,
-                                                   seq_length) * self.beta * self.norm_factor
+            pse = self.alibi.alibi_pse.reshape(batch_size, head_num, self.alibi.alibi_pse.size(1), self.alibi.alibi_pse.size(2))
+            if inference_params:
+                pse = pse * self.beta
+            else:
+                pse = pse * self.beta * self.norm_factor
             self.pre_tockens = seq_length
 
-        output = torch_npu.npu_fusion_attention( \
-            q, k, v, head_num, args.shape_order, \
-            pse=pse, \
-            sparse_mode=sparse_mode, \
-            padding_mask=None, \
-            atten_mask=self.attention_mask, \
-            scale=scale, \
-            pre_tockens=self.pre_tockens, \
-            next_tockens=self.next_tockens, \
-            keep_prob=1 - self.dropout_p, \
-            inner_precise=0
-        )[0]
-
-        return output
-
-
-    def alibi_fill_neg_inf(self, seq_length, batch_size):
-        _alibi = self.alibi.alibi[:, :seq_length, :seq_length]
-        # (b, 1, s, s)
-        if(len(self.attention_mask.size()) == 4):
-            self.attention_mask = \
-                self.attention_mask[:batch_size, :, :, :]
+        if inference_params:
+            q, k, v = [rearrange(x, 's b h -> b s h') for x in [q, k, v]]
+            if q.shape[1] == 1 and q.shape[1] != seq_length:
+                output = torch_npu.npu_incre_flash_attention( \
+                    q, k, v, \
+                    num_heads=head_num, 
+                    input_layout="BSH", \
+                    pse_shift=pse, \
+                    padding_mask=None, \
+                    scale_value=scale, 
+                )
+            else:
+                output = torch_npu.npu_prompt_flash_attention( \
+                    q, k, v, \
+                    num_heads=head_num, 
+                    input_layout="BSH", \
+                    pse_shift=pse, \
+                    sparse_mode=sparse_mode, \
+                    padding_mask=None, \
+                    atten_mask=self.attention_mask, \
+                    scale_value=scale, \
+                    pre_tokens=self.pre_tockens, \
+                    next_tokens=self.next_tockens
+                )
+            output = output.transpose(0, 1)
         else:
-            self.attention_mask = \
-                self.attention_mask.unsqueeze(0).unsqueeze(0).repeat(batch_size, 1, 1, 1)[:batch_size, :, :, :]
-        self.alibi.matmul_result = _get_inverted_mask(self.attention_mask, _alibi).view(-1, seq_length, seq_length)
-
-
-    def get_alibi(self, seq_length):
-        args = get_args()
-        self.alibi = Alibi()
-        alibi = _build_alibi_tensor(seq_length,
-                                    args.num_attention_heads,
-                                    args.square_alibi_mask,
-                                    args.fill_neg_inf,
-                                    ).to(torch.cuda.current_device())
-        if args.params_dtype == torch.float16:
-            alibi = alibi.to(torch.float16)
-        elif args.params_dtype == torch.bfloat16:
-            alibi = alibi.to(torch.bfloat16)
-        self.alibi.alibi = alibi
+            output = torch_npu.npu_fusion_attention( \
+                q, k, v, head_num, args.shape_order, \
+                pse=pse, \
+                sparse_mode=sparse_mode, \
+                padding_mask=None, \
+                atten_mask=self.attention_mask, \
+                scale=scale, \
+                pre_tockens=self.pre_tockens, \
+                next_tockens=self.next_tockens, \
+                keep_prob=1 - self.dropout_p, \
+                inner_precise=0
+            )[0]
+        
+        return output
 
 
 def core_attention_wrapper(fn):
@@ -533,18 +531,9 @@ def core_attention_wrapper(fn):
         self.beta = 1.0
         if self.apply_query_key_layer_scaling:
             self.beta = 1.0 / self.layer_number
+        self.alibi = None
         if args.position_embedding_type == 'alibi':
             self.alibi = Alibi()
-            alibi = _build_alibi_tensor(args.seq_length,
-                                        args.num_attention_heads,
-                                        args.square_alibi_mask,
-                                        args.fill_neg_inf
-                                        ).to(torch.cuda.current_device())
-            if args.params_dtype in [torch.float16, torch.bfloat16]:
-                alibi = alibi.to(args.params_dtype)
-            self.alibi.alibi = alibi
-        else:
-            self.alibi = None
 
     return wrapper
 
@@ -578,39 +567,13 @@ def core_attention_forward(self, query_layer, key_layer, value_layer, attention_
             key_layer.transpose(0, 1).transpose(1, 2),
             beta=0.0, alpha=(1.0 / self.norm_factor))
     else:
-        if self.alibi.matmul_result is None or self.alibi.output_size != output_size:
-            args = get_args()
-
+        if self.alibi.alibi_pse is None or self.alibi.output_size != output_size:
             self.alibi.output_size = output_size
-            alibi = _build_alibi_tensor(query_layer.size(0),
-                                        args.num_attention_heads,
-                                        args.square_alibi_mask,
-                                        args.fill_neg_inf
-                                        ).to(torch.cuda.current_device())
-            if args.params_dtype == torch.float16:
-                alibi = alibi.to(torch.float16)
-            elif args.params_dtype == torch.bfloat16:
-                alibi = alibi.to(torch.bfloat16)
-            self.alibi.alibi = alibi
-
-            def core_attention_fill_neg_inf(output_size, attention_mask):
-                _alibi = self.alibi.alibi[:, :output_size[3], :output_size[3]]
-                # (b, 1, s, s)
-                if attention_mask.size() == 4:
-                    attention_mask = attention_mask.unsqueeze(1)[:output_size[0], :, :, :]
-                else:
-                    attention_mask = attention_mask.repeat(output_size[0], 1, 1, 1)[:output_size[0], :, :, :]
-                self.alibi.matmul_result = _get_inverted_mask(attention_mask, _alibi).view(-1, output_size[2],
-                                                                                                output_size[2]).contiguous()
-
-            if self.fill_neg_inf:
-                core_attention_fill_neg_inf(output_size, attention_mask)
-            else:
-                self.alibi.matmul_result = self.alibi.alibi[:, :, :output_size[3]].repeat(output_size[0], 1, 1)
+            self.alibi.get_alibi_pse(attention_mask, output_size[0], output_size[2], output_size[3])
 
         q_trans = query_layer.transpose(0, 1).contiguous()
         k_trans = key_layer.transpose(0, 1).transpose(1, 2).contiguous()
-        matmul_result = self.beta * self.alibi.matmul_result + torch.bmm(q_trans, k_trans) * (1.0 / self.norm_factor)
+        matmul_result = self.beta * self.alibi.alibi_pse + torch.bmm(q_trans, k_trans) * (1.0 / self.norm_factor)
 
         # change view to [b, np, sq, sk]
     attention_scores = matmul_result.view(*output_size)
@@ -840,9 +803,9 @@ def ParallelAttentionForward(self, hidden_states, attention_mask,
         q, k, v = query_layer, key_layer, value_layer
         if not self.sequence_parallel:
             with tensor_parallel.get_cuda_rng_tracker().fork():
-                context_layer = self.core_attention_flash(q, k, v, attention_mask)
+                context_layer = self.core_attention_flash(q, k, v, attention_mask, inference_params)
         else:
-            context_layer = self.core_attention_flash(q, k, v, attention_mask)
+            context_layer = self.core_attention_flash(q, k, v, attention_mask, inference_params)
 
     # =================
     # Output. [sq, b, h]

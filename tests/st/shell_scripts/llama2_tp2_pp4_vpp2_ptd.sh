@@ -35,6 +35,13 @@ DIST_ALGO=(
     --sequence-parallel
 )
 
+ACCELERATE_ARGS=(
+    --enable-recompute-layers-per-pp-rank \
+    --recompute-granularity full \
+    --recompute-method block \
+    --recompute-num-layers 1 \
+)
+
 MODEL_ARGS=(
     --use-mcore-models
     --num-layers 32
@@ -98,6 +105,7 @@ torchrun ${DISTRIBUTED_ARGS[@]} $basepath/pretrain_gpt.py \
     ${DIST_ALGO[@]} \
     ${MODEL_ARGS[@]} \
     ${TRAINING_ARGS[@]} \
+    ${ACCELERATE_ARGS[@]} \
     ${DATA_ARGS[@]} \
     ${OUTPUT_ARGS[@]} \
     --load ${CKPT_LOAD_DIR} \
