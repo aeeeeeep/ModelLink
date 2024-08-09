@@ -96,12 +96,3 @@ def core_mlp_forward_wrapper(fn):
                 output.register_hook(self.activation_checkpoint_manager.recompute)
         return output, output_bias
     return wrapper
-
-
-def transformer_layer_init_wrapper(fn):
-    @wraps(fn)
-    def wrapper(self, *args, **kwargs):
-        fn(self, *args, **kwargs)
-        self.mlp.layer_number = self.layer_number
-
-    return wrapper

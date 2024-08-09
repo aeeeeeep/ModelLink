@@ -157,7 +157,7 @@ def patch_core_transformers(args):
                         allgather_token_permutation, allgather_token_unpermutation, rotary_embedding_init_wrapper)
     from ..core.transformer.moe.moe_layer import moe_layer_init_wrapper, moe_layer_forward
     from ..core.transformer.transformer_block import _transformer_block_build_layers
-    from ..core.transformer.transformer import core_mlp_forward_wrapper, transformer_layer_init_wrapper
+    from ..core.transformer.transformer import core_mlp_forward_wrapper
 
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__',
                                 rotary_embedding_init_wrapper)
@@ -174,7 +174,6 @@ def patch_core_transformers(args):
     # Transformer block
     PatchManager.register_patch('megatron.core.transformer.transformer_block.TransformerBlock._build_layers',
                                 _transformer_block_build_layers)
-    PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayer.__init__', transformer_layer_init_wrapper)
     PatchManager.register_patch('megatron.core.transformer.mlp.MLP.forward', core_mlp_forward_wrapper)
 
     # For mcore moe
