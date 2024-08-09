@@ -404,7 +404,11 @@ def _add_training_args(parser):
                        help='enable deterministic computing for npu')
     group.add_argument('--jit-compile', action='store_true', default=False,
                        help='Setting jit compile mode to True')
-
+    group.add_argument('--recompute-activation-function', action='store_true',
+                       help='Recompute the activation function in MLP layers.')
+    group.add_argument('--recompute-activation-function-num-layers', type=int, default=None,
+                       help='Can be used together with "--recompute-method block." '
+                       'and "--recompute-num-layers". ')
     return parser
 
 

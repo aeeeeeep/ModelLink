@@ -37,8 +37,10 @@ from megatron.legacy.model.transformer import (
 )
 from megatron.legacy.model.utils import get_norm
 from megatron.core import mpu
+from megatron.legacy.model.fused_bias_gelu import bias_gelu_impl
+from mindspeed.core.tensor_parallel.random import CheckpointWithoutOutput
 
-
+from ..core.transformer.transformer import should_recompute_activation
 from ..core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
 from ..error_utils import ensure_valid
 from ..model.alibi import Alibi
@@ -933,6 +935,49 @@ def parallel_transformer_forward(
     return hidden_states
 
 
+def parallel_mlp_forward_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        is_recompute_activation = should_recompute_activation(self)
+
+        def activation_function(*function_args):
+            intermediate, bias = function_args
+
+            if self.bias_gelu_fusion:
+                assert self.add_bias is True
+                assert self.activation_func == F.gelu
+                intermediate = bias_gelu_impl(intermediate, bias)
+            else:
+                if bias_parallel is not None:
+                    intermediate = intermediate + bias
+                intermediate = self.activation_func(intermediate)
+            return intermediate
+
+        if not is_recompute_activation:
+            output, output_bias = fn(self, *args, **kwargs)
+        else:
+            hidden_states = args[0]
+            intermediate_parallel, bias_parallel = self.dense_h_to_4h(hidden_states)
+            self.activation_checkpoint_manager = CheckpointWithoutOutput()
+            intermediate_parallel = self.activation_checkpoint_manager.checkpoint(activation_function,
+                                                                                  False,
+                                                                                  intermediate_parallel,
+                                                                                  bias_parallel)
+            # [s, b, h]
+            output, output_bias = self.dense_4h_to_h(intermediate_parallel)
+
+            # discard the output of the activation function,
+            # which will be restored by recomputation during backward.
+            self.activation_checkpoint_manager.discard_output()
+
+            # when backward to output of dense_4h_to_h,
+            # recompute and restore the output of activation function.
+            if output.requires_grad:
+                output.register_hook(self.activation_checkpoint_manager.recompute)
+        return output, output_bias
+    return wrapper
+
+
 def parallel_mlp_init_wrapper(fn):
     @wraps(fn)
     def wrapper(self, *args, **kwargs):
@@ -942,9 +987,10 @@ def parallel_mlp_init_wrapper(fn):
         if _args.swiglu:
             def swiglu(x):
                 if _args.use_fused_swiglu:
-                    return torch_npu.npu_swiglu(x, dim=-1)
-                x = torch.chunk(x, 2, dim=-1)
+                    return torch_npu.npu_swiglu(x, dim = -1)
+                x = torch.chunk(x, 2, dim = -1)
                 return F.silu(x[0]) * x[1]
+
             self.activation_func = swiglu
 
         # 适配geglu激活函数
@@ -955,8 +1001,9 @@ def parallel_mlp_init_wrapper(fn):
             config.bias_gelu_fusion = False
 
             def geglu(x):
-                x = torch.chunk(x, 2, dim=-1)
+                x = torch.chunk(x, 2, dim = -1)
                 return F.gelu(x[0]) * x[1]
+
             self.activation_func = geglu
 
         ffn_hidden_size = config.ffn_hidden_size
