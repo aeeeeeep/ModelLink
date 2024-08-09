@@ -4,7 +4,7 @@
 # Also, several overlap algorithm have applied such as overlap-grad-reduce, overlap-param-gather
 # and cp-send-recv-overlap.
 # In addition, several fused kernels have applied, such as Rope, Swiglu and RmsNorm.
-# Finally, re-computation with full recompute-granularity, block recompute-method and recompute-num-layers has tested.
+# Finally, re-computation with recompute-activation-function and recompute-activation-function-num-layers has tested.
 
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
@@ -55,10 +55,9 @@ ACCELERATE_ARGS="
     --reuse-fp32-param \
     --overlap-grad-reduce \
     --overlap-param-gather \
-    --recompute-granularity full \
-    --recompute-method block \
-    --recompute-num-layers 1 \
     --use-distributed-optimizer \
+    --recompute-activation-function \
+    --recompute-activation-function-num-layers 1 \
 "
 
 MODEL_ARGS="
