@@ -291,8 +291,8 @@ def patch_training():
 
 
 def patch_miscellaneous():
-    from modellink.utils import print_args_wrapper
-    from modellink.arguments import validate_args_decorator
+    from ..utils import print_args_wrapper
+    from ..arguments import validate_args_decorator
     PatchManager.register_patch('megatron.training.arguments.parse_args', parse_args_decorator)
     PatchManager.register_patch('megatron.training.arguments.validate_args', validate_args_decorator)
     # After validating arguments, do arguments printing.
