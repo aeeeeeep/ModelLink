@@ -211,7 +211,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
     </tr>
     <tr>
       <td rowspan="3"><a href="https://huggingface.co/THUDM">ChatGLM3</a></td>
-      <td>6B</td>
+      <td><a href="https://huggingface.co/THUDM/chatglm3-6b/tree/main">6B</a></td>
       <td>8K</td>
       <th>Mcore</th>
       <td >1x8</td>
@@ -222,7 +222,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
-      <td>6B</td>
+      <td><a href="https://huggingface.co/THUDM/chatglm3-6b/tree/main">6B</a></td>
       <td>32K</td>
       <th>Mcore</th>
       <td >1x8</td>
@@ -233,7 +233,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
-      <td>6B</td>
+      <td><a href="https://huggingface.co/THUDM/chatglm3-6b/tree/main">6B</a></td>
       <td>64K</td>
       <th>Mcore</th>
       <td >2x8</td>
