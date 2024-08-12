@@ -229,9 +229,9 @@ def get_expert_parallel_world_size():
 
 
 def get_expert_parallel_group():
-    if _EXPERT_PARALLEL_GROUP is None:
+    if megatron.core.parallel_state._EXPERT_MODEL_PARALLEL_GROUP is None:
         raise AttributeError('Expert parallel group is not initialized')
-    return _EXPERT_PARALLEL_GROUP
+    return megatron.core.parallel_state._EXPERT_MODEL_PARALLEL_GROUP
 
 
 def get_expert_model_parallel_rank():
