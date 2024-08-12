@@ -728,13 +728,29 @@ ModelLink支持Huggingface、Megatron-Legacy以及Megatron-Core之间的权重�
       <td>--num-layers-per-virtual-pipeline-stage</td>
     </tr>
     <tr>
-      <td rowspan="4">Megatron-Legacy</td>
+      <td rowspan="6">Megatron-Legacy</td>
       <td>张量并行</td>
       <td>--target-tensor-parallel-size</td>
     </tr>
     <tr>
       <td>流水并行</td>
       <td>--target-pipeline-parallel-size</td>
+    </tr>
+    <tr>
+      <td>LoRA训练模块</td>
+      <td>--lora-target-modules</td>
+    </tr>
+    <tr>
+      <td>LoRA权重</td>
+      <td>--lora-load</td>
+    </tr>
+    <tr>
+      <td>LoRA r</td>
+      <td>--lora-r</td>
+    </tr>
+    <tr>
+      <td>LoRA alpa</td>
+      <td>--lora-alpha</td>
     </tr>
   </tbody>
   <tbody>
