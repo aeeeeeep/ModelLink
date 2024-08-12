@@ -85,9 +85,11 @@ def model_provider_func_wrapper(model_provider_func):
 
             model = get_peft_model(model, lora_config)
             model.add_module('module', model.get_base_model())
+
             def _hook(_module, _x_in, _x_out):
                 """ Extract the feature map of model"""
                 _x_out.requires_grad_(True)
+                
             def _create_hooks(_model, layer):  
                 """ Make the hooks function"""
                 for name, module in _model.named_modules():
