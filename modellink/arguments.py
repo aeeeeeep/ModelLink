@@ -503,6 +503,12 @@ def _validate_recompute_args(args):
     if args.enable_recompute_layers_per_pp_rank and not (enable_pp_vpp and enable_recomputation):
         raise AssertionError("enable-recompute-layers-per-pp-rank should be works with pipeline and virtual pipeline, when enabling re-computation.")
 
+    if args.recompute_activation_function:
+        if args.recompute_method == "uniform":
+            raise AssertionError('uniform recomputation is not compatible with activation function recomputation.')
+        if args.recompute_granularity == "selective":
+            raise AssertionError('--recompute-activation-function is not compatible with selective recomputation.')
+
 
 def _validate_high_availability(args):
     if args.enable_optimizer_state_local_copy and not args.enable_high_availability:
