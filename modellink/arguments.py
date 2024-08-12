@@ -560,6 +560,8 @@ def _validate_transformer_block_build_layers(args):
     else:
         if (args.first_k_dense_replace is None) != (args.moe_layer_freq is None):
             raise AssertionError('First-k-dense-replace and moe-layer-freq must be set together.')
+    if args.num_experts is not None and args.use_mc2 and args.moe_grouped_gemm:
+        raise AssertionError('Moe Grouped Gemm is not supported with mc2 in MOE model.')
 
 
 def _validate_group_limited_greedy(args):
