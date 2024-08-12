@@ -115,6 +115,7 @@ def group_limited_greedy_topKgating(self, logits: torch.Tensor):
     ################ Device-Level Balance Loss ##############
     #########################################################
     P_devi = None
+    args.n_group = args.expert_model_parallel_size
     if args.moe_device_level_aux_loss_coeff > 0:
         l_device_aux = 0
         if args.seq_aux:
