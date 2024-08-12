@@ -73,7 +73,7 @@ class SwitchMLP(MegatronModule):
     def __init__(self, config, layer_number=None):
         from megatron.legacy.model.transformer import ParallelMLP
         from mindspeed.moe.moe import MoE
-        from megatron.core.parallel_state import get_expert_parallel_group
+        from ..core import get_expert_parallel_group
 
         super().__init__()
         args = get_args()
