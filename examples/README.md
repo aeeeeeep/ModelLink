@@ -185,7 +185,77 @@ ModelLink Megatron-Legacy到Huggingface的权重转换脚本命名风格及启�
 bash examples/llama2/ckpt_convert_llama2_legacy2hf.sh
 ```
 
+##### 2.3 lora权重与base权重合并
 
+在上述权重转换命令中，加入如下参数可以将训练的 lora 权重与base进行融合。
+
+```bash
+--lora-load ${CHECKPOINT_LORA}  \
+--lora-r 16 \
+--lora-alpha 32 \
+--lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
+```
+
+【合并后转换为Megatron-Legacy权重】
+
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+    --lora-load ./ckpt/llama-2-7b-lora \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ./model_weights/llama2-7b-lora2legacy
+```
+
+转换脚本命名风格及启动方法为：
+```shell
+bash examples/llama2/ckpt_convert_llama2_legacy2legacy_lora.sh
+```
+
+【合并后转换为Huggingface权重】
+
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --loader megatron \
+    --saver megatron \
+    --save-model-type save_huggingface_llama \
+    --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+    --lora-load ./ckpt/llama-2-7b-lora \
+    --lora-r 16 \
+    --lora-alpha 32 \
+    --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
+    --target-tensor-parallel-size 1 \
+    --target-pipeline-parallel-size 1 \
+    --save-dir ./model_from_hf/llama-2-7b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama2-hf/mg2hg/
+```
+
+转换脚本命名风格及启动方法为：
+```shell
+bash examples/llama2/ckpt_convert_llama2_legacy2hf_lora.sh
+```
+
+**注意：** lora参数值需与lora微调时的参数保持一致
+
+【lora权重评估】
+
+使用lora权重的评估脚本命名风格及启动方法为：
+
+```shell
+bash examples/llama2/evaluate_llama2_7B_lora_ptd.sh
+```
 
 ---
 
@@ -277,6 +347,228 @@ bash examples/mcore/mixtral/data_convert_mixtral_pretrain.sh
 ```
 
 预训练时，数据集路径输入 ./dataset/enwiki_text_document 即可
+
+##### 2.2 微调数据集处理方法
+###### 2.2.1 Alpaca风格数据集处理方法
+在指令监督微调时，instruction 列对应的内容会与 input 列对应的内容拼接后作为人类指令，即人类指令为 instruction\ninput。而 output 列对应的内容为模型回答。如果指定了history，则会将历史对话内容也加入进来。如果指定system 列，则对应的内容将被作为系统提示词。
+
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+mkdir ./finetune_dataset
+
+python ./preprocess_data.py \
+    --input ./dataset/train-00000-of-00042-d964455e17e96d5a.parquet \
+    --tokenizer-name-or-path ./model_from_hf/qwen-7b/ \
+    --output-prefix ./finetune_dataset/alpaca \
+    --workers 4 \
+    --log-interval 1000 \
+    --tokenizer-type PretrainedFromHF \
+    --handler-name AlpacaStyleInstructionHandler \
+    --lla-fact-ins-template qwen  # <-- 需要填入模型模板
+    # --map-keys '{"prompt":"instruction","query":"input","response":"output"}' # 默认值，可不传
+```
+
+【--input】
+
+可以直接输入到数据集目录或具体文件，如果是目录，则处理全部文件, 支持 .parquet \ .csv \ .json \ .jsonl \ .txt \ .arrow 格式， 同一个文件夹下的数据格式需要保持一致 
+
+【--map-keys】
+
+`--map-keys`参数用于配置字段映射来使用数据集。
+
+Alpaca风格示例：
+```
+[
+{
+    "instruction": "人类指令（必填）",
+    "input": "人类输入（选填）",
+    "output": "模型回答（必填）",
+    "system": "系统提示词（选填）",
+    "history": [
+    ["第一轮指令（选填）", "第一轮回答（选填）"],
+    ["第二轮指令（选填）", "第二轮回答（选填）"]
+    ]
+}
+]
+```
+
+对于上面格式的数据，`--map-keys`参数完整应为
+
+`'{"prompt":"instruction","query":"input","response":"output","system":"system","history":"history"}'`
+
+其中参数的key值`"prompt"、"query"、"response"、"system"、"history"`代表数据集列映射后的属性，在代码中是固定的，不应改变，value值`"instruction"、"input"、"output"、"system"、"history"`对应数据集的列名。
+
+考虑到alpaca数据集大部分都是`["instruction", "input", "output"]`型格式，因此我们为key值`["prompt", "query", "response"]`设置了默认值。因此上面格式`--map-keys`参数可简略为`'{"system": "system","history": "history"}'`
+
+若数据集中无`system`与`history`列，则`--map-keys`可省略。
+
+
+【--lla-fact-ins-template】
+
+
+用于指定模型模板，能够让base模型微调后能具备更好的对话能力。
+
+目前支持的模板有：
+
+`['default', 'chatglm3', 'chatml', 'qwen']`
+
+【--handler-name】
+
+微调数据预处理Alpaca风格数据集时，应指定为`AlpacaStyleInstructionHandler`，根据`--map-keys`参数提取对应数据的列。
+
+**示例1：**
+```
+    --map-keys '{"prompt":"notice","query":"question","response":"answer","system":"system_test","history":"histories"}'
+```
+则会提取数据集里的`"notice"、"question"、"answer"、"system_test"、"histories"`列
+
+**示例2：**
+```
+    --map-keys '{"history":"histories"}'
+```
+则会提取数据集里的`"instruction"、"input"、"output"、"histories"`列，其中`"instruction"、"input"、"output"`列作为默认值隐式存在。
+
+
+###### 2.2.2 Sharegpt风格数据集处理方法
+
+相比 alpaca 格式的数据集，sharegpt 格式支持更多的角色种类，例如 `human、gpt、observation、function`等等。它们构成一个对象列表呈现在`conversations`列中。
+
+Sharegpt风格示例：
+```
+[
+  {
+    "conversations": [
+      {
+        "from": "human",
+        "value": "人类指令"
+      },
+      {
+        "from": "function_call",
+        "value": "工具参数"
+      },
+      {
+        "from": "observation",
+        "value": "工具结果"
+      },
+      {
+        "from": "gpt",
+        "value": "模型回答"
+      }
+    ],
+    "system": "系统提示词（选填）",
+    "tools": "工具描述（选填）"
+  }
+]
+```
+Sharegpt格式数据预处理脚本：
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+mkdir ./finetune_dataset
+
+python ./preprocess_data.py \
+    --input ./dataset/sharegpt_formatted_data-evol-gpt4.jsonl \
+    --tokenizer-name-or-path ./model_from_hf/qwen-7b/ \
+    --output-prefix ./finetune_dataset/sharegpt \
+    --workers 4 \
+    --log-interval 1000 \
+    --tokenizer-type PretrainedFromHF \
+    --handler-name SharegptStyleInstructionHandler \
+    --lla-fact-ins-template qwen  # <-- 需要填入模型模板
+    # --map-keys '{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}' # 默认值，可不传
+```
+
+【--map-keys】
+
+`--map-keys`参数用于配置字段映射来使用数据集。默认值为
+
+`'{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}'`
+
+其中key值`"messages"、"tags"`代表数据集列映射后的属性，在代码中是固定的，不应改变。value值中`"conversations"`对应数据集的列名、`"from"`对应角色标志、`"human"、"gpt"、"system"、"observation"、"function_call"`对应角色种类、`"value"`对应具体内容标志。
+
+
+以OpenAI格式为例，OpenAI 格式是 sharegpt 格式的一种特殊情况，其中第一条消息可能是系统提示词。
+
+OpenAI格式示例：
+
+```
+[
+  {
+    "messages": [
+      {
+        "role": "system",
+        "content": "系统提示词（选填）"
+      },
+      {
+        "role": "user",
+        "content": "人类指令"
+      },
+      {
+        "role": "assistant",
+        "content": "模型回答"
+      }
+    ]
+  }
+]
+```
+OpenAI格式数据预处理脚本：
+
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+mkdir ./finetune_dataset
+
+python ./preprocess_data.py \
+    --input ./dataset/xxx.json \
+    --tokenizer-name-or-path ./model_from_hf/qwen-7b/ \
+    --output-prefix ./finetune_dataset/openai \
+    --workers 4 \
+    --log-interval 1000 \
+    --tokenizer-type PretrainedFromHF \
+    --handler-name SharegptStyleInstructionHandler \
+    --lla-fact-ins-template qwen \
+    --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"}}'
+```
+
+【--handler-name】
+
+微调数据预处理Sharegpt风格数据集时，应指定为`SharegptStyleInstructionHandler`，并根据`--map-keys`参数提取对应数据的列。
+
+**示例1：**
+```
+    --map-keys '{"messages":"chat"}'
+```
+则会提取数据集里的`"chat"`列，其中`"tags"`属性包含角色格式和内容格式，做为默认值隐式存在，角色格式可以为：`"from": "human"、"from": "gpt"、"from": "observation"、"from": "function_call"`，内容格式为`"value": "具体内容"`
+
+**示例2：**
+```
+    --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant"}}'
+```
+则会提取数据集里的`"messages"`列，其中角色格式可以为：`"role": "user"、"role": "assistant"`，内容格式为`"content": "具体内容"`
+
+
+ModelLink微调数据集处理脚本命名风格及启动方法为：
+```shell
+# Legacy
+# 命名及启动：examples/model_name/data_convert_xxx_instruction.sh
+bash examples/qwen/data_convert_qwen_instruction.sh
+
+```
+
+指令微调数据集处理结果如下：
+```shell
+./finetune_dataset/alpaca_packed_attention_mask_document.bin
+./finetune_dataset/alpaca_packed_attention_mask_document.idx
+./finetune_dataset/alpaca_packed_input_ids_document.bin
+./finetune_dataset/alpaca_packed_input_ids_document.idx
+./finetune_dataset/alpaca_packed_labels_document.bin
+./finetune_dataset/alpaca_packed_labels_document.idx
+
+```
+
+微调时，数据集路径输入 ./finetune_dataset/alpaca 即可
+
 
 #### 3. 数据集合并
 
