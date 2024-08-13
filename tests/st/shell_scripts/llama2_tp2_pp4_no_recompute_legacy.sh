@@ -88,8 +88,8 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --train-iters 15 \
-    --save-interval 1 \
+    --train-iters 3 \
+    --save-interval 2 \
     --eval-interval 10000 \
     --eval-iters 1 \
     --finetune
