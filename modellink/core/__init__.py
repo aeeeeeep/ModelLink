@@ -23,7 +23,8 @@ from .models.common.embeddings.rotary_pos_embedding import (rotary_embedding_for
                                                             apply_rotary_pos_emb_bshd, apply_rotary_pos_emb)
 from .datasets.blended_megatron_dataset_builder import build_generic_dataset
 from .datasets.gpt_dataset import _build_document_sample_shuffle_indices
-from .datasets.indexed_dataset import __init__, add_item_from_list, finalize
+from .datasets.indexed_dataset import (indexed_dataset_builder_init_wrapper, indexed_dataset_builder_add_item_from_list,
+                                       indexed_dataset_builder_finalize_wrapper)
 from .transformer.moe.router import topk_router_forward, topk_router_routing
 from .transformer.moe.moe_utils import z_loss_func
 from .transformer.transformer_layer import TransformerLayerSubmodules, transformer_layer_init_wrapper, transformer_layer_forward

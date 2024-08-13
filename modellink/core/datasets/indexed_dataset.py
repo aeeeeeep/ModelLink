@@ -1,15 +1,17 @@
-from typing import List, Type
+from typing import List
+from functools import wraps
 
 import numpy
 
-from megatron.core.datasets.indexed_dataset import _IndexWriter
-
 
 class BufferWriter:
-    def __init__(self, data_file, dtype, buffer_threshold=10**5):
+    """
+    Write the sequences in chunks rather than one by one
+    """
+    def __init__(self, data_file, dtype, buffer_chunk_size=10 ** 5):
         self.data_file = data_file
         self.dtype = dtype
-        self.buffer_threshold = buffer_threshold
+        self.buffer_threshold = buffer_chunk_size
         self.buffer = []
 
     def reset_buffer(self):
@@ -28,21 +30,24 @@ class BufferWriter:
             self.write()
 
 
-def __init__(
-        self, bin_path: str, dtype: Type[numpy.number] = numpy.int32, multimodal: bool = False
-) -> None:
-    self.data_file = open(bin_path, "wb")
-    self.dtype = dtype
-    self.multimodal = multimodal
-
-    self.sequence_lengths = []
-    self.document_indices = [0]
-    self.sequence_modes = [] if self.multimodal else None
-    self.buffer_writer = BufferWriter(data_file=self.data_file, dtype=self.dtype)
+def indexed_dataset_builder_init_wrapper(init_func):
+    @wraps(init_func)
+    def indexed_dataset_builder_init(self, *args, **kwargs):
+        init_func(self, *args, **kwargs)
+        self.buffer_writer = BufferWriter(data_file=self.data_file, dtype=self.dtype)
+    return indexed_dataset_builder_init
 
 
-def add_item_from_list(self, lst: List, mode: int = 0) -> None:
-    """Add a single item to the dataset
+def indexed_dataset_builder_finalize_wrapper(fn):
+    @wraps(fn)
+    def indexed_dataset_builder_finalize(self, *args, **kwargs):
+        self.buffer_writer.write()
+        fn(self, *args, **kwargs)
+    return indexed_dataset_builder_finalize
+
+
+def indexed_dataset_builder_add_item_from_list(self, lst: List, mode: int = 0) -> None:
+    """Add a single item to the dataset. Control the writing process using a buffer.
 
     Args:
         lst (list): The item to add to the data file
@@ -53,16 +58,4 @@ def add_item_from_list(self, lst: List, mode: int = 0) -> None:
     self.sequence_lengths.append(len(lst))
     if self.multimodal:
         self.sequence_modes.append(mode)
-
-
-def finalize(self, idx_path: str) -> None:
-    """Clean up and write the index (.idx) file
-
-    Args:
-        idx_path (str): The path to the index file
-    """
-    self.buffer_writer.write()
-    self.data_file.close()
-    with _IndexWriter(idx_path, self.dtype) as writer:
-        writer.write(self.sequence_lengths, self.sequence_modes, self.document_indices)
 
