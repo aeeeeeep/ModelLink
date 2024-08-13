@@ -28,7 +28,7 @@ class BufferWriter:
             self.write()
 
 
-def indexed_dataset_init(
+def __init__(
         self, bin_path: str, dtype: Type[numpy.number] = numpy.int32, multimodal: bool = False
 ) -> None:
     self.data_file = open(bin_path, "wb")
@@ -55,7 +55,7 @@ def add_item_from_list(self, lst: List, mode: int = 0) -> None:
         self.sequence_modes.append(mode)
 
 
-def indexed_dataset_finalize(self, idx_path: str) -> None:
+def finalize(self, idx_path: str) -> None:
     """Clean up and write the index (.idx) file
 
     Args:
