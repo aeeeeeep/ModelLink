@@ -78,7 +78,10 @@ TRAINING_ARGS="
     --use-fused-swiglu \
     --use-fused-rotary-pos-emb \
     --overlap-grad-reduce \
-    --bf16
+    --bf16 \
+    --recompute-granularity full \
+    --recompute-method block \
+    --recompute-num-layers 1 \
 "
 
 DATA_ARGS="
