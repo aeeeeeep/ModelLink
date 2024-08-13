@@ -34,12 +34,12 @@ from ..model import (
     rms_norm_init_wrapper, rms_norm_forward
 )
 from ..core import (initialize_model_parallel_decorator,
-                   build_generic_dataset, _build_document_sample_shuffle_indices,
-                   TransformerLayerSubmodules, transformer_layer_init_wrapper,
-                   transformer_layer_forward, gpt_model_forward, get_num_layers_to_build_wrapper,
-                   start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
-                   clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper,
-                   add_item_from_list)
+                    build_generic_dataset, _build_document_sample_shuffle_indices,
+                    TransformerLayerSubmodules, transformer_layer_init_wrapper,
+                    transformer_layer_forward, gpt_model_forward, get_num_layers_to_build_wrapper,
+                    start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
+                    clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper,
+                    indexed_dataset_init, add_item_from_list, indexed_dataset_finalize)
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
@@ -315,7 +315,9 @@ def patch_datasets():
     # change attributions
     GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
     BlendedMegatronDatasetBuilder.build_generic_dataset = build_generic_dataset
+    IndexedDatasetBuilder.__init__ = indexed_dataset_init
     IndexedDatasetBuilder.add_item_from_list = add_item_from_list
+    IndexedDatasetBuilder.finalize = indexed_dataset_finalize
 
 
 def patch_log_handler():
