@@ -59,5 +59,5 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --lora-r 16 \
        --lora-alpha 32 \
        --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
-       --inference-prompt-type 'alpaca' \
+       --prompt-type 'alpaca' \
        | tee logs/generate_gemma_7b.log

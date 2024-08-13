@@ -405,6 +405,10 @@ def _add_training_args(parser):
                        help='enable deterministic computing for npu')
     group.add_argument('--jit-compile', action='store_true', default=False,
                        help='Setting jit compile mode to True')
+    group.add_argument('--prompt-type', type=str, default=None,
+                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'chatml', 'chatml_de', 'qwen', 'llama3', 'llama2', 'mistral', 'mixtral', 'gemma'],
+                       help='Which template to use for constructing prompts in training/inference.'
+                            'e.g., "qwen"')
 
     return parser
 
@@ -519,6 +523,14 @@ def _valid_lora(args):
             raise AssertionError('lora_fusion for CCLoRA is forbidden without sequence_parallel.')
 
 
+def _validate_inference_args(args):
+    if args.prompt_type is not None and hasattr(args, "hf_chat_template") and args.hf_chat_template:
+        raise AssertionError('Prompt-type is forbidden when use huggingface chat template.')
+
+    if hasattr(args, "history_turns") and args.history_turns < 0:
+        raise AssertionError('History turns of chat must greater than 0.')
+
+
 def _validate_moe_expert_capacity_factor(args):
     if args.moe_expert_capacity_factor is not None:
         if args.moe_token_dispatcher_type != "alltoall":
@@ -615,6 +627,7 @@ def validate_args_decorator(megatron_validate_args):
         _validate_position_embedding(args)
         _validate_high_availability(args)
         _valid_lora(args)
+        _validate_inference_args(args)
         _validate_moe_expert_capacity_factor(args)
         _validate_mla(args)
         _validate_yarn(args)

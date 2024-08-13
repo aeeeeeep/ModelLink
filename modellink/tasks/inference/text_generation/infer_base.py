@@ -18,6 +18,7 @@ import time
 import shutil
 import logging
 import subprocess
+from copy import deepcopy
 
 import torch
 from torch import distributed as dist
@@ -36,14 +37,13 @@ def add_text_generate_args(parser):
     group.add_argument("--temperature", type=float, default=0.7, help='Sampling temperature.')
     group.add_argument("--max-length", type=int, default=256, help='Total length of text.')
     group.add_argument("--max-new-tokens", type=int, default=128, help='Size of the output generated text.')
-    group.add_argument('--inference-prompt-type', type=str, default='llama',
-            help="choose the prompt type for inference")
     group.add_argument('--hf-chat-template', action='store_true', default=False,
-                        help="Using Huggingface chat template")    
+                        help="Using Huggingface chat template")
     group.add_argument('--add-eos-token', nargs='+', type=str, default=[],
                         help="Use additional eos tokens")
     group.add_argument('--use-kv-cache', action="store_true", default=False,
                        help="Use kv cache to accelerate inference")                                     
+    group.add_argument('--history-turns', type=int, default=3, help='Chat turns of histories.')
     return parser
 
 
@@ -56,7 +56,7 @@ def print_flush(prev_str, curr_str):
     sys.stdout.write(difference)
 
 
-def task_factory(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
+def task_factory(args, model):
     task_map = {
         "greedy": task_greedy_search,
         "do_sample": task_do_sample,
@@ -85,40 +85,32 @@ def task_factory(args, model, tokenizer=None, system_template="", dialog_templat
         task_map.get(task)(
             args,
             model,
-            tokenizer,
-            system_template=system_template,
-            dialog_template=dialog_template
         )
 
 
-def task_greedy_search(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
+def task_greedy_search(args, model):
     """Greedy Search"""
-    prompt = "how are you?"
-    template = system_template + dialog_template
-    instruction = template.format(instruction=prompt)
+    instruction = "how are you?"
 
     t = time.time()
     output = model.generate(
         instruction,
         max_new_tokens=args.max_new_tokens,
-        tokenizer=tokenizer,
         stream=False
     )
 
     if dist.get_rank() == 0:
         logging.info("\n=============== Greedy Search ================")
-        logging.info("\nYou:\n%s\n\nModelLink:\n%s", prompt, output)
+        logging.info("\nYou:\n%s\n\nModelLink:\n%s", instruction, output)
         logging.info("==============================================")
         logging.info("\nElapsed: %ss", round(time.time() - t, 2))
 
     dist.barrier()
 
 
-def task_do_sample(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
+def task_do_sample(args, model):
     """Do Sample"""
-    prompt = "how are you?"
-    template = system_template + dialog_template
-    instruction = template.format(instruction=prompt)
+    instruction = "how are you?"
 
     t = time.time()
     output = model.generate(
@@ -127,24 +119,21 @@ def task_do_sample(args, model, tokenizer=None, system_template="", dialog_templ
         top_k=args.top_k,
         top_p=args.top_p,
         max_new_tokens=args.max_new_tokens,
-        tokenizer=tokenizer,
         stream=False
     )
 
     if dist.get_rank() == 0:
         logging.info("\n================ Do Sample =================")
-        logging.info("\nYou:\n%s\n\nModelLink:\n%s", prompt, output)
+        logging.info("\nYou:\n%s\n\nModelLink:\n%s", instruction, output)
         logging.info("============================================")
         logging.info("\nElapsed: %ss", round(time.time() - t, 2))
 
     dist.barrier()
 
 
-def task_beam_search(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
+def task_beam_search(args, model):
     """Beam Search"""
-    prompt = "how are you?"
-    template = system_template + dialog_template
-    instruction = template.format(instruction=prompt)
+    instruction = "how are you?"
 
     t = time.time()
     output = model.generate(
@@ -153,24 +142,21 @@ def task_beam_search(args, model, tokenizer=None, system_template="", dialog_tem
         top_k=args.top_k,
         top_p=args.top_p,
         max_new_tokens=args.max_new_tokens,
-        tokenizer=tokenizer,
         stream=False
     )
 
     if dist.get_rank() == 0:
         logging.info("\n=============== Beam Search =================")
-        logging.info("\nYou:\n%s\n\nModelLink:\n%s", prompt, output)
+        logging.info("\nYou:\n%s\n\nModelLink:\n%s", instruction, output)
         logging.info("=============================================")
         logging.info("\nElapsed: %ss", round(time.time() - t, 2))
 
     dist.barrier()
 
 
-def task_beam_search_with_sampling(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
+def task_beam_search_with_sampling(args, model):
     """Beam Search with sampling"""
-    prompt = "how are you?"
-    template = system_template + dialog_template
-    instruction = template.format(instruction=prompt)
+    instruction = "how are you?"
 
     t = time.time()
     output = model.generate(
@@ -180,24 +166,21 @@ def task_beam_search_with_sampling(args, model, tokenizer=None, system_template=
         top_k=args.top_k,
         top_p=args.top_p,
         max_new_tokens=args.max_new_tokens,
-        tokenizer=tokenizer,
         stream=False
     )
 
     if dist.get_rank() == 0:
         logging.info("\n======== Beam Search with sampling ==========")
-        logging.info("\nYou:\n%s\n\nModelLink:\n%s", prompt, output)
+        logging.info("\nYou:\n%s\n\nModelLink:\n%s", instruction, output)
         logging.info("=============================================")
         logging.info("\nElapsed: %ss", round(time.time() - t, 2))
 
     dist.barrier()
 
 
-def task_return_output_log_probs(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
+def task_return_output_log_probs(args, model):
     """Returns the probability distribution of tokens"""
-    prompt = "how are you?"
-    template = system_template + dialog_template
-    instruction = template.format(instruction=prompt)
+    instruction = "how are you?"
 
     t = time.time()
     tokens, log_probs = model.generate(
@@ -207,7 +190,6 @@ def task_return_output_log_probs(args, model, tokenizer=None, system_template=""
         top_p=args.top_p,
         temperature=args.temperature,
         max_new_tokens=args.max_new_tokens,
-        tokenizer=tokenizer,
         stream=False,
         detokenize=False,
         return_output_log_probs=True
@@ -221,7 +203,6 @@ def task_return_output_log_probs(args, model, tokenizer=None, system_template=""
         top_p=args.top_p,
         temperature=args.temperature,
         max_new_tokens=args.max_new_tokens,
-        tokenizer=tokenizer,
         stream=False,
         detokenize=False,
         return_output_log_probs=True,
@@ -238,32 +219,77 @@ def task_return_output_log_probs(args, model, tokenizer=None, system_template=""
     dist.barrier()
 
 
-def task_chat(args, model, tokenizer=None, system_template="", dialog_template="{instruction}"):
-    """Interactive dialog mode with multiple rounds of conversation"""
+def chat_get_instruction(args, histories_no_template, histories_template, prompt):
+    instruction = None
 
     def get_context(content):
-        res = system_template
+        res = ""
         for q, r in content:
             if r is None:
-                res += dialog_template.format(instruction=q)
+                res += q
             else:
-                res += dialog_template.format(instruction=q) + r
+                res += q + r
         return res
 
-    histories = []
-    columns, rows = shutil.get_terminal_size()
-    output, prompt, instruction = "", "", ""
-    input_template, response_template = "\n\nYou >> ", "\nModelLink:\n"
+    if args.hf_chat_template or args.prompt_type is not None:
+        # Handle conversation history, there can be a better solution
+        if len(histories_template) > 2 * args.history_turns:
+            histories_template.pop(0)
+            histories_template.pop(0)
+
+        histories_template.append({"role": "user", "content": prompt})
+
+        # use llamafactory template, We need to build the intermediate format ourselves 
+        instruction = deepcopy(histories_template) 
+    else:
+        # not use llamafactory template,keep old process
+        histories_no_template.append((prompt, None))
+        instruction = get_context(histories_no_template)
+        histories_no_template.pop()
+
+    return instruction
+
+
+def chat_print_and_update_histories(args, responses, histories_no_template, histories_template, prompt):
+    response_template = "\nModelLink:\n"
+    output = ""
+
+    if dist.get_rank() == 0:
+        sys.stdout.write(response_template)
+
+    prev = ""
+    for output in responses:
+        if dist.get_rank() == 0:
+            curr = output.replace("�", "")
+            print_flush(prev, curr)
+            prev = curr
+
+    # old propress
+    if args.hf_chat_template or args.prompt_type is not None:
+        histories_template.append({"role": "assistant", "content": output})
+    else:
+        histories_no_template.append((prompt, output))
+        if len(histories_no_template) > 3:
+            histories_no_template.pop()
+
+    return output
+
+
+def task_chat(args, model):
+    """Interactive dialog mode with multiple rounds of conversation"""
+
+    histories_no_template = []
+    histories_template = []
+    instruction = None
+    prompt = ""
+    input_template = "\n\nYou >> "
     command_clear = ["clear"]
-    messages = []
-    if args.hf_chat_template:
-        from megatron.training import get_tokenizer
-        tokenizer = get_tokenizer().tokenizer
+
     while True:
         terminate_runs = torch.zeros(1, dtype=torch.int64, device=torch.cuda.current_device())
 
         if dist.get_rank() == 0:
-            if not histories:
+            if not histories_no_template and not histories_template:
                 logging.info("===========================================================")
                 logging.info("1. If you want to quit, please entry one of [q, quit, exit]")
                 logging.info("2. To create new title, please entry one of [clear, new]")
@@ -277,25 +303,15 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
 
             if prompt.strip() in ["clear", "new"]:
                 subprocess.call(command_clear)
-                histories = []
-                messages = []
+                histories_no_template = []
+                histories_template = []
                 continue
 
             if not prompt.strip():
                 continue
+            
+            instruction = chat_get_instruction(args, histories_no_template, histories_template, prompt)
 
-            histories.append((prompt, None))
-            instruction = get_context(histories)
-            histories.pop()
-            messages.append(
-                {"role": "user", "content": prompt}
-            )
-            if args.hf_chat_template:
-                instruction = tokenizer.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True
-                )
 
         dist.all_reduce(terminate_runs)
         dist.barrier()
@@ -307,23 +323,10 @@ def task_chat(args, model, tokenizer=None, system_template="", dialog_template="
             do_sample=True,
             top_k=args.top_k,
             top_p=args.top_p,
-            tokenizer=tokenizer,
+            tokenizer=None,
             temperature=args.temperature,
             max_new_tokens=args.max_new_tokens,
             stream=True
         )
 
-        if dist.get_rank() == 0:
-            sys.stdout.write(response_template)
-
-        prev = ""
-        for output in responses:
-            if dist.get_rank() == 0:
-                curr = output.replace("�", "")
-                print_flush(prev, curr)
-                prev = curr
-
-        histories.append((prompt, output))
-        messages.append(
-            {"role": "assistant", "content": output}
-        )
+        chat_print_and_update_histories(args, responses, histories_no_template, histories_template, prompt)

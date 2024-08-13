@@ -26,7 +26,7 @@ class TestProcessInstructionDataLf:
             "--tokenizer-name-or-path", "/data/qwen-7b/",
             "--workers", "4",
             "--log-interval", "1000",
-            "--lla-fact-ins-template", "qwen"
+            "--prompt-type", "qwen"
         ]
         self.args = get_args()
         self.tokenizer = build_tokenizer(self.args)
@@ -44,7 +44,7 @@ class TestProcessInstructionDataLf:
             "--tokenizer-name-or-path", "/data/qwen-7b/",
             "--workers", "4",
             "--log-interval", "1000",
-            "--lla-fact-ins-template", "qwen",
+            "--prompt-type", "qwen",
             "--map-keys", '{"history":"history"}'
         ]
         self.args = get_args()
@@ -61,7 +61,7 @@ class TestProcessInstructionDataLf:
             "--tokenizer-name-or-path", "/data/qwen-7b/",
             "--workers", "4",
             "--log-interval", "1000",
-            "--lla-fact-ins-template", "qwen",
+            "--prompt-type", "qwen",
             "--map-keys", '{"system":"system_prompt"}'
         ]
 
@@ -79,7 +79,7 @@ class TestProcessInstructionDataLf:
             "--tokenizer-name-or-path", "/data/qwen-7b/",
             "--workers", "4",
             "--log-interval", "1000",
-            "--lla-fact-ins-template", "qwen",
+            "--prompt-type", "qwen",
             "--map-keys", '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"} }'
         ]
 
