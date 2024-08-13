@@ -38,7 +38,8 @@ from ..core import (initialize_model_parallel_decorator,
                    TransformerLayerSubmodules, transformer_layer_init_wrapper,
                    transformer_layer_forward, gpt_model_forward, get_num_layers_to_build_wrapper,
                    start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
-                   clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper)
+                   clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper,
+                   add_item_from_list)
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
@@ -310,9 +311,11 @@ def patch_miscellaneous():
 def patch_datasets():
     from megatron.core.datasets.blended_megatron_dataset_builder import BlendedMegatronDatasetBuilder
     from megatron.core.datasets.gpt_dataset import GPTDataset
+    from megatron.core.datasets.indexed_dataset import IndexedDatasetBuilder
     # change attributions
     GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
     BlendedMegatronDatasetBuilder.build_generic_dataset = build_generic_dataset
+    IndexedDatasetBuilder.add_item_from_list = add_item_from_list
 
 
 def patch_log_handler():
