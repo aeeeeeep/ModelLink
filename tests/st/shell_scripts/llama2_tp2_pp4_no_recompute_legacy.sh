@@ -12,7 +12,7 @@ GBS=16
 
 basepath=$(cd `dirname $0`; cd ../../../; pwd)
 
-CKPT_SAVE_DIR=/data/llama-2-mcore-tp2-cp4-test
+CKPT_SAVE_DIR=/data/ckpt
 CKPT_LOAD_DIR=/data/llama-2-mcore-tp2-cp4-test
 DATA_PATH=/data/pretrain_dataset/alpaca_text_document
 TOKENIZER_MODEL=/data/llama-2-7b-hf/tokenizer.model
@@ -88,8 +88,8 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --train-iters 3 \
-    --save-interval 2 \
+    --train-iters 15 \
+    --save-interval 10000 \
     --eval-interval 10000 \
     --eval-iters 1 \
     --finetune
@@ -103,7 +103,6 @@ torchrun ${DISTRIBUTED_ARGS} $basepath/pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --save ${CKPT_SAVE_DIR} \
+    --load ${CKPT_LOAD_DIR} \
     --log-throughput \
     --distributed-backend nccl
-
-    #    --load ${CKPT_LOAD_DIR} \
