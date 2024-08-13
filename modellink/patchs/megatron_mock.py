@@ -134,3 +134,4 @@ def patch_npu_torch():
     torch.Tensor.type = type_wrapper(torch.Tensor.type)  # replace npu type to gpu type
     torch.Tensor.view = ensure_contiguous(torch.Tensor.view)  # patch view to ensure tensor is contiguous
     torch.Tensor.repeat_interleave = repeat_interleave # replace npu implementation of torch.repeat_interleave
+    torch.compile = torch.jit.script
