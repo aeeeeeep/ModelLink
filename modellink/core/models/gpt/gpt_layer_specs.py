@@ -18,15 +18,9 @@ from functools import wraps
 
 from megatron.core.transformer.moe.moe_layer import MoELayer
 from megatron.training import get_args
-from megatron.core.tensor_parallel import ColumnParallelLinear, RowParallelLinear
-from megatron.core.transformer.attention import SelfAttentionSubmodules
-from megatron.core.transformer.dot_product_attention import DotProductAttention
-from megatron.core.transformer.identity_op import IdentityOp
 
 from modellink.core.transformer.custom_layers.transformer_engine import PTNorm
 from modellink.core.models.gpt.gpt_mla_layer_specs import get_gpt_mla_layer_spec
-
-
 
 
 def get_gpt_layer_local_spec_wrapper(fn):
@@ -55,9 +49,14 @@ def get_gpt_layer_local_spec_wrapper(fn):
 
 
 def build_layers_wrapper(fn, column_forward, row_forward):
+    """
+    For MOE + Ascend MC2, we replace linear_fc1 and linear_fc2 with vanilla column_forward and row_forward in megatron.
+    """
     @wraps(fn)
     def wrapper(self, *args, **kwargs):
         fn(self, *args, **kwargs)
+        if not get_args().use_mc2:
+            return
         for layer in self.layers:
             if isinstance(layer.mlp, MoELayer):
                 for local_expert in layer.mlp.experts.local_experts:
