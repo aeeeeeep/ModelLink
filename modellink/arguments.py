@@ -104,6 +104,10 @@ def _add_deepseek_moe_args(parser):
     group.add_argument('--seq-aux', action='store_true', default=False, help='Compute aux loss in seq_aux')
     group.add_argument('--first-k-dense-replace', type=int, default=None, help='Set first k layer as dense layer')
     group.add_argument('--moe-layer-freq', type=int, default=None, help='Set the occurrence frequency of the moe layer')
+    group.add_argument('--moe-device-level-aux-loss-coeff', type=float, default=0.,
+                       help='set the coeff for devicie-level balance loss in deepseek moe')
+    group.add_argument('--moe-comm-aux-loss-coeff', type=float, default=0.,
+                       help='set the coeff for communication balance loss in deepseek moe')
 
     return parser
 
