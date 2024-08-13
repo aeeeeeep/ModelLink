@@ -12,8 +12,8 @@ GBS=16
 
 basepath=$(cd `dirname $0`; cd ../../../; pwd)
 
-CKPT_SAVE_DIR=/data/llama-2-mcore-tp2-cp4-test
-CKPT_LOAD_DIR=/data/llama-2-mcore-tp2-cp4-test
+CKPT_SAVE_DIR=/data/llama2_tp2_pp4_no_recompute_legacy
+CKPT_LOAD_DIR=/data/llama2_tp2_pp4_no_recompute_legacy
 DATA_PATH=/data/pretrain_dataset/alpaca_text_document
 TOKENIZER_MODEL=/data/llama-2-7b-hf/tokenizer.model
 
