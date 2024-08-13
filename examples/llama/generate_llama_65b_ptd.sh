@@ -48,5 +48,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --no-gradient-accumulation-fusion \
        --exit-on-missing-checkpoint \
        --make-vocab-size-divisible-by 1 \
-       --inference-prompt-type 'alpaca' \
+       --prompt-type 'alpaca' \
        | tee logs/generate_llama_65b.log

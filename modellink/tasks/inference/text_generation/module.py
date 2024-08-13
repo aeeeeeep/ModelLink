@@ -18,7 +18,6 @@ import abc
 import logging
 from typing import Optional, Union
 
-
 import torch
 from torch import distributed as dist
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
@@ -26,6 +25,8 @@ from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 from megatron.core.models.gpt.gpt_model import GPTModel
 from megatron.training import get_args, global_vars
 from megatron.core import parallel_state
+
+from modellink.tasks.preprocess.templates import Template, get_model_template
 
 
 class MegatronModuleForCausalLMABC(torch.nn.Module, abc.ABC):
@@ -189,6 +190,9 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         self.greedy_search_or_sampling = greedy_search_or_sampling
         self.beam_search_in_sampling = beam_search
         self.broadcast_float_list = broadcast_float_list
+        self.template = None
+        if hasattr(args, "prompt_type") and args.prompt_type is not None:
+            self.template = get_model_template(args.prompt_type.strip())
 
     @staticmethod
     def _ids_check(ids, tokenizer):
@@ -274,6 +278,14 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         args.master_rank = master_rank
         args.micro_batch_size = len(context_tokens)
 
+        stop_token = [args.eos_id] + stop_ids
+
+        if hasattr(args, "prompt_type") and args.prompt_type is not None:
+            stop_ids = stop_ids + [self.tokenizer.convert_tokens_to_ids(token) for token in self.template.stop_words] + \
+                       [self.tokenizer.eos_token_id]
+
+            stop_token = [args.eos_id] + stop_ids
+
         # =======================================
         # Get the streaming tokens generator
         # =======================================
@@ -282,7 +294,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
                 args.model[0],
                 context_tokens,
                 beam_size=self.num_beams,
-                stop_token=[args.eos_id] + stop_ids,
+                stop_token=stop_token,
                 num_return_gen=self.num_return_sequences,
                 length_penalty=self.length_penalty
             )
@@ -361,29 +373,82 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         if self.tokenizer.pad_token_id is None:
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
+
+    def _encode_no_template(self, input_ids):
+        context_tokens = [[]]
+        if isinstance(input_ids, str):
+            context_tokens = [self.tokenizer.encode(input_ids)]
+        elif torch.is_tensor(input_ids):
+            if len(input_ids.shape) == 1:
+                context_tokens = input_ids.unsqueeze(0).numpy().tolist()
+            elif len(input_ids.shape) == 2:
+                context_tokens = input_ids.numpy().tolist()
+        elif isinstance(input_ids, (tuple, list)):
+            if len(input_ids) and isinstance(input_ids[0], (tuple, list)):
+                context_tokens = input_ids
+            elif len(input_ids) and isinstance(input_ids[0], int):
+                context_tokens = [input_ids]
+            elif len(input_ids) and isinstance(input_ids[0], str):
+                context_tokens = [self.tokenizer.encode(val) for val in input_ids]
+        else:
+            raise TypeError("Please check input_ids in correct type.")
+
+        return context_tokens
+
+
+    def _encode_by_template(self, input_ids):
+        context_tokens = []
+
+        if input_ids is None:
+            return [[]]
+        response_prompt = [{"role": "assistant", "content": ""}]
+        if len(input_ids) and isinstance(input_ids, str):
+            paired_messages = [{"role": "user", "content": "{}".format(input_ids)}] + response_prompt
+            tokens, _ = self.template.encode_oneturn(tokenizer=self.tokenizer, messages=paired_messages, tools="")
+            context_tokens.append(tokens)
+        elif len(input_ids) and isinstance(input_ids[0], (dict)):
+            paired_messages = input_ids + response_prompt
+            tokens, _ = self.template.encode_oneturn(tokenizer=self.tokenizer, messages=paired_messages, tools="")
+            context_tokens.append(tokens)
+        elif len(input_ids) and isinstance(input_ids[0], (str)):
+            for query in input_ids:
+                paired_messages = [{"role": "user", "content": "{}".format(query)}] + response_prompt
+                tokens, _ = self.template.encode_oneturn(tokenizer=self.tokenizer, messages=paired_messages, tools="")
+                context_tokens.append(tokens)
+        elif len(input_ids) and isinstance(input_ids[0], (tuple, list)):
+            for val in input_ids:
+                if len(val) and isinstance(val, (tuple, list)):
+                    paired_messages = val + response_prompt
+                    tokens, _ = self.template.encode_oneturn(tokenizer=self.tokenizer, messages=paired_messages, tools="")
+                    context_tokens.append(tokens)
+        else:
+            raise TypeError("Please check input_ids in correct type.")
+
+
+        return context_tokens if len(context_tokens) > 0 else [context_tokens]
+
+
     def _tokenize(self, input_ids):
         context_tokens = [[]]
         broadcast_rank = torch.zeros(dist.get_world_size(),
                                      dtype=torch.int64,
                                      device=torch.device(torch.cuda.current_device()))
-
         if input_ids is not None and len(input_ids) > 0:
-            if isinstance(input_ids, str):
-                context_tokens = [self.tokenizer.encode(input_ids)]
-            elif torch.is_tensor(input_ids):
-                if len(input_ids.shape) == 1:
-                    context_tokens = input_ids.unsqueeze(0).numpy().tolist()
-                elif len(input_ids.shape) == 2:
-                    context_tokens = input_ids.numpy().tolist()
-            elif isinstance(input_ids, (tuple, list)):
-                if len(input_ids) and isinstance(input_ids[0], (tuple, list)):
-                    context_tokens = input_ids
-                elif len(input_ids) and isinstance(input_ids[0], int):
-                    context_tokens = [input_ids]
-                elif len(input_ids) and isinstance(input_ids[0], str):
-                    context_tokens = [self.tokenizer.encode(val) for val in input_ids]
+            args = get_args()
+            if args.hf_chat_template:
+                if not hasattr(self.tokenizer, "apply_chat_template"):
+                    raise AssertionError('The tokenizer has no Huggingface chat template, Please use chat model.')
+
+                context_tokens = [self.tokenizer.apply_chat_template(
+                    input_ids,
+                    tokenize=True,
+                    add_generation_prompt=True
+                )]
+            elif self.template is None:
+                context_tokens = self._encode_no_template(input_ids)
             else:
-                raise TypeError("Please check input_ids in correct type.")
+                context_tokens = self._encode_by_template(input_ids)
+
 
             broadcast_rank[dist.get_rank()] = 1
 
