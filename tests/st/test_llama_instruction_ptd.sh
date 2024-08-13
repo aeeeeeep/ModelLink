@@ -28,7 +28,7 @@ export PYTHONPATH=${basepath}:$PYTHONPATH
 python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS \
       ${basepath}/pretrain_gpt.py \
       --tensor-model-parallel-size 2 \
-      --pipeline-model-parallel-size 2 \
+      --pipeline-model-parallel-size 4 \
       --sequence-parallel \
       --num-layers 4 \
       --hidden-size 4096 \
