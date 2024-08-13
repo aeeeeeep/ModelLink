@@ -11,5 +11,5 @@ python ./preprocess_data.py \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF \
     --handler-name SharegptStyleInstructionHandler \
-    --lla-fact-ins-template qwen
+    --prompt-type qwen
     # --map-keys '{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}' # 默认值，可不传
