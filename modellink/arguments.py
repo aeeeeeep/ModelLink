@@ -424,6 +424,24 @@ def _add_training_args(parser):
     group.add_argument('--pad-to-multiple-of', type=int, default=8,
                        help='Used for Padding multiple in finetune. The default is 8.')
 
+    group.add_argument('--swap-attention', action='store_true', default=False,
+                       help='switch to open swap-attention feature.'
+                            'The default is False.')
+
+    group.add_argument('--adaptive-recompute-device-size',
+                       type=int, default=-1,
+                       help='The memory size for adaptive selective recompute strategy. '
+                            'The default is -1. If this parameter > 0, '
+                            'will activate adaptive selective recompute. ')
+    group.add_argument('--adaptive-recompute-profiling-step',
+                       type=int, default=10,
+                       help='The profiling step for adaptive selective recompute strategy. '
+                            'The default is 10. If activate adaptive selective recompute, '
+                            'will solve graph after step 10. ')
+    group.add_argument('--adaptive-recompute-device-swap',
+                       action='store_true', default=False,
+                       help='switch to open adaptive recompute feature. '
+                            'The default is False.')
     return parser
 
 
