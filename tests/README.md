@@ -5,7 +5,8 @@
     <tr>
         <th>Tests</th>
         <th>Module</th>
-        <th>Submodule</th>
+        <th>Structure</th>
+        <th>Features</th>
         <th>Scripts</th>
         <th>Accuracy</th>
         <th>Throughput</th>
@@ -14,6 +15,7 @@
     <tr>
         <td rowspan="3">ST</td>
         <td rowspan="2">Pretrain</td>
+        <td>Mcore</td>
         <td>TP，PP，VPP，重计算，enable-recompute-layers-per-pp-rank</td>
         <td>llama2_tp2_pp4_vpp2.sh</td>
         <td>Y</td>
@@ -21,6 +23,7 @@
         <td>Y</td>
     </tr>
     <tr>
+        <td>Mcore</td>
         <td>CP，分布式优化器，ReuseFP32Param，FusedRMSNorm，FusedSwiGlu，FusedRope，overlap-grad-reduce、overlap-param-gather</td>
         <td>llama2_tp2_cp4_mem_recompute.sh</td>
         <td>Y</td>
@@ -29,6 +32,7 @@
     </tr>
     <tr>
         <td rowspan="1">LoRA</td>
+        <td>Legacy</td>
         <td>CCLoRA</td>
         <td>tune_llama2_tp8_pp1_ptd.sh</td>
         <td>Y</td>
@@ -38,6 +42,7 @@
     <tr>
         <td rowspan="7">UT</td>
         <td>CP</td>
+        <td>Mcore</td>
         <td>hybrid, ring_attn, ulysses</td>
         <td>test_hybrid_context_parallel.py</td>
         <td>Y</td>
@@ -46,6 +51,7 @@
     </tr>
     <tr>
         <td rowspan="2">model_module</td>
+        <td>Mcore</td>
         <td>rope</td>
         <td>test_rotary_pos_embedding.py</td>
         <td>Y</td>
@@ -53,6 +59,7 @@
         <td></td>
     </tr>
     <tr>
+        <td>Mcore, Legacy</td>
         <td>transformer_attention</td>
         <td>test_attention.py</td>
         <td>Y</td>
@@ -61,6 +68,7 @@
     </tr>
     <tr>
         <td>checkpoint</td>
+        <td>Mcore, Legacy</td>
         <td>mcore_dynamic, mcore_vpp, legacy_dynamic</td>
         <td>test_convert_ckpt_from_huggingface.py</td>
         <td>Y</td>
@@ -69,6 +77,7 @@
     </tr>
 	<tr>
         <td rowspan="3">process_data</td>
+        <td rowspan="3">Mcore, Legacy</td>
         <td>pretrain_data_handler, pretrain_merge_datasets</td>
         <td>test_process_pretrain_data.py</td>
         <td>Y</td>
