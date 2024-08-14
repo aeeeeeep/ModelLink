@@ -67,6 +67,21 @@ def exec_adaptation():
     patch_megatron_core()
     patch_megatron_noncore()
     PatchManager.apply_patches()
+    post_patch_application()
+
+
+def post_patch_application():
+    """
+    Adaptations that should execute after patch manager.
+    """
+
+    from ..core import build_layers_wrapper
+    from megatron.core.tensor_parallel import ColumnParallelLinear, RowParallelLinear
+    from megatron.core.transformer.transformer_block import TransformerBlock
+    # For MOE + Ascend MC2, here we can only execute this after _transformer_block_build_layers takes effect.
+    TransformerBlock._build_layers = build_layers_wrapper(TransformerBlock._build_layers,
+                                                          ColumnParallelLinear.forward,
+                                                          RowParallelLinear.forward)
 
 
 def patch_megatron_core():
@@ -108,11 +123,9 @@ def patch_fusions():
 
 
 def patch_core_models(args):
-    from megatron.core.tensor_parallel import ColumnParallelLinear, RowParallelLinear
     from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec
     from mindspeed.core.models.common.embeddings.rotary_pos_embedding import get_pos_emb_on_this_cp_rank
     from mindspeed.core.fusions.rotary_pos_embedding import rotary_embedding_init_wrapper
-    from ..core import build_layers_wrapper
     from ..utils import get_batch_on_this_cp_rank
     from ..core import rotary_embedding_forward, apply_rotary_pos_emb_bshd
     from ..core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper
@@ -142,13 +155,6 @@ def patch_core_models(args):
 
     PatchManager.register_patch('megatron.training.utils.get_batch_on_this_cp_rank', get_batch_on_this_cp_rank)
     PatchManager.register_patch('megatron.core.models.gpt.gpt_model.GPTModel.forward', gpt_model_forward)
-
-    # moe
-    if args.use_mc2:
-        # MoE MLP not use mc2 linear
-        from megatron.core.transformer.transformer_block import TransformerBlock
-        TransformerBlock._build_layers = build_layers_wrapper(TransformerBlock._build_layers, ColumnParallelLinear.forward,
-                                                              RowParallelLinear.forward)
 
     # For recomputation
     from ..core.transformer.transformer_block import transformer_block_checkpointed_forward_wrapper
@@ -291,8 +297,8 @@ def patch_training():
 
 
 def patch_miscellaneous():
-    from modellink.utils import print_args_wrapper
-    from modellink.arguments import validate_args_decorator
+    from ..utils import print_args_wrapper
+    from ..arguments import validate_args_decorator
     PatchManager.register_patch('megatron.training.arguments.parse_args', parse_args_decorator)
     PatchManager.register_patch('megatron.training.arguments.validate_args', validate_args_decorator)
     # After validating arguments, do arguments printing.

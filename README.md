@@ -211,7 +211,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
     </tr>
     <tr>
       <td rowspan="3"><a href="https://huggingface.co/THUDM">ChatGLM3</a></td>
-      <td>6B</td>
+      <td><a href="https://huggingface.co/THUDM/chatglm3-6b/tree/main">6B</a></td>
       <td>8K</td>
       <th>Mcore</th>
       <td >1x8</td>
@@ -222,7 +222,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
-      <td>6B</td>
+      <td><a href="https://huggingface.co/THUDM/chatglm3-6b/tree/main">6B</a></td>
       <td>32K</td>
       <th>Mcore</th>
       <td >1x8</td>
@@ -233,7 +233,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
-      <td>6B</td>
+      <td><a href="https://huggingface.co/THUDM/chatglm3-6b/tree/main">6B</a></td>
       <td>64K</td>
       <th>Mcore</th>
       <td >2x8</td>
@@ -728,13 +728,29 @@ ModelLink支持Huggingface、Megatron-Legacy以及Megatron-Core之间的权重�
       <td>--num-layers-per-virtual-pipeline-stage</td>
     </tr>
     <tr>
-      <td rowspan="4">Megatron-Legacy</td>
+      <td rowspan="6">Megatron-Legacy</td>
       <td>张量并行</td>
       <td>--target-tensor-parallel-size</td>
     </tr>
     <tr>
       <td>流水并行</td>
       <td>--target-pipeline-parallel-size</td>
+    </tr>
+    <tr>
+      <td>LoRA训练模块</td>
+      <td>--lora-target-modules</td>
+    </tr>
+    <tr>
+      <td>LoRA权重</td>
+      <td>--lora-load</td>
+    </tr>
+    <tr>
+      <td>LoRA r</td>
+      <td>--lora-r</td>
+    </tr>
+    <tr>
+      <td>LoRA alpa</td>
+      <td>--lora-alpha</td>
     </tr>
   </tbody>
   <tbody>
@@ -857,7 +873,7 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
     <td>No</td>
   </tr>
   <tr>
-    <td>send/recv掩盖加速</td>
+    <td>Send/recv掩盖加速</td>
     <td>--cp-send-recv-overlap</td>
     <td>Yes</td>
     <td>No</td>
