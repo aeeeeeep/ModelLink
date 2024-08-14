@@ -35,7 +35,7 @@ from ..model import (
 )
 from ..core import (initialize_model_parallel_decorator,
                    build_generic_dataset, _build_document_sample_shuffle_indices,
-                   TransformerLayerSubmodules, transformer_layer_init_wrapper,
+                   TransformerLayerSubmodules,
                    transformer_layer_forward, gpt_model_forward, get_num_layers_to_build_wrapper,
                    start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
                    clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper)
@@ -167,6 +167,8 @@ def patch_core_transformers(args):
                         allgather_token_permutation, allgather_token_unpermutation, rotary_embedding_init_wrapper)
     from ..core.transformer.moe.moe_layer import moe_layer_init_wrapper, moe_layer_forward
     from ..core.transformer.transformer_block import _transformer_block_build_layers
+    from ..core.transformer.mlp import core_mlp_forward_wrapper
+    from ..core.transformer.transformer_layer import transformer_layer_init_wrapper
 
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__',
                                 rotary_embedding_init_wrapper)
@@ -183,6 +185,7 @@ def patch_core_transformers(args):
     # Transformer block
     PatchManager.register_patch('megatron.core.transformer.transformer_block.TransformerBlock._build_layers',
                                 _transformer_block_build_layers)
+    PatchManager.register_patch('megatron.core.transformer.mlp.MLP.forward', core_mlp_forward_wrapper)
 
     # For mcore moe
     PatchManager.register_patch('megatron.core.transformer.moe.moe_layer.MoELayer.__init__', moe_layer_init_wrapper)
@@ -245,6 +248,8 @@ def patch_parallel_state():
 
 
 def patch_model():
+    from mindspeed.model.transformer import parallel_transformer_layer_init_wrapper
+    from ..model.transformer import parallel_mlp_forward_wrapper
     # patch_fused_layer_norm
     PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.FusedLayerNormAffineFunction', FusedLayerNormAffineFunction)  # use torch-npu fused layer norm
     PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.FastLayerNormFN', FastLayerNormFN)  # use torch-npu fused layer norm
@@ -263,6 +268,8 @@ def patch_model():
 
     # patch_transformer
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelMLP.__init__', parallel_mlp_init_wrapper)
+    PatchManager.register_patch('megatron.legacy.model.transformer.ParallelMLP.forward', parallel_mlp_forward_wrapper)
+    PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformerLayer.__init__', parallel_transformer_layer_init_wrapper)
     PatchManager.register_patch('megatron.legacy.model.transformer.SwitchMLP', SwitchMLP)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.__init__', parallel_transformer_init)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.forward', parallel_transformer_forward)
