@@ -13,8 +13,8 @@
         <th>Memory</th>
     </tr>
     <tr>
-        <td rowspan="4">ST</td>
-        <td rowspan="3">Pretrain</td>
+        <td rowspan="5">ST</td>
+        <td rowspan="4">Pretrain</td>
         <td>Mcore</td>
         <td>TP，PP，VPP，重计算，enable-recompute-layers-per-pp-rank</td>
         <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_ptd.sh">llama2_tp2_pp4_vpp2.sh</a></td>
@@ -41,7 +41,7 @@
     <tr>
         <td>Legacy</td>
         <td>TP，PP，VPP，SP，FusedRMSNorm，FusedSwiGlu，FusedRope，overlap-grad-reduce，overlap-param-gather，全重计算</td>
-        <td>llama2_tp2_pp4_vpp2_legacy.sh</td>
+        <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_legacy.sh">llama2_tp2_pp4_vpp2_legacy.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
