@@ -191,8 +191,8 @@ def get_args():
 
 def validate_args(args):
     support_prompt_type_handler = ["LlamaFactoryInstructionHandler", "AlpacaStyleInstructionHandler", "SharegptStyleInstructionHandler"]
-    if args.lla_fact_ins_template is not None and args.handler_name not in support_prompt_type_handler:
-        raise AssertionError('If specify lla_fact_ins_template , handler name must be "LlamaFactoryInstructionHandler"、"AlpacaStyleInstructionHandler"、"SharegptStyleInstructionHandler".')
+    if args.prompt_type is not None and args.handler_name not in support_prompt_type_handler:
+        raise AssertionError('If specify prompt_type , handler name must be "LlamaFactoryInstructionHandler"、"AlpacaStyleInstructionHandler"、"SharegptStyleInstructionHandler".')
 
 
 def main():

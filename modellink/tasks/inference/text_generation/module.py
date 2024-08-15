@@ -226,7 +226,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         for addition_key, addition_val in kwargs.items():
             setattr(args, addition_key, addition_val)
 
-        args.model = get_model(model_provider)
+        args.model = get_model(model_provider, wrap_with_ddp=False)
 
         if pretrained_model_name_or_path:
             args.load = pretrained_model_name_or_path
