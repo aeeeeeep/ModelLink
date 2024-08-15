@@ -39,8 +39,7 @@ from ..core import (initialize_model_parallel_decorator,
                     transformer_layer_forward, gpt_model_forward, get_num_layers_to_build_wrapper,
                     start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
                     clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper,
-                    indexed_dataset_builder_init_wrapper, indexed_dataset_builder_add_item_from_list,
-                    indexed_dataset_builder_finalize_wrapper)
+                    indexed_dataset_builder_init_wrapper, add_item_wrapper, finalize_wrapper)
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
@@ -219,6 +218,7 @@ def patch_pipeline_parallel():
 def patch_tensor_parallel():
     from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
     from ..core import vocab_embedding_wrapper
+    from megatron.core.tensor_parallel.layers.VocabParallelEmbedding import forward
     # default_generators need replace after set_device
     PatchManager.register_patch('megatron.core.tensor_parallel.random._set_cuda_rng_state', _set_cuda_rng_state)
     # change masked_target for better performance
@@ -312,15 +312,15 @@ def patch_miscellaneous():
 def patch_datasets():
     from megatron.core.datasets.blended_megatron_dataset_builder import BlendedMegatronDatasetBuilder
     from megatron.core.datasets.gpt_dataset import GPTDataset
-    from megatron.core.datasets.indexed_dataset import IndexedDatasetBuilder
     # change attributions
     GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
     BlendedMegatronDatasetBuilder.build_generic_dataset = build_generic_dataset
     PatchManager.register_patch('megatron.core.datasets.indexed_dataset.IndexedDatasetBuilder.__init__',
                                 indexed_dataset_builder_init_wrapper)
+    PatchManager.register_patch('megatron.core.datasets.indexed_dataset.IndexedDatasetBuilder.add_item',
+                                add_item_wrapper)
     PatchManager.register_patch('megatron.core.datasets.indexed_dataset.IndexedDatasetBuilder.finalize',
-                                indexed_dataset_builder_finalize_wrapper)
-    IndexedDatasetBuilder.add_item_from_list = indexed_dataset_builder_add_item_from_list
+                                finalize_wrapper)
 
 
 def patch_log_handler():

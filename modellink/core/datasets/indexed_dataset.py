@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Union
 from functools import wraps
 
 import numpy
+import torch
 
 
 class BufferWriter:
@@ -30,28 +31,12 @@ class BufferWriter:
             self.write()
 
 
-def indexed_dataset_builder_init_wrapper(init_func):
-    @wraps(init_func)
-    def indexed_dataset_builder_init(self, *args, **kwargs):
-        init_func(self, *args, **kwargs)
-        self.buffer_writer = BufferWriter(data_file=self.data_file, dtype=self.dtype)
-    return indexed_dataset_builder_init
-
-
-def indexed_dataset_builder_finalize_wrapper(fn):
-    @wraps(fn)
-    def indexed_dataset_builder_finalize(self, *args, **kwargs):
-        self.buffer_writer.write()
-        fn(self, *args, **kwargs)
-    return indexed_dataset_builder_finalize
-
-
-def indexed_dataset_builder_add_item_from_list(self, lst: List, mode: int = 0) -> None:
+def add_item_from_list(self, lst: List, mode: int = 0) -> None:
     """Add a single item to the dataset. Control the writing process using a buffer.
 
     Args:
+        self (IndexedDatasetBuilder): The builder object
         lst (list): The item to add to the data file
-
         mode (int, optional): The mode for the item. Defaults to 0.
     """
     self.buffer_writer.add(lst)
@@ -59,3 +44,28 @@ def indexed_dataset_builder_add_item_from_list(self, lst: List, mode: int = 0) -
     if self.multimodal:
         self.sequence_modes.append(mode)
 
+
+def indexed_dataset_builder_init_wrapper(init_func):
+    @wraps(init_func)
+    def wrapper(self, *args, **kwargs):
+        init_func(self, *args, **kwargs)
+        self.buffer_writer = BufferWriter(data_file=self.data_file, dtype=self.dtype)
+    return wrapper
+
+
+def add_item_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, sequence: Union[List, torch.Tensor], mode: int = 0) -> None:
+        if isinstance(sequence, list):
+            return add_item_from_list(self, sequence, mode)
+        else:
+            return fn(self, sequence, mode)
+    return wrapper
+
+
+def finalize_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        self.buffer_writer.write()
+        fn(self, *args, **kwargs)
+    return wrapper

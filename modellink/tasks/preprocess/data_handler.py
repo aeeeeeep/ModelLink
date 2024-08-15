@@ -101,7 +101,7 @@ class BaseDatasetHandler(object):
                             continue
 
                         total_bytes_processed += len(sentence) * np.int32().itemsize
-                        builders[key].add_item_from_list(sentence)
+                        builders[key].add_item(sentence)
                     builders[key].end_document()
 
             batch_id = i * iteration_batch_size
