@@ -17,6 +17,8 @@ import os
 
 from functools import wraps
 from megatron.training import get_args
+from megatron.training.utils import print_rank_0
+from megatron.training.checkpointing import _load_base_checkpoint
 from .tasks.finetune.lora.utils import is_enable_lora, merge_dicts, modify_keys_with_dict
 
 
@@ -53,4 +55,44 @@ def load_checkpoint_wrapper(fn):
 
         return fn(*args, **kwargs)
 
+    return wrapper
+
+
+def load_args_from_checkpoint_wrapper(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        res = fn(*args, **kwargs)
+        if len(res) == 1:
+            return res
+        args, checkpoint_args = res
+        
+        def _set_arg(arg_name, old_arg_name=None, force=False):
+            if not force and getattr(args, arg_name, None) is not None:
+                return
+            if old_arg_name is not None:
+                checkpoint_value = getattr(checkpoint_args, old_arg_name, None)
+            else:
+                checkpoint_value = getattr(checkpoint_args, arg_name, None)
+            if checkpoint_value is not None:
+                print_rank_0(f"Setting {arg_name} to {checkpoint_value} from checkpoint")
+                setattr(args, arg_name, checkpoint_value)
+            else:
+                print_rank_0(f"Checkpoint did not provide arguments {arg_name}")
+        
+        _set_arg('num_layer_list', force=True)
+        _set_arg('post_norm', force=True)
+        _set_arg('num_experts')
+        
+        state_dict, checkpoint_name, release = _load_base_checkpoint(
+            getattr(args, kwargs.get('load_arg', 'load')),
+            rank0=True,
+            exit_on_missing_checkpoint=kwargs.get('exit_on_missing_checkpoint', False),
+            checkpoint_step=args.ckpt_step
+        )
+        checkpoint_version = state_dict.get('checkpoint_version', 0)
+        if checkpoint_version >= 3.0:
+            _set_arg('expert_model_parallel_size', force=True)
+            
+        return args, checkpoint_args
+    
     return wrapper
