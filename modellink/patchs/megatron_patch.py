@@ -222,7 +222,6 @@ def patch_pipeline_parallel():
 def patch_tensor_parallel():
     from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
     from ..core import vocab_embedding_wrapper
-    from megatron.core.tensor_parallel.layers.VocabParallelEmbedding import forward
     # default_generators need replace after set_device
     PatchManager.register_patch('megatron.core.tensor_parallel.random._set_cuda_rng_state', _set_cuda_rng_state)
     # change masked_target for better performance
