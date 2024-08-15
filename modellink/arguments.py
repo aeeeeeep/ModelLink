@@ -104,6 +104,10 @@ def _add_deepseek_moe_args(parser):
     group.add_argument('--seq-aux', action='store_true', default=False, help='Compute aux loss in seq_aux')
     group.add_argument('--first-k-dense-replace', type=int, default=None, help='Set first k layer as dense layer')
     group.add_argument('--moe-layer-freq', type=int, default=None, help='Set the occurrence frequency of the moe layer')
+    group.add_argument('--moe-device-level-aux-loss-coeff', type=float, default=0.,
+                       help='set the coeff for devicie-level balance loss in deepseek moe')
+    group.add_argument('--moe-comm-aux-loss-coeff', type=float, default=0.,
+                       help='set the coeff for communication balance loss in deepseek moe')
 
     return parser
 
@@ -352,6 +356,11 @@ def _add_algorithm_args(parser):
     group.add_argument('--reuse-fp32-param', action='store_true',
                        help='The distributed training optimizer frees up '
                             'param copies of FP32 to save memory.')
+    group.add_argument('--recompute-activation-function', action='store_true',
+                       help='Recompute the activation function in MLP layers.')
+    group.add_argument('--recompute-activation-function-num-layers', type=int, default=None,
+                       help='Can be used together with "--recompute-method block." '
+                            'and "--recompute-num-layers". ')
     return parser
 
 
@@ -501,6 +510,12 @@ def _validate_recompute_args(args):
     enable_recomputation = args.recompute_granularity is not None and args.recompute_method == 'block'
     if args.enable_recompute_layers_per_pp_rank and not (enable_pp_vpp and enable_recomputation):
         raise AssertionError("enable-recompute-layers-per-pp-rank should be works with pipeline and virtual pipeline, when enabling re-computation.")
+
+    if args.recompute_activation_function:
+        if args.recompute_method == "uniform":
+            raise AssertionError('uniform recomputation is not compatible with activation function recomputation.')
+        if args.recompute_granularity == "selective":
+            raise AssertionError('--recompute-activation-function is not compatible with selective recomputation.')
 
 
 def _validate_high_availability(args):

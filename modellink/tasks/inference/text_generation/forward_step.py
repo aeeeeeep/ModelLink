@@ -146,17 +146,19 @@ def _with_pipelining_forward_step(model, inputs, inference_params, micro_batch_s
                          tokentype_ids=None,
                          inference_params=inference_params)
 
-        # Adjust the batch size offset to account for the micro-batch.
-        inference_params.batch_size_offset += this_micro_batch_size
+        if inference_params:
+            # Adjust the batch size offset to account for the micro-batch.
+            inference_params.batch_size_offset += this_micro_batch_size
 
         # Copy logits.
         if parallel_state.is_pipeline_last_stage():
             logits[start: end, ...] = output
 
-    # Once we are done with all the micro-batches, we can
-    # adjust the sequence length offset.
-    inference_params.sequence_len_offset += sequence_length
-    # and reset the batch size offset
-    inference_params.batch_size_offset = 0
+    if inference_params:
+        # Once we are done with all the micro-batches, we can
+        # adjust the sequence length offset.
+        inference_params.sequence_len_offset += sequence_length
+        # and reset the batch size offset
+        inference_params.batch_size_offset = 0
 
     return logits
