@@ -322,12 +322,9 @@ def patch_datasets():
     # change attributions
     GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
     BlendedMegatronDatasetBuilder.build_generic_dataset = build_generic_dataset
-    PatchManager.register_patch('megatron.core.datasets.indexed_dataset.IndexedDatasetBuilder.__init__',
-                                indexed_dataset_builder_init_wrapper)
-    PatchManager.register_patch('megatron.core.datasets.indexed_dataset.IndexedDatasetBuilder.add_item',
-                                add_item_wrapper)
-    PatchManager.register_patch('megatron.core.datasets.indexed_dataset.IndexedDatasetBuilder.finalize',
-                                finalize_wrapper)
+    PatchManager.register_patch('megatron.core.datasets.indexed_dataset.IndexedDatasetBuilder.__init__', indexed_dataset_builder_init_wrapper)
+    PatchManager.register_patch('megatron.core.datasets.indexed_dataset.IndexedDatasetBuilder.add_item', add_item_wrapper)
+    PatchManager.register_patch('megatron.core.datasets.indexed_dataset.IndexedDatasetBuilder.finalize', finalize_wrapper)
 
 
 def patch_log_handler():
