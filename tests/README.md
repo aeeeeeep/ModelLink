@@ -29,7 +29,7 @@
     </tr>
     <tr>
         <td>EP，mcore，NumExperts，Topk，AuxLoss，MoeAllGather，GQA，RotaryBase</td>
-        <td>shell_scripts/mixtral_mcore_tp4_ep2_ptd.sh</td>
+        <td>mixtral_mcore_tp4_ep2_ptd.sh</td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
