@@ -89,8 +89,8 @@
 
 ```shell
 #!/bin/bash
-mkdir ./model_from_hf/llama-2-7b-hf/
-cd ./model_from_hf/llama-2-7b-hf/
+mkdir ./model_from_hf/llama2-hf/
+cd ./model_from_hf/llama2-hf/
 wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/config.json
 wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/generation_config.json
 wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model-00001-of-00002.bin
@@ -172,7 +172,7 @@ python tools/checkpoint/convert_ckpt.py \
     --load-dir ./model_weights/llama2-legacy/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama2-70b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama2-hf/mg2hg/
+    --save-dir ./model_from_hf/llama2-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama2-hf/mg2hg/
 ```
 
 【启动脚本】
@@ -239,7 +239,7 @@ python tools/checkpoint/convert_ckpt.py \
     --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-2-7b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama2-hf/mg2hg/
+    --save-dir ./model_from_hf/llama2-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama2-hf/mg2hg/
 ```
 
 转换脚本命名风格及启动方法为：
