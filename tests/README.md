@@ -13,8 +13,8 @@
         <th>Memory</th>
     </tr>
     <tr>
-        <td rowspan="3">ST</td>
-        <td rowspan="2">Pretrain</td>
+        <td rowspan="4">ST</td>
+        <td rowspan="3">Pretrain</td>
         <td>Mcore</td>
         <td>TP，PP，VPP，重计算，enable-recompute-layers-per-pp-rank</td>
         <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_ptd.sh">llama2_tp2_pp4_vpp2.sh</a></td>
@@ -24,8 +24,16 @@
     </tr>
     <tr>
         <td>Mcore</td>
-        <td>CP，分布式优化器，ReuseFP32Param，FusedRMSNorm，FusedSwiGlu，FusedRope，overlap-grad-reduce、overlap-param-gather</td>
+        <td>CP，分布式优化器，ReuseFP32Param，RecomputeActivationFunction, FusedRMSNorm，FusedSwiGlu，FusedRope，overlap-grad-reduce、overlap-param-gather</td>
         <td><a href="st/shell_scripts/llama2_tp2_cp4_mem_recompute.sh">llama2_tp2_cp4_mem_recompute.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>Mcore</td>
+        <td>EP，NumExperts，Topk，AuxLoss，MoeAllGather，GQA，RotaryBase</td>
+        <td><a href="st/shell_scripts/mixtral_mcore_tp4_ep2_ptd.sh">mixtral_mcore_tp4_ep2_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
@@ -112,7 +120,7 @@
 
 ### 开发规则
 
-#### ST:
+#### ST
 
 ① 贡献脚本用例请放置于 `st/shell_scripts` 文件夹下，命名规则为 **{模型名}_{切分策略}** 或者 **{模型名}_{特性名称}**， 如 `llama2_tp2_pp4_vpp2_ptd.sh`，请贡献者严格对齐；
 
@@ -123,7 +131,7 @@
 ④ 在贡献时候需要考虑最终校验的具体指标，精度、性能、显存，在对应指标空白处填上 `Y`，如无校验的保留空白即可。
 
 
-#### UT：
+#### UT
 
 ① 建议所有 UT 用例通过分布式 `pytest` 来拉起，即继承 tests/common.py 文件下的 `DistributedTest`，指定 `world_size`，具体参照已有用例即可；
 
@@ -135,6 +143,6 @@
 
 
 
-#### Pipeline:
+#### Pipeline
 
 待补充说明...
