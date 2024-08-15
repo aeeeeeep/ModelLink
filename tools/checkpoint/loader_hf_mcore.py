@@ -89,6 +89,7 @@ def build_metadata(args, margs):
     md.consumed_train_samples = 0
     md.consumed_valid_samples = 0
     md.embed_layernorm = margs.embed_layernorm
+    md.disable_bias_linear = margs.disable_bias_linear
 
     return md
 

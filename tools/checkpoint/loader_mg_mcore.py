@@ -272,9 +272,9 @@ def _load_checkpoint(queue, args):
         for pp_rank in range(pp_size):
             model_mg.set_pipeline_model_parallel_rank(pp_rank)
             model_mg.get_modules_from_pretrained(pp_stage_cache_flag=True)
-            kwargs = {"vp_rank": vp_rank}
+            kwargs = {"vp_rank": vp_rank, 'pp_rank': pp_rank}
             for layer_num in range(len(model_mg.get_layers_module(**kwargs))):
-                kwargs["layer_num"] = layer_num
+                kwargs["layer_idx"] = layer_num
                 message = {}
                 message = get_message_layer_norm(message, model_mg, md, **kwargs)
                 message = get_message_layer_attn(message, model_mg, md, **kwargs)

@@ -251,7 +251,11 @@ class HuggingfaceModel(ModelBase):
 
     def initialize_args(self):
         # Read huggingface args.
-        llama_args_path = os.path.join(self.args_cmd.load_dir, "config.json")
+        if self.args_cmd.save_model_type == 'huggingface':
+            cfg_dir = self.args_cmd.save_dir
+        else:
+            cfg_dir = self.args_cmd.load_dir
+        llama_args_path = os.path.join(cfg_dir, "config.json")
         with open(llama_args_path) as f:
             self.args = json.load(f)
 
@@ -422,7 +426,7 @@ class MegatronModel(ModelBase):
         self.args.world_size = self.args.tensor_model_parallel_size * self.args.pipeline_model_parallel_size
         self.update_megatron_args_from_loader_margs()
         self.args = validate_args(self.args)
-        self.check_for_args(queue)
+        self.check_for_args(queue, saver_megatron)
 
         self.args.model_type = ModelType.encoder_or_decoder
         # Suppress warning about torch.distributed not being initialized.
@@ -622,13 +626,17 @@ class MegatronModel(ModelBase):
             self.pp_stage_cache.append(models)
 
 
-    def check_for_args(self, queue):
+    def check_for_args(self, queue, saver_megatron):
+        if saver_megatron:
+            return 
         check_args_list = {
             'tensor_model_parallel_size': None, 'pipeline_model_parallel_size': None, 'num_layers': None,
             'hidden_size': None, 'seq_length': None, 'num_attention_heads': None, 'max_position_embeddings': None,
             'position_embedding_type': None, 'tokenizer_type': None, 'iteration': 1, 'bert_binary_head': None,
             'disable_bias_linear': False, 'params_dtype': None, 'swiglu': False
         }
+        # if hasattr(self.args, 'add_bias_linear'):
+        #     check_args_list['disable_bias_linear'] = self.args.add_bias_linear
 
         def check_for_arg(arg_name, default=None):
             if getattr(self.args, arg_name, None) is None:
@@ -661,8 +669,11 @@ class MegatronModel(ModelBase):
             '--mock-data',  # To pass the "blend data checks" in arguments.py
             '--load', self.args_cmd.load_dir,
             '--finetune',
-            '--disable-bias-linear'
+            # '--disable-bias-linear'
         ]
+        
+        if hasattr(self.args_cmd, 'add_bias_linear') and not self.args_cmd.add_bias_linear:
+            sys_argv.append('--disable-bias-linear')
 
         if self.args_cmd.use_mcore_models:
             sys_argv.append('--use-mcore-models')
