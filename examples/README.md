@@ -118,9 +118,9 @@ python tools/checkpoint/convert_ckpt.py \
     --target-tensor-parallel-size 2 \
     --target-pipeline-parallel-size 4 \
     --num-layer-list 8,8,8,8 \
-    --load-dir ./model_from_hf/llama2-hf/ \
+    --load-dir ./model_from_hf/llama-2-7b-hf/ \
     --save-dir ./model_weights/llama2-legacy/ \
-    --tokenizer-model ./model_from_hf/llama2-hf/tokenizer.model
+    --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
 ```
 
 【--target-tensor-parallel-size】
@@ -172,7 +172,7 @@ python tools/checkpoint/convert_ckpt.py \
     --load-dir ./model_weights/llama2-legacy/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama2-70b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama2-hf/mg2hg/
+    --save-dir ./model_from_hf/llama-2-7b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-7b-hf/mg2hg/
 ```
 
 【启动脚本】
@@ -239,7 +239,7 @@ python tools/checkpoint/convert_ckpt.py \
     --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-2-7b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama2-hf/mg2hg/
+    --save-dir ./model_from_hf/llama-2-7b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-7b-hf/mg2hg/
 ```
 
 转换脚本命名风格及启动方法为：
@@ -296,7 +296,7 @@ mkdir ./dataset
 
 python ./preprocess_data.py \
     --input ./dataset/train-00000-of-00042-d964455e17e96d5a.parquet \
-    --tokenizer-name-or-path ./model_from_hf/llama2-hf \
+    --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf \
     --tokenizer-type PretrainedFromHF \
     --handler-name GeneralPretrainHandler \
     --output-prefix ./dataset/enwiki \
@@ -711,7 +711,7 @@ bash examples/mcore/mixtral/generate_mixtral_8x7b_ptd.sh
 ```shell
 # 按实际情况修改启动脚本中模型权重路径和分词器路径
 CKPT_LOAD_DIR="./model_weights/Llama2-legacy/"
-TOKENIZER_PATH="./model_from_hf/Llama2-hf/"
+TOKENIZER_PATH="./model_from_hf/llama-2-7b-hf/"
 
 # 启动任务
 bash examples/llama2/generate_llama2_7b_ptd.sh
@@ -738,7 +738,7 @@ bash examples/mcore/mixtral/evaluate_mixtral_8x7b_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # 修改模型参数路径和词表路径
-TOKENIZER_PATH="./model_from_hf/llama2-hf/"  #词表路径
+TOKENIZER_PATH="./model_from_hf/llama-2-7b-hf/"  #词表路径
 CHECKPOINT="./model_weights/llama2-legacy"  #模型路径
 # 配置任务和数据集路径
 DATA_PATH="./mmlu/data/test/"
