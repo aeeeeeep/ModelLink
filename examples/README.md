@@ -365,7 +365,7 @@ python ./preprocess_data.py \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF \
     --handler-name AlpacaStyleInstructionHandler \
-    --lla-fact-ins-template qwen  # <-- 需要填入模型模板
+    --prompt-type qwen  # <-- 需要填入模型模板
     # --map-keys '{"prompt":"instruction","query":"input","response":"output"}' # 默认值，可不传
 ```
 
@@ -404,7 +404,7 @@ Alpaca风格示例：
 若数据集中无`system`与`history`列，则`--map-keys`可省略。
 
 
-【--lla-fact-ins-template】
+【--prompt-type】
 
 
 用于指定模型模板，能够让base模型微调后能具备更好的对话能力。
@@ -475,7 +475,7 @@ python ./preprocess_data.py \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF \
     --handler-name SharegptStyleInstructionHandler \
-    --lla-fact-ins-template qwen  # <-- 需要填入模型模板
+    --prompt-type qwen  # <-- 需要填入模型模板
     # --map-keys '{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}' # 默认值，可不传
 ```
 
@@ -527,7 +527,7 @@ python ./preprocess_data.py \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF \
     --handler-name SharegptStyleInstructionHandler \
-    --lla-fact-ins-template qwen \
+    --prompt-type qwen \
     --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"}}'
 ```
 

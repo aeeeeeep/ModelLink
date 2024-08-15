@@ -104,6 +104,10 @@ def _add_deepseek_moe_args(parser):
     group.add_argument('--seq-aux', action='store_true', default=False, help='Compute aux loss in seq_aux')
     group.add_argument('--first-k-dense-replace', type=int, default=None, help='Set first k layer as dense layer')
     group.add_argument('--moe-layer-freq', type=int, default=None, help='Set the occurrence frequency of the moe layer')
+    group.add_argument('--moe-device-level-aux-loss-coeff', type=float, default=0.,
+                       help='set the coeff for devicie-level balance loss in deepseek moe')
+    group.add_argument('--moe-comm-aux-loss-coeff', type=float, default=0.,
+                       help='set the coeff for communication balance loss in deepseek moe')
 
     return parser
 
@@ -352,6 +356,11 @@ def _add_algorithm_args(parser):
     group.add_argument('--reuse-fp32-param', action='store_true',
                        help='The distributed training optimizer frees up '
                             'param copies of FP32 to save memory.')
+    group.add_argument('--recompute-activation-function', action='store_true',
+                       help='Recompute the activation function in MLP layers.')
+    group.add_argument('--recompute-activation-function-num-layers', type=int, default=None,
+                       help='Can be used together with "--recompute-method block." '
+                            'and "--recompute-num-layers". ')
     return parser
 
 
@@ -405,6 +414,10 @@ def _add_training_args(parser):
                        help='enable deterministic computing for npu')
     group.add_argument('--jit-compile', action='store_true', default=False,
                        help='Setting jit compile mode to True')
+    group.add_argument('--prompt-type', type=str, default=None,
+                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'chatml', 'chatml_de', 'qwen', 'llama3', 'llama2', 'mistral', 'mixtral', 'gemma'],
+                       help='Which template to use for constructing prompts in training/inference.'
+                            'e.g., "qwen"')
 
     return parser
 
@@ -498,6 +511,12 @@ def _validate_recompute_args(args):
     if args.enable_recompute_layers_per_pp_rank and not (enable_pp_vpp and enable_recomputation):
         raise AssertionError("enable-recompute-layers-per-pp-rank should be works with pipeline and virtual pipeline, when enabling re-computation.")
 
+    if args.recompute_activation_function:
+        if args.recompute_method == "uniform":
+            raise AssertionError('uniform recomputation is not compatible with activation function recomputation.')
+        if args.recompute_granularity == "selective":
+            raise AssertionError('--recompute-activation-function is not compatible with selective recomputation.')
+
 
 def _validate_high_availability(args):
     if args.enable_optimizer_state_local_copy and not args.enable_high_availability:
@@ -517,6 +536,14 @@ def _valid_lora(args):
     if args.lora_fusion:
         if not args.sequence_parallel:
             raise AssertionError('lora_fusion for CCLoRA is forbidden without sequence_parallel.')
+
+
+def _validate_inference_args(args):
+    if args.prompt_type is not None and hasattr(args, "hf_chat_template") and args.hf_chat_template:
+        raise AssertionError('Prompt-type is forbidden when use huggingface chat template.')
+
+    if hasattr(args, "history_turns") and args.history_turns < 0:
+        raise AssertionError('History turns of chat must greater than 0.')
 
 
 def _validate_moe_expert_capacity_factor(args):
@@ -615,6 +642,7 @@ def validate_args_decorator(megatron_validate_args):
         _validate_position_embedding(args)
         _validate_high_availability(args)
         _valid_lora(args)
+        _validate_inference_args(args)
         _validate_moe_expert_capacity_factor(args)
         _validate_mla(args)
         _validate_yarn(args)

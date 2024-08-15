@@ -54,10 +54,30 @@ def moe_layer_forward(self, hidden_states: torch.Tensor):
     if args.moe_router_load_balancing_type == "group_limited_greedy":
         save_to_aux_losses_tracker(
             "load_balancing_loss",
-            self.router.l_aux / args.moe_aux_loss_coeff,
+            self.router.l_aux,
             self.layer_number,
             self.config.num_layers,
         )
+        save_to_aux_losses_tracker(
+            "load_balancing_expert_level_loss",
+            self.router.l_expert_aux / args.moe_aux_loss_coeff,
+            self.layer_number,
+            self.config.num_layers,
+        )
+        if hasattr(self.router, 'l_device_aux'):
+            save_to_aux_losses_tracker(
+                "load_balancing_device_level_loss",
+                self.router.l_device_aux / args.moe_device_level_aux_loss_coeff,
+                self.layer_number,
+                self.config.num_layers,
+            )
+        if hasattr(self.router, 'l_comm_aux'):
+            save_to_aux_losses_tracker(
+                "load_balancing_comm_level_loss",
+                self.router.l_comm_aux / args.moe_comm_aux_loss_coeff,
+                self.layer_number,
+                self.config.num_layers,
+            )
         output = MoEAuxLossAutoScaler.apply(output, self.router.l_aux)
     
     if args.n_shared_experts:

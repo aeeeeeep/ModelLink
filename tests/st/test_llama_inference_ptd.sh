@@ -42,6 +42,7 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS ${basepath}/inference.py
        --normalization RMSNorm \
        --untie-embeddings-and-output-weights \
        --disable-bias-linear \
+       --prompt-type llama2 \
        --attention-softmax-in-fp32 \
        --no-masked-softmax-fusion \
        --no-gradient-accumulation-fusion \

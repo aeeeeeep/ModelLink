@@ -19,6 +19,7 @@ from transformers import AutoTokenizer
 from megatron.training.tokenizer import build_tokenizer as megatron_build_tokenizer
 from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
 from megatron.core.datasets.megatron_tokenizer import MegatronTokenizer
+from modellink.tasks.preprocess.templates import fix_model_tokenizer
 
 
 def build_tokenizer(args):
@@ -54,6 +55,9 @@ def build_tokenizer(args):
                                                               args)
     else:
         tokenizer = TokenizerAdaptor(megatron_build_tokenizer(args))
+
+    if hasattr(args, "prompt_type") and args.prompt_type is not None:
+        fix_model_tokenizer(tokenizer.tokenizer, args.prompt_type.strip())
 
     return tokenizer
 

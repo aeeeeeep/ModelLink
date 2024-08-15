@@ -26,8 +26,7 @@ from datasets import load_dataset
 
 from megatron.core.datasets import indexed_dataset
 
-from modellink.tasks.preprocess.templates import Prompter, AlpacaTemplate
-from modellink.tasks.preprocess.templates import get_template_and_fix_tokenizer
+from modellink.tasks.preprocess.templates import Prompter, AlpacaTemplate, get_model_template
 from .utils import get_dataset_list, get_handler_dataset_attr, load_single_dataset, merge_dataset, align_dataset
 
 
@@ -206,7 +205,7 @@ class LlamaFactoryInstructionHandler(BaseDatasetHandler):
         self.args.output_prefix = self.args.output_prefix + "_packed"
         self.ignored_label = -100
         self.is_multi_turn = True
-        self.llama_factory_template = get_template_and_fix_tokenizer(tokenizer.tokenizer, args.lla_fact_ins_template.strip())
+        self.llama_factory_template = get_model_template(args.prompt_type.strip())
 
     def _format_msg(self, sample):
         return sample

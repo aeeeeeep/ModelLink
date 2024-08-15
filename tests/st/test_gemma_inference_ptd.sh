@@ -36,6 +36,7 @@ python3.8 -m torch.distributed.launch $DISTRIBUTED_ARGS ${basepath}/inference.py
        --geglu \
        --input-embeds-norm \
        --fp16 \
+       --prompt-type gemma \
        --micro-batch-size 1 \
        --seq-length 8192 \
        --max-new-tokens 64 \

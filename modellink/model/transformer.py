@@ -37,14 +37,15 @@ from megatron.legacy.model.transformer import (
 )
 from megatron.legacy.model.utils import get_norm
 from megatron.core import mpu
+from megatron.legacy.model.fused_bias_gelu import bias_gelu_impl
 
-
+from mindspeed.core.tensor_parallel.random import CheckpointWithoutOutput
+from ..core.transformer.mlp import should_recompute_activation
 from ..core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
 from ..error_utils import ensure_valid
 from ..model.alibi import Alibi
 from ..tasks.finetune.lora.utils import is_enable_lora
 from ..core.transformer import get_attention_mask, MUST_COMPRESS
-
 
 
 def state_dict_for_save_checkpoint(state_dict):
@@ -931,6 +932,48 @@ def parallel_transformer_forward(
         hidden_states = self.final_norm(hidden_states)
 
     return hidden_states
+
+
+def parallel_mlp_forward_wrapper(fn):
+    """
+    For legacy activation re-computation.
+    """
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        is_recompute_activation = should_recompute_activation(self)
+
+        def activation_function(*function_args):
+            intermediate, bias = function_args
+
+            if self.bias_gelu_fusion:
+                assert self.add_bias is True
+                assert self.activation_func == F.gelu
+                intermediate = bias_gelu_impl(intermediate, bias)
+            else:
+                if bias is not None:
+                    intermediate = intermediate + bias
+                intermediate = self.activation_func(intermediate)
+            return intermediate
+
+        if not is_recompute_activation:
+            output, output_bias = fn(self, *args, **kwargs)
+        else:
+            hidden_states = args[0]
+            intermediate_parallel, bias_parallel = self.dense_h_to_4h(hidden_states)
+            self.activation_checkpoint_manager = CheckpointWithoutOutput()
+            intermediate_parallel = self.activation_checkpoint_manager.checkpoint(activation_function,
+                                                                                  False,
+                                                                                  intermediate_parallel,
+                                                                                  bias_parallel)
+            # [s, b, h]
+            output, output_bias = self.dense_4h_to_h(intermediate_parallel)
+            self.activation_checkpoint_manager.discard_output()
+
+            if output.requires_grad:
+                output.register_hook(self.activation_checkpoint_manager.recompute)
+        return output, output_bias
+
+    return wrapper
 
 
 def parallel_mlp_init_wrapper(fn):
