@@ -40,7 +40,7 @@
     </tr>
     <tr>
         <td>Legacy</td>
-        <td>TP，PP，VPP，SP，FusedRMSNorm，FusedSwiGlu，FusedRope，overlap-grad-reduce，overlap-param-gather，全重计算</td>
+        <td>TP，PP，VPP，SP，全重计算，FusedRMSNorm，FusedSwiGlu，FusedRope，overlap-grad-reduce</td>
         <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_legacy.sh">llama2_tp2_pp4_vpp2_legacy.sh</a></td>
         <td>Y</td>
         <td>Y</td>
