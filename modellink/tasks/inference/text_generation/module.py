@@ -218,8 +218,6 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
         from megatron.core.distributed import DistributedDataParallel as LocalDDP
         from megatron.legacy.model import Float16Module as MegatronFloat16Module
         from megatron.training.utils import unwrap_model
-        from modellink.training import model_provider_func_wrapper
-        model_provider = model_provider_func_wrapper(model_provider)
 
         args = get_args()
 
@@ -232,8 +230,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
             args.load = pretrained_model_name_or_path
 
         if args.load:
-            strict = False if args.lora_load else True
-            load_checkpoint(args.model, None, None, 'load', strict)
+            load_checkpoint(args.model, None, None, 'load')
 
         unwrap_classes = (torchDDP, LocalDDP, MegatronFloat16Module)
 
