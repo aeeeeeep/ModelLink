@@ -32,8 +32,8 @@
     </tr>
     <tr>
         <td>Mcore</td>
-        <td>EP，NumExperts，Topk，AuxLoss，MoeAllGather，GQA，RotaryBase</td>
-        <td><a href="st/shell_scripts/mixtral_mcore_tp4_ep2_ptd.sh">mixtral_mcore_tp4_ep2_ptd.sh</a></td>
+        <td>CP，EP，NumExperts，Topk，AuxLoss，MoeAllGather，GQA，RotaryBase</td>
+        <td><a href="st/shell_scripts/mixtral_mcore_tp4_cp2_ep2_ptd.sh">mixtral_mcore_tp4_cp2_ep2_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
