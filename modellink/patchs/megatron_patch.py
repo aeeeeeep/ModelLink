@@ -38,7 +38,9 @@ from ..core import (initialize_model_parallel_decorator,
                    TransformerLayerSubmodules,
                    transformer_layer_forward, gpt_model_forward, get_num_layers_to_build_wrapper,
                    start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
-                   clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper)
+                   clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper,
+                   indexed_dataset_builder_init_wrapper, add_item_wrapper, finalize_wrapper)
+
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
@@ -320,6 +322,9 @@ def patch_datasets():
     # change attributions
     GPTDataset._build_document_sample_shuffle_indices = _build_document_sample_shuffle_indices
     BlendedMegatronDatasetBuilder.build_generic_dataset = build_generic_dataset
+    PatchManager.register_patch('megatron.core.datasets.indexed_dataset.IndexedDatasetBuilder.__init__', indexed_dataset_builder_init_wrapper)
+    PatchManager.register_patch('megatron.core.datasets.indexed_dataset.IndexedDatasetBuilder.add_item', add_item_wrapper)
+    PatchManager.register_patch('megatron.core.datasets.indexed_dataset.IndexedDatasetBuilder.finalize', finalize_wrapper)
 
 
 def patch_log_handler():

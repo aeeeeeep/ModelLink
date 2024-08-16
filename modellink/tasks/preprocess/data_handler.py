@@ -61,7 +61,7 @@ class BaseDatasetHandler(object):
         proc_kwargs = {} if self.args.streaming else {"num_proc": self.args.workers}
         return self.raw_datasets.map(self._filter, remove_columns=remove_columns, **proc_kwargs)
 
-    def serialize_to_disk(self):
+    def serialize_to_disk(self, iteration_batch_size=50):
         """save idx and bin to disk"""
         startup_start = time.time()
         if not self.tokenized_dataset:
@@ -87,24 +87,29 @@ class BaseDatasetHandler(object):
         logger.info("Time to startup:%s", startup_end - startup_start)
 
         skip_num = 0
-        for i, doc in enumerate(iter(self.tokenized_dataset), start=1):
+        for i, doc in enumerate(self.tokenized_dataset.iter(batch_size=iteration_batch_size), start=1):
             for key in self.args.json_keys:
-                sentences = doc[key]
-                if len(sentences) == 0:
-                    continue
-                for sentence in sentences:
-                    if self.args.seq_length is not None and len(sentence) >= self.args.seq_length:
-                        skip_num += 1
-                        continue
+                batch = [sentences for sentences in doc[key] if len(sentences) > 0]
 
-                    total_bytes_processed += len(sentence) * np.int32().itemsize
-                    builders[key].add_item(torch.IntTensor(sentence))
-                builders[key].end_document()
-            if i % self.args.log_interval == 0:
+                if len(batch) == 0:
+                    continue
+
+                for sentences in batch:
+                    for sentence in sentences:
+                        if self.args.seq_length is not None and len(sentence) >= self.args.seq_length:
+                            skip_num += 1
+                            continue
+
+                        total_bytes_processed += len(sentence) * np.int32().itemsize
+                        builders[key].add_item(sentence)
+                    builders[key].end_document()
+
+            batch_id = i * iteration_batch_size
+            if batch_id % self.args.log_interval == 0:
                 current = time.time()
                 elapsed = current - proc_start
                 mbs = total_bytes_processed / elapsed / 1024 / 1024
-                logger.info("Processed %s documents (%s docs/s, %s MB/s).", i, i / elapsed, mbs)
+                logger.info("Processed %s documents (%s docs/s, %s MB/s).", batch_id, batch_id / elapsed, mbs)
 
         logger.info("Skip %s sample exceeded seq-length(%s)", skip_num // 3, self.args.seq_length)
         for key in self.args.json_keys:
