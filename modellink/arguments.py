@@ -427,6 +427,8 @@ def _add_distributed_args(parser):
 
     group.add_argument('--local-rank', type=int, default=None,
                        help='Local rank passed from distributed launcher for torch2.x.')
+    group.add_argument('--distributed-timeout-minutes', type=int, default=45,
+                       help='Timeout minutes for torch.distributed.')
     return parser
 
 
