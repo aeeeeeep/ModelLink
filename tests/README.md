@@ -5,79 +5,96 @@
     <tr>
         <th>Tests</th>
         <th>Module</th>
-        <th>Submodule</th>
+        <th>Structure</th>
+        <th>Features</th>
         <th>Scripts</th>
         <th>Accuracy</th>
         <th>Throughput</th>
         <th>Memory</th>
     </tr>
     <tr>
-        <td rowspan="3">ST</td>
-        <td rowspan="2">Pretrain</td>
+        <td rowspan="4">ST</td>
+        <td rowspan="3">Pretrain</td>
+        <td>Mcore</td>
         <td>TP，PP，VPP，重计算，enable-recompute-layers-per-pp-rank</td>
-        <td>llama2_tp2_pp4_vpp2.sh</td>
+        <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_ptd.sh">llama2_tp2_pp4_vpp2.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
     </tr>
     <tr>
-        <td>CP，分布式优化器，ReuseFP32Param，RecomputeActivationFunction，FusedRMSNorm，FusedSwiGlu，FusedRope，overlap-grad-reduce、overlap-param-gather</td>
-        <td>llama2_tp2_cp4_mem_recompute.sh</td>
+        <td>Mcore</td>
+        <td>CP，分布式优化器，ReuseFP32Param，RecomputeActivationFunction, FusedRMSNorm，FusedSwiGlu，FusedRope，overlap-grad-reduce、overlap-param-gather</td>
+        <td><a href="st/shell_scripts/llama2_tp2_cp4_mem_recompute.sh">llama2_tp2_cp4_mem_recompute.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>Mcore</td>
+        <td>CP，EP，NumExperts，Topk，AuxLoss，MoeAllGather，GQA，RotaryBase</td>
+        <td><a href="st/shell_scripts/mixtral_mcore_tp4_cp2_ep2_ptd.sh">mixtral_mcore_tp4_cp2_ep2_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
     </tr>
     <tr>
         <td rowspan="1">LoRA</td>
+        <td>Legacy</td>
         <td>CCLoRA</td>
-        <td>tune_llama2_tp8_pp1_ptd.sh</td>
+        <td><a href="st/shell_scripts/tune_llama2_tp8_pp1_ptd.sh">tune_llama2_tp8_pp1_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
     </tr>
     <tr>
         <td rowspan="7">UT</td>
-        <td>CP</td>
+        <td>Pretrain</td>
+        <td>Mcore</td>
         <td>hybrid, ring_attn, ulysses</td>
-        <td>test_hybrid_context_parallel.py</td>
+        <td><a href="ut/dist_algo/context_parallel">context_parallel</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
     <tr>
         <td rowspan="2">model_module</td>
+        <td>Mcore</td>
         <td>rope</td>
-        <td>test_rotary_pos_embedding.py</td>
+        <td><a href="ut/model_module/embeddings/test_rotary_pos_embedding.py">test_rotary_pos_embedding.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
     <tr>
+        <td>Mcore, Legacy</td>
         <td>transformer_attention</td>
-        <td>test_attention.py</td>
+        <td><a href="ut/model_module/transformer/test_attention.py">test_attention.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
     <tr>
         <td>checkpoint</td>
+        <td>Mcore, Legacy</td>
         <td>mcore_dynamic, mcore_vpp, legacy_dynamic</td>
-        <td>test_convert_ckpt_from_huggingface.py</td>
+        <td><a href="ut/checkpoint">checkpoint</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
 	<tr>
         <td rowspan="3">process_data</td>
+        <td rowspan="3">Mcore, Legacy</td>
         <td>pretrain_data_handler, pretrain_merge_datasets</td>
-        <td>test_process_pretrain_data.py</td>
+        <td><a href="ut/process_data">process_data</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
 	<tr>
         <td>instruction_data_handler, instruction_merge_datasets</td>
-        <td>test_process_instruction_data.py</td>
+        <td><a href="ut/process_data/test_process_instruction_data.py">test_process_instruction_data.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
@@ -87,14 +104,14 @@
         instruction_data_alpaca_history,
         instruction_data_sharegpt,
         instruction_data_openai,</td>
-        <td>test_process_instruction_data_lf.py</td>
+        <td><a href="ut/process_data/test_process_instruction_data_lf.py">test_process_instruction_data_lf.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
     <tr>
         <td>Pipeline</td>
-        <td colspan="6"></td>
+        <td colspan="7"></td>
     </tr>
 </table>
 
@@ -103,7 +120,7 @@
 
 ### 开发规则
 
-#### ST:
+#### ST
 
 ① 贡献脚本用例请放置于 `st/shell_scripts` 文件夹下，命名规则为 **{模型名}_{切分策略}** 或者 **{模型名}_{特性名称}**， 如 `llama2_tp2_pp4_vpp2_ptd.sh`，请贡献者严格对齐；
 
@@ -114,7 +131,7 @@
 ④ 在贡献时候需要考虑最终校验的具体指标，精度、性能、显存，在对应指标空白处填上 `Y`，如无校验的保留空白即可。
 
 
-#### UT：
+#### UT
 
 ① 建议所有 UT 用例通过分布式 `pytest` 来拉起，即继承 tests/common.py 文件下的 `DistributedTest`，指定 `world_size`，具体参照已有用例即可；
 
@@ -126,6 +143,6 @@
 
 
 
-#### Pipeline:
+#### Pipeline
 
 待补充说明...
