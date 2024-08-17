@@ -66,10 +66,6 @@ def initialize_model_parallel_decorator(initialize_model_parallel):
                 tensor_model_parallel_size * pipeline_model_parallel_size * context_parallel_size
         )
 
-        if data_parallel_size % expert_model_parallel_size != 0:
-            raise RuntimeError(
-                f"data_parallel_size ({data_parallel_size}) is not divisible by expert_model_parallel_size "
-            )
         if data_parallel_size * context_parallel_size % expert_model_parallel_size != 0:
             raise RuntimeError(
                 f"data_parallel_size * context_parallel_size ({data_parallel_size * context_parallel_size}) is not divisible by expert_model_parallel_size "
