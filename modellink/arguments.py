@@ -356,6 +356,11 @@ def _add_algorithm_args(parser):
     group.add_argument('--reuse-fp32-param', action='store_true',
                        help='The distributed training optimizer frees up '
                             'param copies of FP32 to save memory.')
+    group.add_argument('--recompute-activation-function', action='store_true',
+                       help='Recompute the activation function in MLP layers.')
+    group.add_argument('--recompute-activation-function-num-layers', type=int, default=None,
+                       help='Can be used together with "--recompute-method block." '
+                            'and "--recompute-num-layers". ')
     return parser
 
 
@@ -422,6 +427,8 @@ def _add_distributed_args(parser):
 
     group.add_argument('--local-rank', type=int, default=None,
                        help='Local rank passed from distributed launcher for torch2.x.')
+    group.add_argument('--distributed-timeout-minutes', type=int, default=45,
+                       help='Timeout minutes for torch.distributed.')
     return parser
 
 
@@ -505,6 +512,12 @@ def _validate_recompute_args(args):
     enable_recomputation = args.recompute_granularity is not None and args.recompute_method == 'block'
     if args.enable_recompute_layers_per_pp_rank and not (enable_pp_vpp and enable_recomputation):
         raise AssertionError("enable-recompute-layers-per-pp-rank should be works with pipeline and virtual pipeline, when enabling re-computation.")
+
+    if args.recompute_activation_function:
+        if args.recompute_method == "uniform":
+            raise AssertionError('uniform recomputation is not compatible with activation function recomputation.')
+        if args.recompute_granularity == "selective":
+            raise AssertionError('--recompute-activation-function is not compatible with selective recomputation.')
 
 
 def _validate_high_availability(args):

@@ -65,6 +65,10 @@ def transformer_layer_init_wrapper(fn):
                 hidden_size=self.config.hidden_size,
                 eps=self.config.layernorm_epsilon,
             )
+
+        # For mcore activation re-computation
+        self.mlp.layer_number = self.layer_number
+
     return wrapper
 
 

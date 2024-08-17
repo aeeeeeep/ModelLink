@@ -17,8 +17,10 @@
 
 import argparse
 import json
+import multiprocessing
 import os
 import sys
+import copy
 import logging
 from typing import List
 
@@ -33,6 +35,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
 
 from modellink.tokenizer import build_tokenizer
 from modellink.tasks.preprocess.data_handler import build_dataset, get_dataset_handler
+from megatron.core.datasets.indexed_dataset import IndexedDatasetBuilder
 
 
 logging.basicConfig(level=logging.INFO)
@@ -163,6 +166,8 @@ def add_output_args(parser):
     group = parser.add_argument_group(title='runtime')
     group.add_argument('--workers', type=int, default=1,
                        help='Number of worker processes to launch')
+    group.add_argument('--n-subs', type=int, default=1,
+                       help='Number of subsets to cut for multiprocessing')
     group.add_argument('--log-interval', type=int, default=100,
                        help='Interval between progress updates')
 
@@ -195,6 +200,22 @@ def validate_args(args):
         raise AssertionError('If specify prompt_type , handler name must be "LlamaFactoryInstructionHandler"、"AlpacaStyleInstructionHandler"、"SharegptStyleInstructionHandler".')
 
 
+def cut_range_to_subs(n, gap):
+    n_ = n // gap
+    mod = n % gap
+    if mod != 0:
+        return [(k * gap, (k + 1) * gap) for k in range(0, n_)] + [(gap * n_, n)]
+    else:
+        return [(k * gap, (k + 1) * gap) for k in range(0, n_)]
+
+
+def handle_subset(params):
+    """params: [args, dataset, tokenizer, splitter]"""
+    handler = get_dataset_handler(params[0], params[1], params[2], params[3])
+    handler.serialize_to_disk()
+    return handler.output_idx_files
+
+
 def main():
     args = get_args()
     validate_args(args)
@@ -205,11 +226,43 @@ def main():
     logger.info("building dataset: %s", args.input)
     raw_data = build_dataset(args)
 
-    handler = get_dataset_handler(args, raw_data, tokenizer, splitter)
-
-    # serialize to bin&idx
-    handler.serialize_to_disk()
-
+    if args.n_subs == 1:
+        handler = get_dataset_handler(args, raw_data, tokenizer, splitter)
+        # serialize to bin&idx
+        handler.serialize_to_disk()
+    else:
+        target_prefix = args.output_prefix
+        target_prefixname = os.path.basename(target_prefix)
+        
+        num_samples = len(raw_data)
+        start_ends = cut_range_to_subs(num_samples, num_samples // args.n_subs)
+        subsets = [raw_data.select(range(x[0], x[1])) for x in start_ends]
+        
+        # multiprocessing
+        params_list = []
+        for k, subset in enumerate(subsets):
+            args_ = copy.deepcopy(args)
+            args_.output_prefix = target_prefix.replace(target_prefixname, f'{str(k).zfill(3)}_of_{str(len(subsets)-1).zfill(3)}_{target_prefixname}')
+            params = [args_, subset, tokenizer, splitter]
+            params_list.append(params)
+        pool = multiprocessing.Pool()
+        sub_idx_files = pool.map(handle_subset, params_list)
+        pool.close()
+        pool.join()
+        
+        for key in sub_idx_files[0].keys():
+            idx_files = [x[key] for x in sub_idx_files]
+            idx_files.sort()
+            target_idx = idx_files[0].replace(f'000_of_{str(len(subsets)-1).zfill(3)}_{target_prefixname}', target_prefixname)
+            target_bin = target_idx.replace('.idx', '.bin')
+            idx = IndexedDatasetBuilder(target_bin)
+            for idx_file in idx_files:
+                idx.add_index(idx_file.replace('.idx', ''))
+            idx.finalize(target_idx)
+            
+            for idx_file in idx_files:
+                os.remove(idx_file)
+                os.remove(idx_file.replace('.idx', '.bin'))
 
 if __name__ == '__main__':
     main()
