@@ -25,7 +25,10 @@ from megatron.training import get_args
 
 @dataclass
 class TransformerLayerSubmodules:
-
+    """
+    Based on megatron.core.transformer.transformer_layer.TransformerLayerSubmodules,
+    we add post_attn_norm and post_mlp_layernorm.
+    """
     input_layernorm: Union[ModuleSpec, type] = IdentityOp
     self_attention: Union[ModuleSpec, type] = IdentityOp
     # add post_attn_norm for attention post norm

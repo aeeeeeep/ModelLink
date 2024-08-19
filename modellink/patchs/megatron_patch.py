@@ -35,7 +35,6 @@ from ..model import (
 )
 from ..core import (initialize_model_parallel_decorator,
                    build_generic_dataset, _build_document_sample_shuffle_indices,
-                   TransformerLayerSubmodules,
                    transformer_layer_forward, gpt_model_forward, get_num_layers_to_build_wrapper,
                    start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
                    clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper)
@@ -175,7 +174,6 @@ def patch_core_transformers(args):
     PatchManager.register_patch('megatron.core.transformer.transformer_block.TENorm', PTNorm)
     PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.routing', topk_router_routing)
     PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.forward', topk_router_forward)
-    PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayerSubmodules', TransformerLayerSubmodules)
     PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayer.__init__', transformer_layer_init_wrapper)
     PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayer.forward', transformer_layer_forward)
     PatchManager.register_patch('megatron.core.transformer.moe.router.z_loss_func', z_loss_func)
