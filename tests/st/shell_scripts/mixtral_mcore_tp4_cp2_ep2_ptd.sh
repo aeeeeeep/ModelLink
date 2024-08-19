@@ -27,8 +27,8 @@ CKPT_LOAD_DIR="/data/mixtral-8*7b-tp4-ep2-mcore-base"
 TP=4
 PP=1
 EP=2
-CP=1
-CP_TYPE='megatron_cp_algo'
+CP=2
+CP_TYPE='ulysses_cp_algo'
 NUM_LAYERS=6
 
 MOE_ARGS=(
