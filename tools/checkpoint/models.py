@@ -448,6 +448,8 @@ class MegatronModel(ModelBase):
                 'lr_warmup_fraction', 'start_weight_decay', 'end_weight_decay', 'make_vocab_size_divisible_by',
                 'masked_softmax_fusion', 'num_layer_list', 'lora_target_modules', 'expert_model_parallel_size'
             ]
+            if hasattr(self.md.check_for_args, 'num_experts') and self.md.checkpoint_args.num_experts is not None:
+                args_to_keep.remove('sequence_parallel')
 
             for arg, value in vars(self.md.checkpoint_args).items():
                 if arg in args_to_keep:
@@ -790,7 +792,8 @@ class MegatronMCoreModel(MegatronModel):
             "layers_mlp_linear_fc2": module_layer + "mlp.linear_fc2",
             "layers_self_attention_post_mlp_layernorm": module_layer + "post_mlp_layernorm",
             "final_layernorm": "decoder.final_layernorm",
-            "output_layer": "output_layer"
+            "output_layer": "output_layer",
+            "layers_mlp_router": module_layer + "mlp.router"
         }
 
         config_value = self.model_cfg.get(self.args_cmd.model_name).get('config_set_value')
