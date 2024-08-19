@@ -48,5 +48,6 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --seed 42 \
        --bf16 \
        --rotary-base 5000000 \
-       --padded-vocab-size 151936
+       --padded-vocab-size 151936 \
+       | tee logs/generate_qwen15_4b.log
 
