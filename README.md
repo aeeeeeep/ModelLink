@@ -373,10 +373,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td rowspan="2"><a href="https://huggingface.co/meta-llama">LLaMA3</td>
       <td><a href="https://huggingface.co/unsloth/llama-3-8b/tree/main">8B</a></td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 2483 </td>
+      <td> 2400 </td>
       <td> 2674 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
@@ -384,10 +384,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
     <tr>
       <td><a href="https://huggingface.co/v2ray/Llama-3-70B/tree/main">70B</a></td>
       <td> 8K </td>
-      <th>Legacy</th>
-      <td>8x8</td>
+      <th>Mcore</th>
+      <td>4x8</td>
       <td>BF16 </td>
-      <td> 283 </td>
+      <td> 353 </td>
       <td> 355 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
