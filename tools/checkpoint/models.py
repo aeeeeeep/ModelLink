@@ -448,7 +448,7 @@ class MegatronModel(ModelBase):
                 'lr_warmup_fraction', 'start_weight_decay', 'end_weight_decay', 'make_vocab_size_divisible_by',
                 'masked_softmax_fusion', 'num_layer_list', 'lora_target_modules', 'expert_model_parallel_size'
             ]
-            if hasattr(self.md.check_for_args, 'num_experts') and self.md.checkpoint_args.num_experts is not None:
+            if hasattr(self.md.checkpoint_args, 'num_experts') and self.md.checkpoint_args.num_experts is not None:
                 args_to_keep.remove('sequence_parallel')
 
             for arg, value in vars(self.md.checkpoint_args).items():
