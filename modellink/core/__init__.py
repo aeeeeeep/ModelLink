@@ -25,7 +25,6 @@ from .datasets.blended_megatron_dataset_builder import build_generic_dataset
 from .datasets.gpt_dataset import _build_document_sample_shuffle_indices
 from .transformer.moe.router import topk_router_forward, topk_router_routing
 from .transformer.moe.moe_utils import z_loss_func
-from .transformer.transformer_layer import TransformerLayerSubmodules, transformer_layer_init_wrapper, transformer_layer_forward
 from .transformer.transformer_block import get_num_layers_to_build_wrapper
 from .models.gpt.gpt_model import gpt_model_forward
 from .models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper, build_layers_wrapper

@@ -6,8 +6,8 @@ from megatron.core.transformer.custom_layers.transformer_engine import TENorm
 from megatron.core.transformer.dot_product_attention import DotProductAttention
 from megatron.core.transformer.enums import AttnMaskType
 from megatron.core.transformer.identity_op import IdentityOp
+from megatron.core.transformer.transformer_layer import TransformerLayerSubmodules
 from modellink.core.transformer.multi_head_latent_attention import MLASelfAttentionSubmodules, MultiHeadLatentAttention
-from modellink.core.transformer.transformer_layer import TransformerLayerSubmodules
 
 
 def get_gpt_mla_layer_spec(
