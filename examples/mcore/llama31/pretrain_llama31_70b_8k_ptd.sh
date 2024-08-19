@@ -1,11 +1,12 @@
 #!/bin/bash
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
+export HCCL_CONNECT_TIMEOUT=1200
 
 GPUS_PER_NODE=8
 MASTER_ADDR=localhost
 MASTER_PORT=6000
-NNODES=1
+NNODES=4
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
@@ -14,7 +15,7 @@ DATA_PATH="your data path"
 TOKENIZER_MODEL="your tokenizer path"
 CKPT_LOAD_DIR="your model ckpt path"
 TP=8
-PP=1
+PP=4
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -28,8 +29,8 @@ GPT_ARGS="
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --use-mcore-models \
-    --micro-batch-size 2 \
-    --global-batch-size 64 \
+    --micro-batch-size 1 \
+    --global-batch-size 512 \
     --sequence-parallel \
     --use-mc2 \
     --use-flash-attn \
@@ -43,10 +44,11 @@ GPT_ARGS="
     --original-max-position-embeddings 8192 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_MODEL} \
-    --num-layers 32 \
-    --hidden-size 4096 \
-    --ffn-hidden-size 14336 \
-    --num-attention-heads 32 \
+    --num-layers 80 \
+    --num-layer-list 17,20,22,21 \
+    --hidden-size 8192 \
+    --ffn-hidden-size 28672 \
+    --num-attention-heads 64 \
     --group-query-attention \
     --num-query-groups 8 \
     --seq-length 8192 \
@@ -100,4 +102,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --distributed-backend nccl \
     --load ${CKPT_LOAD_DIR} \
     --save ${CKPT_SAVE_DIR} \
-    | tee logs/train_llama31_8b.log
+    | tee logs/train_llama31_70b_mcore.log
