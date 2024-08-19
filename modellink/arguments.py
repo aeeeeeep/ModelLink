@@ -630,8 +630,11 @@ def validate_args_decorator(megatron_validate_args):
         if defaults is None:
             defaults = {}
         variable_seq_lengths = args.variable_seq_lengths
+        spec = args.spec
+        args.spec = None
         megatron_validate_args(args, defaults)
         args.variable_seq_lengths = variable_seq_lengths
+        args.spec = spec
 
         args.use_mc2 = False
 
