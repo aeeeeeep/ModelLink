@@ -31,9 +31,10 @@ DISTRIBUTED_ARGS="
     --master_addr $MASTER_ADDR \
     --master_port $MASTER_PORT
 "
-#grok1总层数是64
+# total num layers of grok1 is 64.
 MODEL_ARGS="
     --use-mcore-models \
+    --spec modellink.core.models.gpt.layer_specs grok_layer_local_spec \
     --disable-bias-linear \
     --seq-length 8192 \
     --max-position-embeddings 8192 \
