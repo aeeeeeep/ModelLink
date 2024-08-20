@@ -5,7 +5,7 @@ import math
 import pandas as pd
 
 import modellink
-from ut.utils import judge_expression, get_md5sum
+from test_tools.utils import judge_expression, get_md5sum
 from modellink.tokenizer import build_tokenizer
 from modellink.tokenizer.tokenizer import _AutoTokenizer
 from modellink.tasks.preprocess.data_handler import GeneralInstructionHandler

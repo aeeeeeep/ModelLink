@@ -142,5 +142,4 @@ torchrun $DISTRIBUTED_ARGS $basepath/pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --save $CKPT_SAVE_DIR \
-    --load $CKPT_LOAD_DIR \
-    | tee ${log_dir}
+    --load $CKPT_LOAD_DIR

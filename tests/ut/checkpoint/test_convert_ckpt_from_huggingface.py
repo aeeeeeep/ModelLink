@@ -6,8 +6,8 @@ from pathlib import Path
 import torch
 
 import modellink
-from ut.utils import judge_expression
-from ut.utils import weight_compare
+from test_tools.utils import judge_expression
+from test_tools.utils import weight_compare
 
 
 class CovertCkptFromHuggingfaceArgs:

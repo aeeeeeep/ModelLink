@@ -13,9 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-GSM8K_TEMPLATE_DIR = 'modellink/tasks/evaluation/eval_impl/fewshot_template/gsm8k_3shot_template.json'
-MMLU_TEMPLATE_DIR = 'modellink/tasks/evaluation/eval_impl/fewshot_template/mmlu_5shot_template.json'
-CEVAL_TEMPLATE_DIR = 'modellink/tasks/evaluation/eval_impl/fewshot_template/ceval_5shot_template.json'
-AGIEVAL_TEMPLATE_DIR = 'modellink/tasks/evaluation/eval_impl/fewshot_template/AGI_fewshot.json'
-BBH_TEMPLATE_DIR = 'modellink/tasks/evaluation/eval_impl/fewshot_template/bbh_template.json'
-CODE_TEST_LOG_DIR = 'modellink/tasks/evaluation/codecheck_log'
+import os
+from pathlib import Path
+
+
+cur_file_dir = Path(__file__).absolute().parent
+
+GSM8K_TEMPLATE_DIR = os.path.join(cur_file_dir, "fewshot_template/gsm8k_3shot_template.json")
+MMLU_TEMPLATE_DIR = os.path.join(cur_file_dir, "fewshot_template/mmlu_5shot_template.json")
+CEVAL_TEMPLATE_DIR = os.path.join(cur_file_dir, "fewshot_template/ceval_5shot_template.json")
+AGIEVAL_TEMPLATE_DIR = os.path.join(cur_file_dir, "fewshot_template/AGI_fewshot.json")
+BBH_TEMPLATE_DIR = os.path.join(cur_file_dir, "fewshot_template/bbh_template.json")
+CODE_TEST_LOG_DIR = os.path.join(cur_file_dir.parent, "codecheck_log")
+

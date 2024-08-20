@@ -8,7 +8,7 @@ import torch
 from transformers import AutoModelForCausalLM
 
 import modellink
-from ut.utils import judge_expression
+from test_tools.utils import judge_expression
 
 
 class CovertCkptToHuggingfaceArgs:
