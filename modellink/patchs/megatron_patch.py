@@ -250,7 +250,7 @@ def patch_parallel_state():
 
 
 def patch_model():
-    from mindspeed.model.transformer import parallel_transformer_layer_init_wrapper
+    from ..model.transformer import parallel_transformer_layer_init_wrapper
     from ..model.transformer import parallel_mlp_forward_wrapper
     # patch_fused_layer_norm
     PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.FusedLayerNormAffineFunction', FusedLayerNormAffineFunction)  # use torch-npu fused layer norm

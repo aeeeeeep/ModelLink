@@ -1030,3 +1030,20 @@ def parallel_mlp_init_wrapper(fn):
         )
 
     return wrapper
+
+
+def parallel_transformer_layer_init_wrapper(fn):
+    """
+    When training moe models in legacy structure, we pass layer_number attribution for recompute activation function.
+    """
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        from megatron.legacy.model.transformer import SwitchMLP
+        super(ParallelTransformerLayer, self).__init__()
+        fn(self, *args, **kwargs)
+        if self.mlp.__class__ is SwitchMLP:
+            for expert in self.mlp.block.moe_layer.experts.experts:
+                expert.layer_number = self.layer_number
+        else:
+            self.mlp.layer_number = self.layer_number
+    return wrapper

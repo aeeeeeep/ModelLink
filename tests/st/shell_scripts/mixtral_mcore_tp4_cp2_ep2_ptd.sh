@@ -71,6 +71,8 @@ GPT_ARGS=(
     --overlap-grad-reduce
     --overlap-param-gather
     --use-mc2
+    --recompute-activation-function \
+    --recompute-activation-function-num-layers 1 \
    
     --tensor-model-parallel-size ${TP}
     --pipeline-model-parallel-size ${PP}

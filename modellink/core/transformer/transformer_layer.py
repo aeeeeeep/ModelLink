@@ -19,6 +19,8 @@ from typing import Dict, Union
 
 from megatron.core.transformer.identity_op import IdentityFuncOp, IdentityOp
 from megatron.core.transformer.spec_utils import ModuleSpec, build_module
+from megatron.core.transformer.moe.moe_layer import MoELayer
+from megatron.core.transformer.moe.experts import GroupedMLP, SequentialMLP
 from megatron.core.utils import make_viewless_tensor
 from megatron.training import get_args
 
@@ -67,8 +69,14 @@ def transformer_layer_init_wrapper(fn):
             )
 
         # For mcore activation re-computation
-        self.mlp.layer_number = self.layer_number
-
+        if self.mlp.__class__ is MoELayer:
+            if self.mlp.experts.__class__ is GroupedMLP:
+                self.mlp.experts.layer_number = self.layer_number
+            if self.mlp.experts.__class__ is SequentialMLP:
+                for expert in self.mlp.experts.local_experts:
+                    expert.layer_number = self.layer_number
+        else:
+            self.mlp.layer_number = self.layer_number
     return wrapper
 
 
