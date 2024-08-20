@@ -16,8 +16,8 @@ CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
 TOKENIZER_PATH="your tokenizer path"
 
-TP=4
-PP=2
+TP=8
+PP=1
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
