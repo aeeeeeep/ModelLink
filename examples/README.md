@@ -55,7 +55,16 @@
     # 安装 torch 和 torch_npu，注意要选择对应python版本、x86或arm的torch、torch_npu及apex包
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl 
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
-    pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+
+    # 安装apex库
+    ## 建议查看[昇腾apex仓库](https://gitee.com/ascend/apex)
+    git clone -b master https://gitee.com/ascend/apex.git
+    cd apex/
+
+    ## 建议打开scripts/build.sh，将其中line 22改为PY_VERSION='3.8'
+    bash scripts/build.sh --python=3.8
+    pip apex/dist/install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
+    cd ..
     
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
@@ -88,19 +97,19 @@
 
 
 ```shell
-#!/bin/bash
-mkdir ./model_from_hf/llama2-hf/
-cd ./model_from_hf/llama2-hf/
-wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/config.json
-wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/generation_config.json
-wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model-00001-of-00002.bin
-wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model-00002-of-00002.bin
-wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model.bin.index.json
-wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/special_tokens_map.json
-wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer.json
-wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer.model
-wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer_config.json
-cd ../../
+    #!/bin/bash
+    mkdir ./model_from_hf/llama2-hf/
+    cd ./model_from_hf/llama2-hf/
+    wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/config.json
+    wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/generation_config.json
+    wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model-00001-of-00002.bin
+    wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model-00002-of-00002.bin
+    wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model.bin.index.json
+    wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/special_tokens_map.json
+    wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer.json
+    wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer.model
+    wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer_config.json
+    cd ../../
 ```
 
 #### 2. 权重转换
@@ -111,7 +120,14 @@ cd ../../
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-python tools/checkpoint/convert_ckpt.py \
+# 将转化权重所需要的py文件复制到文件夹的根目录
+# 此时你应当正处于ModelLink文件夹下
+cp -r tools/checkpoint/convert_ckpt.py ../ModelLink/
+cp -r tools/checkpoint/loader_llama2_hf.py ../ModelLink/
+cp -r tools/checkpoint/saver_megatron.py ../ModelLink/
+
+# 执行权重转化脚本
+python convert_ckpt.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
