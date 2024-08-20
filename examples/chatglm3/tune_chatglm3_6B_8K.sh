@@ -55,7 +55,7 @@ GPT_ARGS="
     --tokenizer-type PretrainedFromHF \
     --tokenizer-not-use-fast \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
-    --lr 1e-6 \
+    --lr 5e-5 \
     --train-iters 2000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
@@ -76,6 +76,8 @@ GPT_ARGS="
     --load ${CKPT_LOAD_DIR}  \
     --no-load-optim \
     --no-load-rng \
+    --variable-seq-lengths \
+    --prompt-type chatglm3_system \
     --fp16
 "
 
@@ -86,7 +88,7 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 2000 \
+    --save-interval 1000 \
     --eval-interval 1000 \
     --eval-iters 10 \
 "

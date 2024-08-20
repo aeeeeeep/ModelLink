@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .gpt_model import GPTModel
+from .gpt_model import GPTModel, post_language_model_processing
 from .transformer import (
     parallel_transformer_init, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, FlashSelfAttention, core_attention_forward,

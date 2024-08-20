@@ -57,6 +57,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --exit-on-missing-checkpoint \
        --seed 42 \
        --fp16 \
+       --prompt-type chatglm3_system \
        | tee logs/generate_chatglm3_6B.log
 
 

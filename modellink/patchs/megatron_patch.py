@@ -31,7 +31,7 @@ from ..model import (
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
     ParallelAttention_wrapper, transformer_language_model_init,
     ParallelAttentionForward, parallel_transformer_forward, parallel_mlp_init_wrapper,
-    rms_norm_init_wrapper, rms_norm_forward
+    rms_norm_init_wrapper, rms_norm_forward, post_language_model_processing
 )
 from ..core import (initialize_model_parallel_decorator,
                    build_generic_dataset, _build_document_sample_shuffle_indices,
@@ -285,7 +285,7 @@ def patch_model():
 
     # patch gptmodel
     PatchManager.register_patch('megatron.legacy.model.GPTModel', GPTModel)
-
+    PatchManager.register_patch('megatron.legacy.model.gpt_model.post_language_model_processing', post_language_model_processing)
     # patch language model
     PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.forward', transformer_language_model_forward_wrapper)
     PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.__init__', transformer_language_model_init)
