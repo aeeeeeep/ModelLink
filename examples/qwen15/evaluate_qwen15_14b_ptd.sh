@@ -20,8 +20,8 @@ TOKENIZER_PATH="your tokenizer path"
 DATA_PATH="your data path"
 TASK="mmlu"
 
-TP=8
-PP=1
+TP=4
+PP=2
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
