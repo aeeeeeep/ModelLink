@@ -128,7 +128,7 @@ def patch_core_models(args):
     from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec
     from mindspeed.core.models.common.embeddings.rotary_pos_embedding import get_pos_emb_on_this_cp_rank
     from mindspeed.core.fusions.rotary_pos_embedding import rotary_embedding_init_wrapper
-    from ..utils import get_batch_on_this_cp_rank
+    from ..utils import get_batch_on_this_cp_rank, get_device
     from ..core import rotary_embedding_forward, apply_rotary_pos_emb_bshd
     from ..core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper
     from ..core.transformer.dot_product_attention import dot_product_attention_init_wrapper, \
@@ -156,6 +156,7 @@ def patch_core_models(args):
     PatchManager.register_patch('megatron.core.models.gpt.gpt_layer_specs.get_gpt_layer_local_spec', get_gpt_layer_local_spec_wrapper)
 
     PatchManager.register_patch('megatron.training.utils.get_batch_on_this_cp_rank', get_batch_on_this_cp_rank)
+    PatchManager.register_patch('megatron.training.dist_signal_handler.get_device', get_device)
     PatchManager.register_patch('megatron.core.models.gpt.gpt_model.GPTModel.forward', gpt_model_forward)
 
     # For recomputation
