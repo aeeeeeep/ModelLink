@@ -45,13 +45,9 @@ class ST_Test:
         test_dir = os.path.join(base_dir, 'tests')
 
         st_dir = "st"
-        self.pretrain_tp2_pp4_vpp2 = os.path.join(
+        self.st_shell = os.path.join(
             test_dir, st_dir, "run.sh"
         )
-        llama_inference_shell_file = os.path.join(
-            test_dir, st_dir, "test_llama_inference_ptd.sh")
-        gemma_inference_shell_file = os.path.join(
-            test_dir, st_dir, "test_gemma_inference_ptd.sh")
         llama_instruction_shell_file = os.path.join(
             test_dir, st_dir, "test_llama_instruction_ptd.sh")
         llama_pretrain_ha_save_shell_file = os.path.join(
@@ -60,13 +56,11 @@ class ST_Test:
             test_dir, st_dir, "test_llama_pretrain_ha_load_ptd.sh")
 
         self.st_file_list = [
-            llama_instruction_shell_file,
-            llama_inference_shell_file,
-            gemma_inference_shell_file
+            llama_instruction_shell_file
         ]
 
     def run_st(self):
-        rectify_case = f"bash {self.pretrain_tp2_pp4_vpp2}"
+        rectify_case = f"bash {self.st_shell}"
         rectify_code = acquire_exitcode(rectify_case)
         if rectify_code != 0:
             print("rectify case failed, check it.")

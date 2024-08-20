@@ -39,5 +39,7 @@ def add_text_generate_args(parser):
     group.add_argument("--no-chat-template", action="store_true", default=False,
                        help="Disable Huggingface chat template")
     group.add_argument('--use-kv-cache', action="store_true", default=False,
-                       help="Use kv cache to accelerate inference")                   
+                       help="Use kv cache to accelerate inference")   
+    group.add_argument('--hf-chat-template', action='store_true', default=False,
+                        help="Using Huggingface chat template")                
     return parser

@@ -3,8 +3,13 @@ We can't use assert in our code for codecheck, so create this auxiliary function
 the assert case in ut for ci.
 """
 import os
-import glob
 import hashlib
+import logging
+import re
+import json
+import glob
+import sys
+import pytest
 import torch
 import torch_npu
 import megatron.core.parallel_state as mpu
@@ -73,3 +78,51 @@ def get_md5sum(fpath):
     with open(fpath, 'rb') as f:
         md5sum.update(f.read())
         return md5sum.hexdigest()
+
+
+@pytest.fixture
+def build_args(request, monkeypatch):
+    params = request.getfixturevalue("params")
+    argv = [sys.argv[0]]
+    for k, v in params.items():
+        if v is None:
+            argv.append(f"--{k}")
+        elif isinstance(v, list):
+            argv.extend([f"--{k}"] + [str(value) for value in v])
+        else:
+            argv.extend([f"--{k}", str(v)])
+    monkeypatch.setattr(sys, "argv", argv)
+
+
+def create_testconfig(path: str):
+    with open(path) as f:
+        raw_data = json.load(f)
+    
+    return {k: [tuple(s.values()) if len(s) > 1 else tuple(s.values())[0] for s in v] for k, v in raw_data.items()}
+
+
+class ListHandler(logging.Handler):
+    # Extract inference log, the regular expression is universal.
+    # Just pass the pattern you want.
+    def __init__(self, pattern):
+        super().__init__()
+        self.log_capture = []
+        self.pattern = pattern
+    
+    def emit(self, record):
+        log_entry = self.format(record)
+        if re.search(self.pattern, log_entry, re.DOTALL):
+            self.log_capture.append(log_entry)
+
+
+def setup_logger(pattern):
+    # Set the logger and the handler.
+    # Different tasks will not form interference, feel relieved to use. 
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    handler = ListHandler(pattern)
+    handler.setLevel(logging.INFO)
+    logger.addHandler(handler)
+
+    return handler, handler.log_capture
