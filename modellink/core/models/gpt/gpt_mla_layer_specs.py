@@ -1,11 +1,12 @@
 from megatron.core.fusions.fused_bias_dropout import get_bias_dropout_add
 from megatron.core.models.gpt.gpt_layer_specs import _get_mlp_module_spec
 from megatron.core.tensor_parallel import ColumnParallelLinear, RowParallelLinear
-from megatron.core.transformer import ModuleSpec, TransformerLayer, TransformerLayerSubmodules
+from megatron.core.transformer import ModuleSpec, TransformerLayer
 from megatron.core.transformer.custom_layers.transformer_engine import TENorm
 from megatron.core.transformer.dot_product_attention import DotProductAttention
 from megatron.core.transformer.enums import AttnMaskType
 from megatron.core.transformer.identity_op import IdentityOp
+from megatron.core.transformer.transformer_layer import TransformerLayerSubmodules
 from modellink.core.transformer.multi_head_latent_attention import MLASelfAttentionSubmodules, MultiHeadLatentAttention
 
 
