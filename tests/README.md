@@ -14,7 +14,7 @@
     </tr>
     <tr>
         <td rowspan="6">ST</td>
-        <td rowspan="4">Pretrain</td>
+        <td rowspan="5">Pretrain</td>
         <td>Mcore</td>
         <td>TP，PP，VPP，重计算，enable_recompute_layers_per_pp_rank</td>
         <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_ptd.sh">llama2_tp2_pp4_vpp2.sh</a></td>
@@ -42,6 +42,14 @@
         <td>Legacy</td>
         <td>TP，PP，VPP，SP，全重计算，fused_rmsnorm，fused_swiglu，fused_rope，overlap_grad_reduce</td>
         <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_legacy.sh">llama2_tp2_pp4_vpp2_legacy.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>Legacy</td>
+        <td>TP，PP，EP，MoeAllGather，FusedRMSNorm，Topk，AuxLoss</td>
+        <td><a href="st/shell_scripts/mixtral_legacy_tp2_ep4_ptd.sh">mixtral_legacy_tp2_ep4_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
