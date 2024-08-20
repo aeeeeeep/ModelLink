@@ -224,6 +224,7 @@ def patch_core_transformers(args):
             PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAlltoAllTokenDispatcher', MoEAlltoAllTokenDispatcher)
 
 
+
 def patch_pipeline_parallel():
     # solve send recv bug
     PatchManager.register_patch('megatron.core.pipeline_parallel.p2p_communication._batched_p2p_ops', _batched_p2p_ops)
@@ -360,7 +361,8 @@ def patch_high_availability_feature():
 
 
 def patch_optimizer():
-    if get_modellink_args().reuse_fp32_param:
+    args = get_modellink_args()
+    if args.reuse_fp32_param:
         from mindspeed.optimizer.optimizer import mixed_precision_optimizer_step, reuse_fp32_param_init_wrapper, \
             optimizer_config_init_wrapper
         from ..core.optimizer.distrib_optimizer import reuse_fp32_param_distrib_optimizer_init_wrapper
@@ -368,3 +370,14 @@ def patch_optimizer():
         PatchManager.register_patch('megatron.core.optimizer.optimizer.Float16OptimizerWithFloat16Params.__init__', reuse_fp32_param_init_wrapper)
         PatchManager.register_patch('megatron.core.optimizer.optimizer_config.OptimizerConfig.__init__', optimizer_config_init_wrapper)
         PatchManager.register_patch('megatron.core.optimizer.distrib_optimizer.DistributedOptimizer.__init__', reuse_fp32_param_distrib_optimizer_init_wrapper)
+
+    adaptive_recompute_enable = args.adaptive_recompute_device_size > 0 or args.adaptive_recompute_device_swap
+    if (adaptive_recompute_enable and not args.memory_fragmentation) or args.swap_attention:
+        from mindspeed.core.memory.adaptive_recomputing.adaptive_recompute import allowed_recomputing_module_wrapper
+        from mindspeed.core.memory.adaptive_recomputing.adaptive_recompute import setup_model_and_optimizer_wrapper
+        from mindspeed.core.memory.adaptive_recomputing.pluggable_allocator_adpator import change_allocator
+        from megatron.legacy.model.transformer import ParallelTransformerLayer
+        if not args.swap_attention:
+            change_allocator()
+        allowed_recomputing_module_wrapper(ParallelTransformerLayer)
+        PatchManager.register_patch('megatron.training.training.setup_model_and_optimizer', setup_model_and_optimizer_wrapper)
