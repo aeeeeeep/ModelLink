@@ -1,78 +1,78 @@
 {
     "lm loss": [
-        1.221694,
-        1.281097,
-        1.282001,
-        1.29385,
-        1.373271,
-        1.229121,
-        1.340521,
-        1.279965,
-        1.42014,
-        1.279688,
-        1.276707,
-        1.262766,
-        1.260327,
-        1.223695,
-        1.232566
+        1.221185,
+        1.281827,
+        1.281562,
+        1.294134,
+        1.375184,
+        1.228927,
+        1.341176,
+        1.281563,
+        1.420085,
+        1.279985,
+        1.277306,
+        1.263282,
+        1.259732,
+        1.223624,
+        1.232118
     ],
     "throughput": [
-        96.8,
-        349.9,
-        355.5,
-        348.6,
-        344.9,
-        354.6,
-        351.8,
-        357.3,
-        359.1,
-        365.4,
-        359.2,
-        354.9,
-        352.5,
-        367.1,
-        366.4
+        94.5,
+        241.3,
+        245.2,
+        245.0,
+        247.0,
+        252.7,
+        249.0,
+        246.2,
+        248.1,
+        260.7,
+        261.4,
+        256.5,
+        262.4,
+        259.5,
+        261.6
     ],
     "memo info": [
         {
             "rank": 0,
-            "allocated memory": 1817.138671875,
-            "max allocated memory": 2643.8134765625
+            "allocated memory": 1817.09375,
+            "max allocated memory": 1877.65087890625
         },
         {
             "rank": 1,
-            "allocated memory": 1817.138671875,
-            "max allocated memory": 2643.8134765625
+            "allocated memory": 1817.09375,
+            "max allocated memory": 1877.65087890625
         },
         {
             "rank": 2,
-            "allocated memory": 1817.138671875,
-            "max allocated memory": 2643.8134765625
+            "allocated memory": 1817.09375,
+            "max allocated memory": 1877.65087890625
         },
         {
             "rank": 3,
-            "allocated memory": 1817.138671875,
-            "max allocated memory": 2643.8134765625
+            "allocated memory": 1817.09375,
+            "max allocated memory": 1877.65087890625
         },
         {
             "rank": 4,
-            "allocated memory": 1817.138671875,
-            "max allocated memory": 2643.8134765625
+            "allocated memory": 1817.09375,
+            "max allocated memory": 1877.65087890625
         },
         {
             "rank": 5,
-            "allocated memory": 1817.138671875,
-            "max allocated memory": 2643.8134765625
+            "allocated memory": 1817.09375,
+            "max allocated memory": 1877.65087890625
         },
         {
             "rank": 6,
-            "allocated memory": 1817.138671875,
-            "max allocated memory": 2643.8134765625
+            "allocated memory": 1817.09375,
+            "max allocated memory": 1877.65087890625
         },
         {
             "rank": 7,
-            "allocated memory": 1817.138671875,
-            "max allocated memory": 2643.8134765625
+            "allocated memory": 1817.09375,
+            "max allocated memory": 1877.65087890625
         }
     ]
 }
