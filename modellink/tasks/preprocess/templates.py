@@ -494,7 +494,6 @@ _register_template(
 )
 
 
-
 _register_template(
     name="chatglm3_system",
     format_user=StringFormatter(slots=[{"token": "<|user|>"}, "\n", "{{content}}", {"token": "<|assistant|>"}]),
@@ -620,4 +619,15 @@ _register_template(
     name="llama2",
     format_user=StringFormatter(slots=[{"bos_token"}, "[INST] {{content}} [/INST]"]),
     format_system=StringFormatter(slots=["<<SYS>>\n{{content}}\n<</SYS>>\n\n"]),
+)
+
+
+_register_template(
+    name="alpaca",
+    format_user=StringFormatter(slots=["### Instruction:\n{{content}}\n\n### Response:\n"]),
+    format_separator=EmptyFormatter(slots=["\n\n"]),
+    default_system=(
+        "Below is an instruction that describes a task. "
+        "Write a response that appropriately completes the request.\n\n"
+    ),
 )

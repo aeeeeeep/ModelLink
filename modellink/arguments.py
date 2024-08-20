@@ -415,7 +415,7 @@ def _add_training_args(parser):
     group.add_argument('--jit-compile', action='store_true', default=False,
                        help='Setting jit compile mode to True')
     group.add_argument('--prompt-type', type=str, default=None,
-                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'chatml', 'chatml_de', 'qwen', 'llama3', 'llama2', 'mistral', 'mixtral', 'gemma'],
+                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'chatml', 'chatml_de', 'qwen', 'llama3', 'llama2', 'mistral', 'mixtral', 'gemma', 'alpaca'],
                        help='Which template to use for constructing prompts in training/inference.'
                             'e.g., "qwen"')
     group.add_argument('--pad-to-multiple-of', type=int, default=8,
