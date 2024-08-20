@@ -136,6 +136,7 @@ def emit(self, record):
         except Exception:
             self.handleError(record)
 
+
 def get_device(local_rank=None):
     backend = torch.distributed.get_backend()
     if backend == 'nccl':
