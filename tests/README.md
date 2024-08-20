@@ -13,7 +13,7 @@
         <th>Memory</th>
     </tr>
     <tr>
-        <td rowspan="5">ST</td>
+        <td rowspan="6">ST</td>
         <td rowspan="4">Pretrain</td>
         <td>Mcore</td>
         <td>TP，PP，VPP，重计算，enable_recompute_layers_per_pp_rank</td>
@@ -50,7 +50,16 @@
         <td rowspan="1">LoRA</td>
         <td>Legacy</td>
         <td>CCLoRA</td>
-        <td><a href="st/shell_scripts/tune_llama2_tp8_pp1_ptd.sh">tune_llama2_tp8_pp1_ptd.sh</a></td>
+        <td><a href="st/shell_scripts/tune_llama2_tp8_pp1_lora_ptd.sh">tune_llama2_tp8_pp1_lora_ptd.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td rowspan="1">FullSFT</td>
+        <td>Legacy</td>
+        <td>prompt_type</td>
+        <td><a href="st/shell_scripts/tune_qwen7b_tp8_pp1_full_ptd.sh">tune_qwen7b_tp8_pp1_full_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>

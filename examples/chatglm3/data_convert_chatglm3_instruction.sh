@@ -11,5 +11,5 @@ python ./preprocess_data.py \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF \
     --handler-name AlpacaStyleInstructionHandler \
-    --prompt-type chatglm3 \
+    --prompt-type chatglm3_system \
     # --map-keys '{"prompt":"instruction","query":"input","response":"output"}' # 默认值，可不传

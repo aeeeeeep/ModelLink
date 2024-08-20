@@ -17,7 +17,7 @@ from megatron.training import get_args
 from megatron.legacy.model.module import MegatronModule
 from megatron.legacy.model.enums import AttnMaskType
 from megatron.legacy.model.language_model import get_language_model, parallel_lm_logits
-from megatron.core.tensor_parallel.cross_entropy import vocab_parallel_cross_entropy
+from megatron.core import tensor_parallel
 from ..tasks.inference.text_generation import MegatronModuleForCausalLM
 
 

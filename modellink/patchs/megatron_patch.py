@@ -31,7 +31,7 @@ from ..model import (
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
     ParallelAttention_wrapper, transformer_language_model_init,
     ParallelAttentionForward, parallel_transformer_forward, parallel_mlp_init_wrapper,
-    rms_norm_init_wrapper, rms_norm_forward
+    rms_norm_init_wrapper, rms_norm_forward, post_language_model_processing
 )
 from ..core import (initialize_model_parallel_decorator,
                    build_generic_dataset, _build_document_sample_shuffle_indices,

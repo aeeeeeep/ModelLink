@@ -416,7 +416,7 @@ Alpaca风格示例：
 
 目前支持的模板有：
 
-`['default', 'chatglm3', 'chatml', 'qwen']`
+`['empty', 'default', 'chatglm3_system', 'chatml', 'qwen']`
 
 【--handler-name】
 
