@@ -1067,3 +1067,4 @@ ModelLink由华为公司的下列部门联合贡献 ：
 ## 安全声明
 
 [ModelLink安全声明](https://gitee.com/ascend/ModelLink/wikis/%E5%AE%89%E5%85%A8%E7%9B%B8%E5%85%B3/%E5%AE%89%E5%85%A8%E5%A3%B0%E6%98%8E)
+
