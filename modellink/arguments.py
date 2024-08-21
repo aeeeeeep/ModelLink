@@ -235,7 +235,7 @@ def _add_moe_args(parser):
     group.add_argument('--moe-router-topk', type=int, default=2,
                        help='Number of experts to route to for each token. The default is 2.')
     group.add_argument('--moe-router-load-balancing-type', type=str,
-                       choices=['aux_loss', "group_limited_greedy"],
+                       choices=['aux_loss', "group_limited_greedy", "softmax_topk"],
                        default='aux_loss',
                        help='Determines the load balancing strategy for the router. "aux_loss" corresponds '
                             'to the load balancing loss used in GShard and SwitchTransformer, "sinkhorn" corresponds '
@@ -565,9 +565,7 @@ def _validate_moe_expert_capacity_factor(args):
 
 def _validate_mla(args):
     if args.multi_head_latent_attention:
-        if args.q_lora_rank is None:
-            raise AssertionError('The parameter q-lora-rank should be set when use multi_head_latent_attention.')
-        elif args.kv_lora_rank is None:
+        if args.kv_lora_rank is None:
             raise AssertionError('The parameter kv-lora-rank should be set when use multi_head_latent_attention.')
         elif args.v_head_dim is None:
             raise AssertionError('The parameter v-head-dim should be set when use multi_head_latent_attention.')
