@@ -529,7 +529,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <th>Legacy</th>
       <td>2x8</td>
       <td>BF16 </td>
-      <td> 809 </td>
+      <td> 768 </td>
       <td> 730 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
