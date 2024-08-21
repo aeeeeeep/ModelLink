@@ -57,10 +57,38 @@ class MultiHeadLatentAttention(SelfAttention):
 
         query_projection_size = self.config.num_attention_heads * self.v_head_dim
         self.q_head_dim = self.qk_nope_head_dim + self.qk_rope_head_dim
+
+        if self.q_lora_rank is None:
+            self.q_rank = self.config.num_attention_heads * self.q_head_dim
+            self.q_layernorm = None
+        else:
+            self.q_rank = self.q_lora_rank
+            if submodules.q_layernorm is not None:
+                self.q_layernorm = build_module(
+                    submodules.q_layernorm,
+                    hidden_size=self.q_lora_rank,
+                    config=self.config,
+                    eps=self.config.layernorm_epsilon,
+                )
+            else:
+                self.q_layernorm = None
+            self.linear_qb = build_module(
+                submodules.linear_qb,
+                self.q_lora_rank,
+                self.config.num_attention_heads * self.q_head_dim,
+                config=self.config,
+                init_method=self.config.init_method,
+                gather_output=False,
+                bias=self.config.add_bias_linear or self.config.add_qkv_bias,
+                skip_bias_add=False,
+                is_expert=False,
+                tp_comm_buffer_name='qb',
+            )        
+        
         self.linear_qkv = build_module(
             submodules.linear_qkv,
             self.config.hidden_size,
-            self.q_lora_rank + self.kv_lora_rank + self.qk_rope_head_dim,
+            self.q_rank + self.kv_lora_rank + self.qk_rope_head_dim,
             config=self.config,
             init_method=self.config.init_method,
             gather_output=False,
@@ -68,28 +96,6 @@ class MultiHeadLatentAttention(SelfAttention):
             skip_bias_add=False,
             is_expert=False,
             tp_comm_buffer_name='qkv',
-        )
-        if submodules.q_layernorm is not None:
-            self.q_layernorm = build_module(
-                submodules.q_layernorm,
-                hidden_size=self.q_lora_rank,
-                config=self.config,
-                eps=self.config.layernorm_epsilon,
-            )
-        else:
-            self.q_layernorm = None
-
-        self.linear_qb = build_module(
-            submodules.linear_qb,
-            self.q_lora_rank,
-            self.config.num_attention_heads * self.q_head_dim,
-            config=self.config,
-            init_method=self.config.init_method,
-            gather_output=False,
-            bias=self.config.add_bias_linear or self.config.add_qkv_bias,
-            skip_bias_add=False,
-            is_expert=False,
-            tp_comm_buffer_name='qb',
         )
 
         if submodules.k_layernorm is not None:
@@ -154,12 +160,17 @@ class MultiHeadLatentAttention(SelfAttention):
         q_a, compressed_kv, k_pe = torch.split(
             mixed_x_layer,
             [
-                self.q_lora_rank, self.kv_lora_rank, self.qk_rope_head_dim,
+                self.q_rank, self.kv_lora_rank, self.qk_rope_head_dim,
             ],
             dim=-1)
 
-        q, _ = self.linear_qb(self.q_layernorm(q_a))
-        q = q.view(q_len, bsz, self.config.num_attention_heads, self.q_head_dim)
+        if self.q_layernorm is None:
+            q = q_a
+        else:
+            q, _ = self.linear_qb(self.q_layernorm(q_a))
+        
+        q = q.view(q_len, bsz, self.config.num_attention_heads, -1)
+
         q_nope, q_pe = torch.split(
             q, [self.qk_nope_head_dim, self.qk_rope_head_dim], dim=-1
         )
