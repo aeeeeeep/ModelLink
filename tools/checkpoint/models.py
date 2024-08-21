@@ -16,6 +16,7 @@ from megatron.core.enums import ModelType
 from megatron.training.checkpointing import load_args_from_checkpoint
 from megatron.training.global_vars import set_args
 from megatron.training.checkpointing import load_checkpoint
+from megatron.core import tensor_parallel
 from pretrain_gpt import model_provider
 from modellink.utils import parse_args
 from modellink.training import model_provider_func_wrapper
@@ -300,10 +301,9 @@ class HuggingfaceModel(ModelBase):
             load_dir = self.args_cmd.save_dir
         else:
             load_dir = self.args_cmd.load_dir
-
-        self.module = [
-            AutoModelForCausalLM.from_pretrained(load_dir, device_map=device_map, trust_remote_code=trust_remote_code).to(torch.bfloat16)
-        ]
+        self.module = [AutoModelForCausalLM.from_pretrained(load_dir, device_map=device_map, trust_remote_code=trust_remote_code)]
+        if self.args.torch_dtype in ["float16", "bfloat16"]:
+            self.module[0] = self.module[0].to(eval(f'torch.{self.args.torch_dtype}'))
 
     def get_module_mapping(self):
         self.module_mapping = self.model_cfg.get(self.args_cmd.model_name).get('model_hf_key_mapping')
@@ -585,6 +585,8 @@ class MegatronModel(ModelBase):
         self.__get_modules(from_pretrained=True, pp_stage_cache_flag=pp_stage_cache_flag)
 
     def __get_modules(self, from_pretrained=False, pp_stage_cache_flag=False):
+        if self.args.sequence_parallel:
+            tensor_parallel.model_parallel_cuda_manual_seed(123)
         # Initialize the dictionary for the parallel mode of the model
         pp_rank = self.get_pipeline_model_parallel_rank()
         if pp_stage_cache_flag and pp_rank < len(self.pp_stage_cache):
