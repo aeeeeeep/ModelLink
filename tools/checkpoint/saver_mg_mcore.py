@@ -16,13 +16,14 @@
 
 import os
 import sys
-import time
-import copy
+import logging as logger
 import torch
 from megatron.training.checkpointing import save_checkpoint
 from megatron.core import mpu
 from models import get_megatron_model
 
+logger.basicConfig(format="")
+logger.getLogger().setLevel(logger.INFO)
 
 def add_arguments(parser):
     group = parser.add_argument_group(title='Megatron saver')
@@ -30,21 +31,25 @@ def add_arguments(parser):
     group.add_argument('--megatron-path', type=str, default=None,
                        help='Base directory of Megatron repository')
 
-    group.add_argument('--target-tensor-parallel-size', type=int,
+    group.add_argument('--target-tensor-parallel-size', type=int, default=1,
                        help='Target tensor model parallel size, defaults to the tensor parallel size '
                             'in the input checkpoint if provided by the loader, otherwise to 1')
-    group.add_argument('--target-pipeline-parallel-size', type=int,
+    group.add_argument('--target-pipeline-parallel-size', type=int, default=1,
                        help='Target tensor model parallel size, default to the pipeline parall size '
                             'in the input checkpoint if provided by the loader, otherwise to 1')
     group.add_argument('--save-model-type', type=str, default='megatron',
-                       choices=['megatron'], help='Save model type')
+                       choices=['megatron', 'huggingface'], help='Save model type')
     group.add_argument("--w-pack", type=bool,
                        help='True is w_pack weight for llm',
                        default=False)
     group.add_argument('--num-layers-per-virtual-pipeline-stage', type=int, default=None,
                        help='Number of layers per virtual pipeline stage')
+    group.add_argument('--target-expert-parallel-size', type=int, default=1,
+                       help='Number of layers per virtual pipeline stage')
     group.add_argument('--num-layer-list',
                        type=str, help='a list of number of layers, seperated by comma; e.g., 4,4,4,4')
+    group.add_argument('--use-mcore-models', action='store_true',
+                       help='Use the implementation from megatron core')
 
 
 def update_padded_vocab_size(md, model_mg, orig_tensor, orig_word_embed):
@@ -55,7 +60,7 @@ def update_padded_vocab_size(md, model_mg, orig_tensor, orig_word_embed):
         padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
         model_mg.set_padded_vocab_size(padded_vocab_size)
     else:
-        print("Original vocab size not specified, leaving embedding table as-is. "
+        logger.warning("Original vocab size not specified, leaving embedding table as-is. "
               "If you've changed the tensor parallel size this could cause problems.")
         model_mg.set_padded_vocab_size(orig_word_embed.shape[0])
     margs = model_mg.get_args()
@@ -90,56 +95,259 @@ def reset_cmd_args_from_md(args, md):
         if hasattr(md, 'previous_tensor_parallel_size'):
             args.target_tensor_parallel_size = md.previous_tensor_parallel_size
         else:
-            print(
-                "loader did not provide a tensor parallel size and --target-tensor-parallel-size not provided on command line. "
-                "Default to 1.")
+            logger.warning("loader did not provide a tensor parallel size and "
+                  "--target-tensor-parallel-size not provided on command line. Default to 1.")
             args.target_tensor_parallel_size = 1
 
     if args.target_pipeline_parallel_size is None:
         if hasattr(md, 'previous_pipeline_parallel_size'):
             args.target_pipeline_parallel_size = md.previous_pipeline_parallel_size
         else:
-            print(
-                "loader did not provide a pipeline parallel size and --target-pipeline-parallel-size not provided on command line. "
-                "Default to 1.")
+            logger.warning(
+                "loader did not provide a pipeline parallel size and "
+                "--target-pipeline-parallel-size not provided on command line. Default to 1.")
             args.target_pipeline_parallel_size = 1
 
 
-def set_model_preprocess(model, embeddings_msg, check_message):
+def set_model_preprocess(model, embeddings_msg):
     md = model.get_metadata()
     margs = model.get_args()
     pos_embed = None
+    tp_size = margs.tensor_model_parallel_size
+    ep_size = margs.expert_model_parallel_size
     if md.position_embedding_type == 'learned_absolute':
-        pos_embed = embeddings_msg.pop("position embeddings")
-    orig_word_embed = embeddings_msg.pop("word embeddings")
+        pos_embed = embeddings_msg.pop(f"position embeddings")
+    orig_word_embed = embeddings_msg.pop(f"word embeddings")
     orig_word_embed_n_w, orig_word_embed_n_b = None, None
-    if "word embeddings norm_w" in embeddings_msg and "word embeddings norm_b" in embeddings_msg:
-        orig_word_embed_n_w = embeddings_msg.pop("word embeddings norm_w")
-        orig_word_embed_n_b = embeddings_msg.pop("word embeddings norm_b")
-    check_message(embeddings_msg)
-
-    if md.true_vocab_size is not None:
-        orig_vocab_size = orig_word_embed.shape[0]
-        full_word_embed = vocab_padding(orig_vocab_size, margs.padded_vocab_size, orig_word_embed)
-    else:
-        full_word_embed = orig_word_embed
-
-    # Split into new tensor model parallel sizes  tensor_model_parallel_size
-    out_word_embed = torch.chunk(full_word_embed, margs.tensor_model_parallel_size, dim=0)
-
-    modules_count = model.get_modules_count()
-    for tp_rank in range(modules_count):
-        model.set_embedding_word_embeddings_weight(tp_rank=tp_rank, data=out_word_embed[tp_rank])
-        if orig_word_embed_n_w is not None:
-            model.set_embedding_word_embeddings_norm_weight(tp_rank=tp_rank, data=orig_word_embed_n_w)
-            model.set_embedding_word_embeddings_norm_bias(tp_rank=tp_rank, data=orig_word_embed_n_b)
-        if pos_embed is not None:
-            model.set_embedding_position_embeddings_weight(tp_rank=tp_rank, data=pos_embed)
+    if (f"word embeddings norm_w" in embeddings_msg and
+            f"word embeddings norm_b" in embeddings_msg
+    ):
+        orig_word_embed_n_w = embeddings_msg.pop(f"word embeddings norm_w")
+        orig_word_embed_n_b = embeddings_msg.pop(f"word embeddings norm_b")
+    out_word_embed_list = []
+    for ep_rank in range(ep_size):
+        if md.true_vocab_size is not None:
+            orig_vocab_size = orig_word_embed.shape[0]
+            full_word_embed = vocab_padding(orig_vocab_size, margs.padded_vocab_size, orig_word_embed)
         else:
-            if hasattr(model.get_embedding_module(), 'position_embeddings'):
-                raise ValueError("model should have position_embeddings")
+            full_word_embed = orig_word_embed
 
-    return out_word_embed
+        # Split into new tensor model parallel sizes  tensor_model_parallel_size
+        out_word_embed = torch.chunk(full_word_embed, margs.tensor_model_parallel_size, dim=0)
+        for tp_rank in range(tp_size):
+            model.set_embedding_word_embeddings_weight(ep_rank=ep_rank, tp_rank=tp_rank, data=out_word_embed[tp_rank])
+            if orig_word_embed_n_w is not None:
+                model.set_embedding_word_embeddings_norm_weight(ep_rank=ep_rank, tp_rank=tp_rank, data=orig_word_embed_n_w)
+                model.set_embedding_word_embeddings_norm_bias(ep_rank=ep_rank, tp_rank=tp_rank, data=orig_word_embed_n_b)
+            if pos_embed is not None:
+                model.set_embedding_position_embeddings_weight(ep_rank=ep_rank, tp_rank=tp_rank, data=pos_embed)
+            else:
+                if hasattr(model.get_embedding_module(), 'position_embeddings'):
+                    raise ValueError("model should have position_embeddings")
+
+        out_word_embed_list.append(out_word_embed)
+
+    return out_word_embed_list
+
+
+def set_model_layer_norm(model_mg, msg, md, **kwargs):
+    # duplicated tensors
+    input_norm_weight = msg.pop("input norm weight")
+    input_norm_bias = None
+    post_norm_bias = None
+    if md.norm_has_bias:
+        input_norm_bias = msg.pop("input norm bias")
+    post_norm_weight = msg.pop("post norm weight")
+    if md.norm_has_bias:
+        post_norm_bias = msg.pop("post norm bias")
+
+    margs = model_mg.get_args()
+
+    # Save them to the model
+    for ep_rank in range(margs.expert_model_parallel_size):
+        kwargs["ep_rank"] = ep_rank
+        for tp_rank in range(margs.tensor_model_parallel_size):
+            kwargs["tp_rank"] = tp_rank
+
+            model_mg.set_layers_input_layernorm_weight(**kwargs, data=input_norm_weight)
+            if input_norm_bias:
+                model_mg.set_layers_input_layernorm_bias(**kwargs, data=input_norm_bias)
+            model_mg.set_layers_self_attention_pre_mlp_layernorm_weight(**kwargs, data=post_norm_weight)
+            if post_norm_bias:
+                model_mg.set_layers_self_attention_pre_mlp_layernorm_bias(**kwargs, data=post_norm_bias)
+
+
+def set_model_layer_attn(model_mg, msg, md, **kwargs):
+    # duplicated tensors
+    if md.linear_bias:
+        dense_bias = msg.pop("dense bias")
+    margs = model_mg.get_args()
+    if margs.add_qkv_bias:
+        qkv_bias = torch.chunk(msg.pop("qkv bias"), margs.tensor_model_parallel_size, dim=0)
+    if margs.add_dense_bias:
+        dense_bias = msg.pop("dense bias")
+
+    qkv_org = msg.pop("qkv weight")
+    qkv_weight = torch.chunk(qkv_org, margs.tensor_model_parallel_size, dim=0)
+
+    # Split up the parallel tensors
+    dense_weight = torch.chunk(msg.pop("dense weight"), margs.tensor_model_parallel_size, dim=1)
+
+    if md.linear_bias:
+        qkv_bias = torch.chunk(msg.pop("qkv bias"), margs.tensor_model_parallel_size, dim=0)
+
+    # Save them to the model
+    for ep_rank in range(margs.expert_model_parallel_size):
+        kwargs["ep_rank"] = ep_rank
+        for tp_rank in range(margs.tensor_model_parallel_size):
+            kwargs["tp_rank"] = tp_rank
+            model_mg.set_layers_self_attention_linear_qkv_weight(**kwargs, data=qkv_weight[tp_rank])
+            model_mg.set_layers_self_attention_linear_proj_weight(**kwargs, data=dense_weight[tp_rank])
+
+            if md.linear_bias:
+                model_mg.set_layers_self_attention_linear_qkv_bias(**kwargs, data=qkv_bias[tp_rank])
+                model_mg.set_layers_self_attention_linear_proj_bias(**kwargs, data=dense_bias)
+
+            if margs.add_qkv_bias:
+                model_mg.set_layers_self_attention_linear_qkv_bias(**kwargs, data=qkv_bias[tp_rank])
+            if margs.add_dense_bias:
+                model_mg.set_layers_self_attention_linear_proj_bias(**kwargs, data=dense_bias)
+
+
+def _set_set_model_layer_mlp(model_mg, msg, md, **kwargs):
+    margs = model_mg.get_args()
+    num_experts_local = 1
+    if margs.num_experts:
+        num_experts_local = margs.num_experts // margs.expert_model_parallel_size
+    # Save them to the model
+
+    if md.linear_bias:
+        mlp_l1_bias = msg.pop(f"mlp l1 bias")
+    # Split up the parallel tensors
+    mlp_l1_weight = torch.chunk(msg.pop(f"mlp l1 weight"), margs.tensor_model_parallel_size, dim=1)
+
+    # Special handling for swiglu
+    if md.swiglu:
+        mlp_l0_weight_W = torch.chunk(msg.pop(f"mlp l0 weight W"), margs.tensor_model_parallel_size, dim=0)
+        mlp_l0_weight_V = torch.chunk(msg.pop(f"mlp l0 weight V"), margs.tensor_model_parallel_size, dim=0)
+        mlp_l0_weight = [torch.cat(weights, dim=0) for weights in zip(mlp_l0_weight_W, mlp_l0_weight_V)]
+    else:
+        mlp_l0_weight = torch.chunk(msg.pop(f"mlp l0 weight"), margs.tensor_model_parallel_size, dim=0)
+    if md.linear_bias:
+        if md.swiglu:
+            mlp_l0_bias_W = torch.chunk(msg.pop(f"mlp l0 bias W"), margs.tensor_model_parallel_size, dim=0)
+            mlp_l0_bias_V = torch.chunk(msg.pop(f"mlp l0 bias V"), margs.tensor_model_parallel_size, dim=0)
+            mlp_l0_bias = [torch.cat(bias, dim=0) for bias in zip(mlp_l0_bias_W, mlp_l0_bias_V)]
+        else:
+            mlp_l0_bias = torch.chunk(msg.pop(f"mlp l0 bias"), margs.tensor_model_parallel_size, dim=0)
+
+    # duplicated tensors
+    for tp_rank in range(margs.tensor_model_parallel_size):
+        kwargs["tp_rank"] = tp_rank
+        model_mg.set_layers_mlp_linear_fc1_weight(**kwargs, data=mlp_l0_weight[tp_rank])
+        model_mg.set_layers_mlp_linear_fc2_weight(**kwargs, data=mlp_l1_weight[tp_rank])
+
+        if md.linear_bias:
+            model_mg.set_layers_mlp_linear_fc1_bias(**kwargs, data=mlp_l0_bias[tp_rank])
+            model_mg.set_layers_mlp_linear_fc2_bias(**kwargs, data=mlp_l1_bias)
+
+
+def set_model_layer_mlp(model_mg, msg, md, **kwargs):
+    margs = model_mg.get_args()
+    if margs.num_experts:
+        num_experts_local = margs.num_experts // margs.expert_model_parallel_size
+        mlp_moe = msg.pop("mlp_moe")
+        mlp_router_weight = mlp_moe.pop("mlp router weight")
+        for ep_rank in range(margs.expert_model_parallel_size):
+            kwargs["ep_rank"] = ep_rank
+            for tp_rank in range(margs.tensor_model_parallel_size):
+                kwargs['tp_rank'] = tp_rank
+                model_mg.set_layers_mlp_router_weight(**kwargs, data=mlp_router_weight)
+            for expert_idx in range(num_experts_local):
+                kwargs["expert_idx"] = expert_idx
+                global_expert_idx = expert_idx + ep_rank * num_experts_local
+                expert = mlp_moe.pop(f"expert {global_expert_idx}")
+                _set_set_model_layer_mlp(model_mg, expert, md, **kwargs)
+    else:
+        _set_set_model_layer_mlp(model_mg, msg, md, **kwargs)
+
+
+def set_model_postprocess(model_mg, msg, md, out_word_embed_list, **kwargs):
+    margs = model_mg.get_args()
+    tp_size = margs.tensor_model_parallel_size
+    ep_size = margs.expert_model_parallel_size
+    final_norm_weight = msg.pop(f"weight")
+    final_norm_bias = None
+    if md.norm_has_bias:
+        final_norm_bias = msg.pop(f"bias")
+    for ep_rank in range(ep_size):
+        kwargs["ep_rank"] = ep_rank
+        for tp_rank in range(tp_size):
+            kwargs["tp_rank"] = tp_rank
+            model_mg.set_final_layernorm_weight(**kwargs, data=final_norm_weight)
+            if final_norm_bias:
+                model_mg.set_final_layernorm_bias(**kwargs, data=final_norm_bias)
+            if kwargs.get("pp_rank", 0) and not md.output_layer:
+                # Copy word embeddings to final pipeline rank
+                model_mg.set_output_layer_weight(**kwargs, data=out_word_embed_list[ep_rank][tp_rank])
+    del final_norm_weight
+    if final_norm_bias:
+        del final_norm_bias
+
+
+def set_model_output_layer(model_mg, msg, md, **kwargs):
+    margs = model_mg.get_args()
+    tp_size = margs.tensor_model_parallel_size
+    ep_size = margs.expert_model_parallel_size
+    output_layer = msg.pop(f"weight")
+    for ep_rank in range(ep_size):
+        kwargs["ep_rank"] = ep_rank
+        if md.true_vocab_size is not None:
+            orig_vocab_size = output_layer.shape[0]
+            full_word_embed = vocab_padding(orig_vocab_size, margs.padded_vocab_size, output_layer)
+        else:
+            full_word_embed = output_layer
+        output_layer_weight = torch.chunk(full_word_embed, margs.tensor_model_parallel_size, dim=0)
+        for tp_rank in range(tp_size):
+            kwargs["tp_rank"] = tp_rank
+            model_mg.set_output_layer_weight(**kwargs, data=output_layer_weight[tp_rank])
+
+
+def save_model(model_mg, md, **kwargs):
+    margs = model_mg.get_args()
+    args_cmd = model_mg.get_args_cmd()
+    virtual_pipeline_model_parallel_size = margs.virtual_pipeline_model_parallel_size
+    if virtual_pipeline_model_parallel_size is None:
+        virtual_pipeline_model_parallel_size = 1
+    for ep_rank in range(margs.expert_model_parallel_size):
+        model_mg.set_expert_model_parallel_rank(ep_rank)
+        kwargs["ep_rank"] = ep_rank
+        for tp_rank in range(margs.tensor_model_parallel_size):
+            model_mg.set_tensor_model_parallel_rank(tp_rank)
+            kwargs["tp_rank"] = tp_rank
+            vp_models = []
+            for vp_rank in range(virtual_pipeline_model_parallel_size):
+                kwargs["vp_rank"] = vp_rank
+                vp_models.append(model_mg.get_model_item(**kwargs))
+            if args_cmd.save_model_type == 'megatron':
+                # Split the PP into multiple VPPs and select the corresponding layers for each VPP by copying and deleting
+                save_checkpoint(md.iteration, vp_models, None, None, 0)
+            elif args_cmd.save_model_type == "huggingface":
+                save_huggingface(args_cmd, model_mg)
+
+
+def save_huggingface(args, model):
+    '''Set model params.'''
+    from models import get_huggingface_model
+    model_hf = get_huggingface_model(args)
+    model_hf.get_modules_from_pretrained()
+    args_cmd = model_hf.get_args_cmd()
+
+    model_hf.update_module(model)
+
+    save_dir = os.path.join(args_cmd.save_dir, 'mg2hf')
+    logger.info(f'save weight to {save_dir}')
+    model_hf.get_model_item().save_pretrained(save_dir)
 
 
 def save_model_checkpoint(queue, args):
@@ -154,14 +362,14 @@ def save_model_checkpoint(queue, args):
     def queue_get(name=None):
         val = queue.get()
         if val == "exit":
-            print("Loader exited, exiting saver")
+            logger.error("Loader exited, exiting saver")
             exit(1)
         if name is not None and args.checking and val["name"] != name:
             val_name = val["name"]
-            print(f'Unexpected message. Expecting "{name}" but got "{val_name}". Exiting saver.')
+            logger.error(f'Unexpected message. Expecting "{name}" but got "{val_name}". Exiting saver.')
             exit(1)
         if name is not None:
-            print(f"received {name}")
+            logger.info(f"received {name}")
         return val
 
     def check_message(msg):
@@ -169,10 +377,10 @@ def save_model_checkpoint(queue, args):
             return
         msg_name = msg.pop("name")
         if len(msg.keys()) > 0:
-            print(f"Unexpected values in {msg_name}:")
+            logger.error(f"Unexpected values in {msg_name}:")
             for key in msg.keys():
-                print(f"   {key}")
-            print(f"Exiting. If you want to ignore this, use the argument --no-checking.")
+                logger.error(f"   {key}")
+            logger.error(f"Exiting. If you want to ignore this, use the argument --no-checking.")
             exit(1)
 
     md = queue_get()
@@ -185,182 +393,59 @@ def save_model_checkpoint(queue, args):
 
     # We want all arguments to come from us
     model_mg = get_megatron_model(args_cmd=args, md=md)
-    model_mg.initialize_megatron_args(queue=queue)
+    model_mg.initialize_megatron_args(queue=queue, saver_megatron=True)
 
     # Make models for first pipeline stage and fill in embeddings
     mpu.set_pipeline_model_parallel_rank(0)
     post_process = args.target_pipeline_parallel_size == 1
-    model_mg.get_modules_from_config(args.target_tensor_parallel_size, pre_process=True, post_process=post_process)
+    model_mg.get_modules_from_config(pp_stage_cache_flag=True)
 
     # Embeddings
     embeddings_msg = queue_get("embeddings")
-    out_word_embed = set_model_preprocess(model_mg, embeddings_msg, check_message)
-
+    out_word_embed_list = set_model_preprocess(model_mg, embeddings_msg)
+    check_message(embeddings_msg)
     margs = model_mg.get_args()
 
     # Transformer layers
     # -------------------
     total_layer_num = 0
-    lst = []
-    if args.num_layers_per_virtual_pipeline_stage and args.save_model_type == 'megatron':
-        times = 3
-        while queue.qsize() > 3 or times >= 0:
-            if times >= 0:
-                time.sleep(1)
-                times -= 1
-                continue
-            lst.append(queue.get())
-    for pp_rank in range(args.target_pipeline_parallel_size):
-        # For later pipeline parallel ranks, make the new models
-        if pp_rank > 0:
+
+    virtual_pipeline_model_parallel_size = margs.virtual_pipeline_model_parallel_size
+    if virtual_pipeline_model_parallel_size is None:
+        virtual_pipeline_model_parallel_size = 1
+
+    for vp_rank in range(virtual_pipeline_model_parallel_size):
+        model_mg.set_virtual_pipeline_model_parallel_rank(vp_rank)
+        kwargs = {"vp_rank": vp_rank}
+        for pp_rank in range(args.target_pipeline_parallel_size):
+            # For later pipeline parallel ranks, make the new models
             mpu.set_pipeline_model_parallel_rank(pp_rank)
-            post_process = pp_rank == args.target_pipeline_parallel_size - 1
-            model_mg.get_modules_from_config(args.target_tensor_parallel_size, False, post_process)
-
-        if args.num_layers_per_virtual_pipeline_stage and args.save_model_type == 'megatron':
-            vp_size = margs.num_layers // args.target_pipeline_parallel_size // args.num_layers_per_virtual_pipeline_stage
-        else:
-            vp_size = 1
-        for vpp_rank in range(vp_size):
-            for layer in range(len(model_mg.get_layers_module()) // vp_size):
-                if args.num_layers_per_virtual_pipeline_stage and args.save_model_type == 'megatron':
-                    # The execution order between layers in the VPP model is different from that in the PP model. Here,
-                    # it is necessary to calculate the index and arrange the layers in the actual execution order
-                    total_layer_num = args.target_pipeline_parallel_size * vpp_rank * args.num_layers_per_virtual_pipeline_stage + pp_rank * args.num_layers_per_virtual_pipeline_stage + layer
-                    msg = lst[total_layer_num]
-                else:
-                    msg = queue_get(f"transformer layer {total_layer_num}")
-
-                # duplicated tensors
-                input_norm_weight = msg.pop("input norm weight")
-                if md.norm_has_bias:
-                    input_norm_bias = msg.pop("input norm bias")
-                post_norm_weight = msg.pop("post norm weight")
-                if md.norm_has_bias:
-                    post_norm_bias = msg.pop("post norm bias")
-                if md.linear_bias:
-                    dense_bias = msg.pop("dense bias")
-                    mlp_l1_bias = msg.pop("mlp l1 bias")
-
-                if args.add_qkv_bias:
-                    qkv_bias = torch.chunk(msg.pop("qkv bias"), args.target_tensor_parallel_size, dim=0)
-                if args.add_dense_bias:
-                    dense_bias = msg.pop("dense bias")
-
-                qkv_org = msg.pop("qkv weight")
-                qkv_weight = torch.chunk(qkv_org, args.target_tensor_parallel_size, dim=0)
-
-                # Split up the parallel tensors
-                dense_weight = torch.chunk(msg.pop("dense weight"), args.target_tensor_parallel_size, dim=1)
-                mlp_l1_weight = torch.chunk(msg.pop("mlp l1 weight"), args.target_tensor_parallel_size, dim=1)
-
-                # Special handling for swiglu
-                if md.swiglu:
-                    mlp_l0_weight_W = torch.chunk(msg.pop("mlp l0 weight W"), args.target_tensor_parallel_size, dim=0)
-                    mlp_l0_weight_V = torch.chunk(msg.pop("mlp l0 weight V"), args.target_tensor_parallel_size, dim=0)
-                    mlp_l0_weight = [torch.cat(weights, dim=0) for weights in zip(mlp_l0_weight_W, mlp_l0_weight_V)]
-                else:
-                    mlp_l0_weight = torch.chunk(msg.pop("mlp l0 weight"), args.target_tensor_parallel_size, dim=0)
-
-                if md.linear_bias:
-                    qkv_bias = torch.chunk(msg.pop("qkv bias"), args.target_tensor_parallel_size, dim=0)
-                    if md.swiglu:
-                        mlp_l0_bias_W = torch.chunk(msg.pop("mlp l0 bias W"), args.target_tensor_parallel_size, dim=0)
-                        mlp_l0_bias_V = torch.chunk(msg.pop("mlp l0 bias V"), args.target_tensor_parallel_size, dim=0)
-                        mlp_l0_bias = [torch.cat(bias, dim=0) for bias in zip(mlp_l0_bias_W, mlp_l0_bias_V)]
-                    else:
-                        mlp_l0_bias = torch.chunk(msg.pop("mlp l0 bias"), args.target_tensor_parallel_size, dim=0)
-
-                # Save them to the model
-                for tp_rank in range(args.target_tensor_parallel_size):
-                    if args.num_layers_per_virtual_pipeline_stage and args.save_model_type == 'megatron':
-                        l_idx = vpp_rank * args.num_layers_per_virtual_pipeline_stage + layer
-                    else:
-                        l_idx = layer
-
-                    model_mg.set_layers_input_layernorm_weight(tp_rank=tp_rank, layer_idx=l_idx, data=input_norm_weight)
-                    if md.norm_has_bias:
-                        model_mg.set_layers_input_layernorm_bias(tp_rank=tp_rank, layer_idx=l_idx, data=input_norm_bias)
-                    model_mg.set_layers_self_attention_linear_qkv_weight(tp_rank=tp_rank, layer_idx=l_idx, data=qkv_weight[tp_rank])
-                    model_mg.set_layers_self_attention_linear_proj_weight(tp_rank=tp_rank, layer_idx=l_idx, data=dense_weight[tp_rank])
-                    model_mg.set_layers_self_attention_pre_mlp_layernorm_weight(tp_rank=tp_rank, layer_idx=l_idx, data=post_norm_weight)
-                    if md.norm_has_bias:
-                        model_mg.set_layers_self_attention_pre_mlp_layernorm_bias(tp_rank=tp_rank, layer_idx=l_idx, data=post_norm_bias)
-
-                    model_mg.set_layers_mlp_linear_fc1_weight(tp_rank=tp_rank, layer_idx=l_idx, data=mlp_l0_weight[tp_rank])
-                    model_mg.set_layers_mlp_linear_fc2_weight(tp_rank=tp_rank, layer_idx=l_idx, data=mlp_l1_weight[tp_rank])
-
-                    if md.linear_bias:
-                        model_mg.set_layers_self_attention_linear_qkv_bias(tp_rank=tp_rank, layer_idx=l_idx, data=qkv_bias[tp_rank])
-                        model_mg.set_layers_self_attention_linear_proj_bias(tp_rank=tp_rank, layer_idx=l_idx, data=dense_bias)
-                        model_mg.set_layers_mlp_linear_fc1_bias(tp_rank=tp_rank, layer_idx=l_idx, data=mlp_l0_bias[tp_rank])
-                        model_mg.set_layers_mlp_linear_fc2_bias(tp_rank=tp_rank, layer_idx=l_idx, data=mlp_l1_bias)
-
-                    if args.add_qkv_bias:
-                        model_mg.set_layers_self_attention_linear_qkv_bias(tp_rank=tp_rank, layer_idx=l_idx, data=qkv_bias[tp_rank])
-                    if args.add_dense_bias:
-                        model_mg.set_layers_self_attention_linear_proj_bias(tp_rank=tp_rank, layer_idx=l_idx, data=dense_bias)
+            model_mg.get_modules_from_config(pp_stage_cache_flag=True)
+            kwargs["pp_rank"] = pp_rank
+            for layer in range(len(model_mg.get_layers_module())):
+                kwargs["layer_idx"] = layer
+                msg = queue_get(f"transformer layer {total_layer_num}")
+                set_model_layer_norm(model_mg, msg, md, **kwargs)
+                set_model_layer_attn(model_mg, msg, md, **kwargs)
+                set_model_layer_mlp(model_mg, msg, md, **kwargs)
 
                 total_layer_num = total_layer_num + 1
                 check_message(msg)
 
-        if post_process:
-            msg = queue_get("final norm")
-            final_norm_weight = msg.pop("weight")
-            if md.norm_has_bias:
-                final_norm_bias = msg.pop("bias")
-            for tp_rank in range(args.target_tensor_parallel_size):
-                model_mg.set_final_layernorm_weight(tp_rank=tp_rank, data=final_norm_weight)
-                if md.norm_has_bias:
-                    model_mg.set_final_layernorm_bias(tp_rank=tp_rank, data=final_norm_bias)
-                if pp_rank != 0 and not md.output_layer:
-                    # Copy word embeddings to final pipeline rank
-                    model_mg.set_output_layer_weight(tp_rank=tp_rank, data=out_word_embed[tp_rank])
-            del final_norm_weight
-            if md.norm_has_bias:
-                del final_norm_bias
-            check_message(msg)
-
-            if md.output_layer:
-                msg = queue_get("output layer")
-                output_layer = msg.pop("weight")
-                if md.true_vocab_size is not None:
-                    orig_vocab_size = output_layer.shape[0]
-                    full_word_embed = vocab_padding(orig_vocab_size, margs.padded_vocab_size, output_layer)
-                else:
-                    full_word_embed = output_layer
-
-                output_layer_weight = torch.chunk(full_word_embed, args.target_tensor_parallel_size, dim=0)
-
-                for tp_rank in range(args.target_tensor_parallel_size):
-                    model_mg.set_output_layer_weight(tp_rank=tp_rank, data=output_layer_weight[tp_rank])
-                del output_layer_weight
+            post_process = (
+                    (pp_rank == args.target_pipeline_parallel_size - 1) &
+                    (vp_rank == virtual_pipeline_model_parallel_size - 1)
+            )
+            if post_process:
+                msg = queue_get("final norm")
+                set_model_postprocess(model_mg, msg, md, out_word_embed_list, **kwargs)
                 check_message(msg)
-            msg = queue_get()
 
-        for tp_rank in range(args.target_tensor_parallel_size):
-            mpu.set_tensor_model_parallel_rank(tp_rank)
-            # Split the PP into multiple VPPs and select the corresponding layers for each VPP by copying and deleting
-            if args.num_layers_per_virtual_pipeline_stage:
-                vp_models = []
-                layers = margs.num_layers // args.target_pipeline_parallel_size
-                for vp_rank in range(vp_size):
-                    model = copy.deepcopy(model_mg.get_model_module(tp_rank=tp_rank))
-                    left = vp_rank * args.num_layers_per_virtual_pipeline_stage
-                    right = (vp_rank + 1) * args.num_layers_per_virtual_pipeline_stage
-                    for i in range(layers - 1, -1, -1):
-                        if i >= right or i < left:
-                            del model.decoder.layers[i]
-                    if right < layers and pp_rank == args.target_pipeline_parallel_size - 1:
-                        del model.decoder.final_layernorm
-                        if getattr(model, "output_layer", None):
-                            model.post_process = False
-                            del model.output_layer
-                    if pp_rank == 0 and vp_rank > 0:
-                        model.pre_process = False
-                        del model.embedding
-                    vp_models.append(model)
-                save_checkpoint(md.iteration, vp_models, None, None, 0)
-            else:
-                save_checkpoint(md.iteration, [model_mg.get_model_module(tp_rank=tp_rank)], None, None, 0)
-    print("Done!")
+                if md.output_layer:
+                    msg = queue_get("output layer")
+                    set_model_output_layer(model_mg, msg, md, **kwargs)
+                    check_message(msg)
+
+            if vp_rank == virtual_pipeline_model_parallel_size - 1:
+                save_model(model_mg, md, **kwargs)
+    logger.info("Done!")
