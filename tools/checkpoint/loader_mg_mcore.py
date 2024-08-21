@@ -21,7 +21,7 @@ def add_arguments(parser):
                        help='Path to the vocab file. If specified will use this to get vocab size and '
                        'trim padding from the embedding table.')
     group.add_argument('--megatron-path', type=str, default=None,
-                       help='Base directory of deepspeed repository')
+                       help='Base directory of megatron repository')
     parser.add_argument('--add-qkv-bias', action='store_true',
                        help='Add bias for attention qkv', default=False,
     )
@@ -133,8 +133,6 @@ def get_message_layer_attn(message, model, md=None, **kwargs):
     message["qkv weight"] = torch.cat(qkv_weight, dim=0)
     message["dense weight"] = torch.cat(dense_weight, dim=1)
     if md.linear_bias or margs.add_qkv_bias:
-        message["qkv bias"] = torch.cat(qkv_bias, dim=0)
-    if margs.add_qkv_bias:
         message["qkv bias"] = torch.cat(qkv_bias, dim=0)
 
     if md.linear_bias:
@@ -273,8 +271,8 @@ def _load_checkpoint(queue, args):
             model_mg.set_pipeline_model_parallel_rank(pp_rank)
             model_mg.get_modules_from_pretrained(pp_stage_cache_flag=True)
             kwargs = {"vp_rank": vp_rank, 'pp_rank': pp_rank}
-            for layer_num in range(len(model_mg.get_layers_module(**kwargs))):
-                kwargs["layer_idx"] = layer_num
+            for layer_idx in range(len(model_mg.get_layers_module(**kwargs))):
+                kwargs["layer_idx"] = layer_idx
                 message = {}
                 message = get_message_layer_norm(message, model_mg, md, **kwargs)
                 message = get_message_layer_attn(message, model_mg, md, **kwargs)

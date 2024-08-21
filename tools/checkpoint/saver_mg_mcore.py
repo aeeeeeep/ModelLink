@@ -25,6 +25,7 @@ from models import get_megatron_model
 logger.basicConfig(format="")
 logger.getLogger().setLevel(logger.INFO)
 
+
 def add_arguments(parser):
     group = parser.add_argument_group(title='Megatron saver')
 
@@ -119,11 +120,10 @@ def set_model_preprocess(model, embeddings_msg):
         pos_embed = embeddings_msg.pop(f"position embeddings")
     orig_word_embed = embeddings_msg.pop(f"word embeddings")
     orig_word_embed_n_w, orig_word_embed_n_b = None, None
-    if (f"word embeddings norm_w" in embeddings_msg and
-            f"word embeddings norm_b" in embeddings_msg
-    ):
+    if "word embeddings norm_w" in embeddings_msg:
         orig_word_embed_n_w = embeddings_msg.pop(f"word embeddings norm_w")
-        orig_word_embed_n_b = embeddings_msg.pop(f"word embeddings norm_b")
+        if "word embeddings norm_b" in embeddings_msg:
+            orig_word_embed_n_b = embeddings_msg.pop(f"word embeddings norm_b")
     out_word_embed_list = []
     for ep_rank in range(ep_size):
         if md.true_vocab_size is not None:
@@ -138,7 +138,8 @@ def set_model_preprocess(model, embeddings_msg):
             model.set_embedding_word_embeddings_weight(ep_rank=ep_rank, tp_rank=tp_rank, data=out_word_embed[tp_rank])
             if orig_word_embed_n_w is not None:
                 model.set_embedding_word_embeddings_norm_weight(ep_rank=ep_rank, tp_rank=tp_rank, data=orig_word_embed_n_w)
-                model.set_embedding_word_embeddings_norm_bias(ep_rank=ep_rank, tp_rank=tp_rank, data=orig_word_embed_n_b)
+                if orig_word_embed_n_b is not None:
+                    model.set_embedding_word_embeddings_norm_bias(ep_rank=ep_rank, tp_rank=tp_rank, data=orig_word_embed_n_b)
             if pos_embed is not None:
                 model.set_embedding_position_embeddings_weight(ep_rank=ep_rank, tp_rank=tp_rank, data=pos_embed)
             else:
@@ -153,11 +154,11 @@ def set_model_preprocess(model, embeddings_msg):
 def set_model_layer_norm(model_mg, msg, md, **kwargs):
     # duplicated tensors
     input_norm_weight = msg.pop("input norm weight")
+    post_norm_weight = msg.pop("post norm weight")
     input_norm_bias = None
     post_norm_bias = None
     if md.norm_has_bias:
         input_norm_bias = msg.pop("input norm bias")
-    post_norm_weight = msg.pop("post norm weight")
     if md.norm_has_bias:
         post_norm_bias = msg.pop("post norm bias")
 
@@ -179,22 +180,17 @@ def set_model_layer_norm(model_mg, msg, md, **kwargs):
 
 def set_model_layer_attn(model_mg, msg, md, **kwargs):
     # duplicated tensors
-    if md.linear_bias:
+    if md.linear_bias or margs.add_dense_bias:
         dense_bias = msg.pop("dense bias")
     margs = model_mg.get_args()
-    if margs.add_qkv_bias:
+    if md.linear_bias or margs.add_qkv_bias:
         qkv_bias = torch.chunk(msg.pop("qkv bias"), margs.tensor_model_parallel_size, dim=0)
-    if margs.add_dense_bias:
-        dense_bias = msg.pop("dense bias")
 
     qkv_org = msg.pop("qkv weight")
     qkv_weight = torch.chunk(qkv_org, margs.tensor_model_parallel_size, dim=0)
 
     # Split up the parallel tensors
     dense_weight = torch.chunk(msg.pop("dense weight"), margs.tensor_model_parallel_size, dim=1)
-
-    if md.linear_bias:
-        qkv_bias = torch.chunk(msg.pop("qkv bias"), margs.tensor_model_parallel_size, dim=0)
 
     # Save them to the model
     for ep_rank in range(margs.expert_model_parallel_size):
