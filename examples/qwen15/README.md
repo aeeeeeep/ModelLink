@@ -1105,11 +1105,11 @@ Qwen1.5-14B 训练的硬件配置:
        --model-type GPT \
        --loader llama2_hf \
        --saver megatron \
-       --target-tensor-parallel-size 8 \
-       --target-pipeline-parallel-size 1 \
+       --target-tensor-parallel-size 4 \
+       --target-pipeline-parallel-size 2 \
        --make-vocab-size-divisible-by 16 \
        --load-dir ./model_from_hf/Qwen1.5-14B/ \
-       --save-dir ./model_weights/Qwen1.5-14B-v0.1-tp8-pp1/ \
+       --save-dir ./model_weights/Qwen1.5-14B-v0.1-tp4-pp2/ \
        --tokenizer-model ./model_from_hf/Qwen1.5-14B/tokenizer.json \
        --add-qkv-bias \
        --params-dtype bf16 
@@ -1129,7 +1129,7 @@ Qwen1.5-14B 训练的硬件配置:
        --target-tensor-parallel-size 1 \
        --target-pipeline-parallel-size 1 \
        --add-qkv-bias \
-       --load-dir ./model_weights/Qwen1.5-14B-v0.1-tp8-pp1 \
+       --load-dir ./model_weights/Qwen1.5-14B-v0.1-tp4-pp2 \
        --save-dir ./model_from_hf/Qwen1.5-14B 		# 需要填入原始HF模型路径，新权重会存于./model_from_hf/Qwen1.5-14B/mg2hg/
    ```
    
@@ -1169,7 +1169,7 @@ Qwen1.5-14B 训练的硬件配置:
    CKPT_SAVE_DIR="./ckpt/Qwen1.5-14B"
    TOKENIZER_PATH="./model_from_hf/Qwen1.5-14B"  #词表路径
    DATA_PATH="./dataset/Qwen1.5-14B/alpaca_text_document"  #数据集路径
-   CKPT_LOAD_DIR="./model_weights/Qwen1.5-14B-v0.1-tp8-pp1"
+   CKPT_LOAD_DIR="./model_weights/Qwen1.5-14B-v0.1-tp4-pp2"
    ```
    多机运行增加参数 `--overlap-grad-reduce`。
 
@@ -1211,7 +1211,7 @@ Qwen1.5-14B 训练的硬件配置:
    修改如下：
 
    ```bash
-   CKPT_LOAD_DIR="./model_weights/Qwen1.5-14B-v0.1-tp8-pp1/"
+   CKPT_LOAD_DIR="./model_weights/Qwen1.5-14B-v0.1-tp4-pp2/"
    CKPT_SAVE_DIR="./ckpt/Qwen1.5-14B/"
    DATA_PATH="./finetune_dataset/Qwen1.5-14B/alpaca"
    TOKENIZER_PATH="./model_from_hf/Qwen1.5-14B/"
@@ -1232,7 +1232,7 @@ Qwen1.5-14B 训练的硬件配置:
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 修改模型权重路径和词表路径
-CHECKPOINT="./model_weights/Qwen1.5-14B-v0.1-tp8-pp1"
+CHECKPOINT="./model_weights/Qwen1.5-14B-v0.1-tp4-pp2"
 TOKENIZER_PATH="./model_from_hf/Qwen1.5-14B"
 ```
 
@@ -1259,7 +1259,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 修改模型参数路径和词表路径
 TOKENIZER_PATH="./model_from_hf/Qwen1.5-14B/"  #词表路径
-CHECKPOINT="./model_weights/Qwen1.5-14B-v0.1-tp8-pp1/"  #模型路径
+CHECKPOINT="./model_weights/Qwen1.5-14B-v0.1-tp4-pp2/"  #模型路径
 
 # 配置任务和数据集路径
 DATA_PATH="./mmlu/data/test/"  # ceval任务配置为 "./ceval/val/"
