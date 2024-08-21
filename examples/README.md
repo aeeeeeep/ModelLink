@@ -53,6 +53,7 @@
     conda activate test
     
     # 安装 torch 和 torch_npu，注意要选择对应python版本、x86或arm的torch、torch_npu及apex包
+    # 建议查看[昇腾apex仓库](https://gitee.com/ascend/apex)
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl 
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
@@ -111,7 +112,14 @@ cd ../../
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-python tools/checkpoint/convert_ckpt.py \
+# 将转化权重所需要的py文件复制到文件夹的根目录
+# 执行前应当正处于ModelLink文件夹下
+cp -r tools/checkpoint/convert_ckpt.py ../ModelLink/
+cp -r tools/checkpoint/loader_llama2_hf.py ../ModelLink/
+cp -r tools/checkpoint/saver_megatron.py ../ModelLink/
+
+# 执行权重转化脚本
+python convert_ckpt.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \
