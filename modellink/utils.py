@@ -137,6 +137,22 @@ def emit(self, record):
             self.handleError(record)
 
 
+def get_device_wrapper(fn):
+    @wraps(fn)
+    def wrapper(local_rank=None, *arg, **kwargs):
+        backend = torch.distributed.get_backend()
+        if backend == 'hccl':
+            if local_rank is None:
+                device = torch.device('npu')
+            else:
+                device = torch.device(f'npu:{local_rank}')
+        else:
+            device = fn(local_rank)
+        return device
+
+    return wrapper
+
+
 def unwrap_model_wrapper(fn):
     @wraps(fn)
     def wrapper(model, module_instances=None):
