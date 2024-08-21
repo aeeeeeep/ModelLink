@@ -13,7 +13,7 @@
         <th>Memory</th>
     </tr>
     <tr>
-        <td rowspan="6">ST</td>
+        <td rowspan="7">ST</td>
         <td rowspan="5">Pretrain</td>
         <td>Mcore</td>
         <td>TP，PP，VPP，重计算，enable_recompute_layers_per_pp_rank</td>
