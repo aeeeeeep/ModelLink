@@ -137,23 +137,20 @@ def emit(self, record):
             self.handleError(record)
 
 
-def get_device(local_rank=None):
-    backend = torch.distributed.get_backend()
-    if backend == 'nccl':
-        if local_rank is None:
-            device = torch.device('cuda')
+def get_device_wrapper(fn):
+    @wraps(fn)
+    def wrapper(local_rank=None, *arg, **kwargs):
+        backend = torch.distributed.get_backend()
+        if backend == 'hccl':
+            if local_rank is None:
+                device = torch.device('npu')
+            else:
+                device = torch.device(f'npu:{local_rank}')
         else:
-            device = torch.device(f'cuda:{local_rank}')
-    elif backend == 'gloo':
-        device = torch.device('cpu')
-    elif backend == 'hccl':
-        if local_rank is None:
-            device = torch.device('npu')
-        else:
-            device = torch.device(f'npu:{local_rank}')
-    else:
-        raise RuntimeError
-    return device
+            device = fn(local_rank)
+        return device
+
+    return wrapper
 
 
 def unwrap_model_wrapper(fn):
