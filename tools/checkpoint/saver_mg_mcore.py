@@ -260,7 +260,9 @@ def set_model_layer_mlp(model_mg, msg, md, **kwargs):
         mlp_router_weight = mlp_moe.pop("mlp router weight")
         for ep_rank in range(margs.expert_model_parallel_size):
             kwargs["ep_rank"] = ep_rank
-            model_mg.set_layers_mlp_router_weight(**kwargs, data=mlp_router_weight)
+            for tp_rank in range(margs.tensor_model_parallel_size):
+                kwargs['tp_rank'] = tp_rank
+                model_mg.set_layers_mlp_router_weight(**kwargs, data=mlp_router_weight)
             for expert_idx in range(num_experts_local):
                 kwargs["expert_idx"] = expert_idx
                 global_expert_idx = expert_idx + ep_rank * num_experts_local

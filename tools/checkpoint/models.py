@@ -16,6 +16,7 @@ from megatron.core.enums import ModelType
 from megatron.training.checkpointing import load_args_from_checkpoint
 from megatron.training.global_vars import set_args
 from megatron.training.checkpointing import load_checkpoint
+from megatron.core import tensor_parallel
 from pretrain_gpt import model_provider
 from modellink.utils import parse_args
 from modellink.training import model_provider_func_wrapper
@@ -182,16 +183,31 @@ class ModelBase(abc.ABC):
         logger.debug(f"[{self.__class__.__name__}] - [set_attn_state] - layer[{layer_idx}].proj_weight info: "
                      f"{tensor_info(proj_weight)}")
 
-    def set_mlp_state(self, layer_idx, src_model):
+    def _set_mlp_state(self, src_model, **kwargs):
         '''Set MLP params.'''
-        fc1_weight = src_model.get_layers_mlp_linear_fc1_weight(layer_idx=layer_idx)
-        fc2_weight = src_model.get_layers_mlp_linear_fc2_weight(layer_idx=layer_idx)
-        self.set_layers_mlp_linear_fc1_weight(layer_idx=layer_idx, data=fc1_weight)
-        self.set_layers_mlp_linear_fc2_weight(layer_idx=layer_idx, data=fc2_weight)
-        logger.debug(f"[{self.__class__.__name__}] - [set_mlp_state] - layer[{layer_idx}].fc1_weight info: "
+        fc1_weight = src_model.get_layers_mlp_linear_fc1_weight(**kwargs)
+        fc2_weight = src_model.get_layers_mlp_linear_fc2_weight(**kwargs)
+        self.set_layers_mlp_linear_fc1_weight(data=fc1_weight, **kwargs)
+        self.set_layers_mlp_linear_fc2_weight(data=fc2_weight, **kwargs)
+        logger.debug(f"[{self.__class__.__name__}] - [set_mlp_state] - layer[{kwargs['layer_idx']}].fc1_weight info: "
                      f"{tensor_info(fc1_weight)}")
-        logger.debug(f"[{self.__class__.__name__}] - [set_mlp_state] - layer[{layer_idx}].fc2_weight info: "
+        logger.debug(f"[{self.__class__.__name__}] - [set_mlp_state] - layer[{kwargs['layer_idx']}].fc2_weight info: "
                      f"{tensor_info(fc2_weight)}")
+
+
+    def set_mlp_state(self, layer_idx, src_model):
+        args = src_model.get_args()
+        kwargs = {'layer_idx': layer_idx}
+        num_experts = getattr(args, 'num_experts', None) or getattr(args, 'num_local_experts', None)
+        if num_experts:
+            router_weight = src_model.get_layers_mlp_router_weight(**kwargs)
+            self.set_layers_mlp_router_weight(**kwargs, data=router_weight)
+            for expert_idx in range(num_experts):
+                kwargs['expert_idx'] = expert_idx
+                self._set_mlp_state(src_model, **kwargs)
+        else:
+            self._set_mlp_state(src_model, **kwargs)
+
 
     def get_args(self):
         return self.args
@@ -251,7 +267,11 @@ class HuggingfaceModel(ModelBase):
 
     def initialize_args(self):
         # Read huggingface args.
-        llama_args_path = os.path.join(self.args_cmd.load_dir, "config.json")
+        if self.args_cmd.save_model_type == 'huggingface':
+            cfg_dir = self.args_cmd.save_dir
+        else:
+            cfg_dir = self.args_cmd.load_dir
+        llama_args_path = os.path.join(cfg_dir, "config.json")
         with open(llama_args_path) as f:
             self.args = json.load(f)
 
@@ -281,9 +301,9 @@ class HuggingfaceModel(ModelBase):
             load_dir = self.args_cmd.save_dir
         else:
             load_dir = self.args_cmd.load_dir
-        self.module = [
-            AutoModelForCausalLM.from_pretrained(load_dir, device_map=device_map, trust_remote_code=trust_remote_code)
-        ]
+        self.module = [AutoModelForCausalLM.from_pretrained(load_dir, device_map=device_map, trust_remote_code=trust_remote_code)]
+        if self.args.torch_dtype in ["float16", "bfloat16"]:
+            self.module[0] = self.module[0].to(eval(f'torch.{self.args.torch_dtype}'))
 
     def get_module_mapping(self):
         self.module_mapping = self.model_cfg.get(self.args_cmd.model_name).get('model_hf_key_mapping')
@@ -326,9 +346,9 @@ class HuggingfaceModel(ModelBase):
         else:
             raise ValueError(f"Unsupported types. {qkv_type}")
 
-    def get_layers_mlp_linear_fc1_weight(self, layer_idx=0):
-        gate_proj = self.get_layers_mlp_gate_proj_weight(layer_idx=layer_idx)
-        up_proj = self.get_layers_mlp_up_proj_weight(layer_idx=layer_idx)
+    def get_layers_mlp_linear_fc1_weight(self, **kwargs):
+        gate_proj = self.get_layers_mlp_gate_proj_weight(**kwargs)
+        up_proj = self.get_layers_mlp_up_proj_weight(**kwargs)
         return torch.cat([gate_proj, up_proj], dim=0)
 
     def get_layers_self_attention_linear_qkv_weight(self, layer_idx):
@@ -339,10 +359,10 @@ class HuggingfaceModel(ModelBase):
         self.__get_layers_self_attention_linear_qkv_module(layer_idx=layer_idx)
         return self.layers_self_attention_linear_qkv_caches["bias"]
 
-    def set_layers_mlp_linear_fc1_weight(self, layer_idx=0, data=None):
+    def set_layers_mlp_linear_fc1_weight(self, data=None, **kwargs):
         gate_proj, up_proj = torch.chunk(data, 2, dim=0)
-        self.set_layers_mlp_gate_proj_weight(layer_idx=layer_idx, data=gate_proj)
-        self.set_layers_mlp_up_proj_weight(layer_idx=layer_idx, data=up_proj)
+        self.set_layers_mlp_gate_proj_weight(data=gate_proj, **kwargs)
+        self.set_layers_mlp_up_proj_weight(data=up_proj, **kwargs)
 
     def set_layers_self_attention_linear_qkv_weight(self, layer_idx=0, data=None):
         def qkv_split_weight(query_key_value):
@@ -413,6 +433,7 @@ class MegatronModel(ModelBase):
         sys.argv = self.get_sys_argv()
         self.args = parse_args()
 
+        # todo: 改为外层条件判断是否进入更新
         self.update_megatron_args_from_megatron_checkpoint(loader_megatron)
         self.update_megatron_args_from_cmd_config(loader_megatron)
         self.update_megatron_args_from_huggingface_config(hf_args)
@@ -422,7 +443,7 @@ class MegatronModel(ModelBase):
         self.args.world_size = self.args.tensor_model_parallel_size * self.args.pipeline_model_parallel_size
         self.update_megatron_args_from_loader_margs()
         self.args = validate_args(self.args)
-        self.check_for_args(queue)
+        self.check_for_args(queue, saver_megatron)
 
         self.args.model_type = ModelType.encoder_or_decoder
         # Suppress warning about torch.distributed not being initialized.
@@ -498,6 +519,8 @@ class MegatronModel(ModelBase):
         ):
             self.args.group_query_attention = True
             self.args.num_query_groups = hf_args.num_key_value_heads
+        if hasattr(hf_args, 'num_local_experts'):
+            self.args.num_experts = hf_args.num_local_experts
 
     def update_megatron_args_from_megatron_checkpoint(self, loader_megatron):
         if not loader_megatron:
@@ -562,6 +585,8 @@ class MegatronModel(ModelBase):
         self.__get_modules(from_pretrained=True, pp_stage_cache_flag=pp_stage_cache_flag)
 
     def __get_modules(self, from_pretrained=False, pp_stage_cache_flag=False):
+        if self.args.sequence_parallel:
+            tensor_parallel.model_parallel_cuda_manual_seed(123)
         # Initialize the dictionary for the parallel mode of the model
         pp_rank = self.get_pipeline_model_parallel_rank()
         if pp_stage_cache_flag and pp_rank < len(self.pp_stage_cache):
@@ -622,13 +647,17 @@ class MegatronModel(ModelBase):
             self.pp_stage_cache.append(models)
 
 
-    def check_for_args(self, queue):
+    def check_for_args(self, queue, saver_megatron):
+        if saver_megatron:
+            return 
         check_args_list = {
             'tensor_model_parallel_size': None, 'pipeline_model_parallel_size': None, 'num_layers': None,
             'hidden_size': None, 'seq_length': None, 'num_attention_heads': None, 'max_position_embeddings': None,
             'position_embedding_type': None, 'tokenizer_type': None, 'iteration': 1, 'bert_binary_head': None,
             'disable_bias_linear': False, 'params_dtype': None, 'swiglu': False
         }
+        # if hasattr(self.args, 'add_bias_linear'):
+        #     check_args_list['disable_bias_linear'] = self.args.add_bias_linear
 
         def check_for_arg(arg_name, default=None):
             if getattr(self.args, arg_name, None) is None:
@@ -661,8 +690,11 @@ class MegatronModel(ModelBase):
             '--mock-data',  # To pass the "blend data checks" in arguments.py
             '--load', self.args_cmd.load_dir,
             '--finetune',
-            '--disable-bias-linear'
+            # '--disable-bias-linear'
         ]
+        
+        if hasattr(self.args_cmd, 'add_bias_linear') and not self.args_cmd.add_bias_linear:
+            sys_argv.append('--disable-bias-linear')
 
         if self.args_cmd.use_mcore_models:
             sys_argv.append('--use-mcore-models')
@@ -687,6 +719,10 @@ class MegatronModel(ModelBase):
         if self.args_cmd.num_layers_per_virtual_pipeline_stage:
             sys_argv.extend(['--num-layers-per-virtual-pipeline-stage',
                              str(self.args_cmd.num_layers_per_virtual_pipeline_stage)])
+
+        num_experts = getattr(self.md.checkpoint_args, 'num_experts', None)
+        if self.args_cmd.target_tensor_parallel_size > 1 and num_experts is not None and num_experts > 1:
+            sys_argv.append('--sequence-parallel')
 
         if self.md.make_vocab_size_divisible_by is not None:
             sys_argv.extend(['--make-vocab-size-divisible-by', str(self.md.make_vocab_size_divisible_by)])

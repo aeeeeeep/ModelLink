@@ -83,32 +83,32 @@ def build_metadata(args, margs):
     return md
 
 
-def get_message_preprocess(models, args):
+def get_message_preprocess(model, args):
     # Send embeddings.
     tp_size = args.tensor_model_parallel_size
     message = {
         "word embeddings": torch.cat(
-            [models.get_embedding_word_embeddings_weight(tp_rank=tp_rank) for tp_rank in range(tp_size)], dim=0
+            [model.get_embedding_word_embeddings_weight(tp_rank=tp_rank) for tp_rank in range(tp_size)], dim=0
     )
     }
     if args.position_embedding_type == 'learned_absolute':
-        message[f"position embeddings"] = models.get_embedding_position_embeddings_weight()
+        message["position embeddings"] = model.get_embedding_position_embeddings_weight()
     if args.embed_layernorm:
-        message[f"word embeddings norm_w"] = models.get_embedding_word_embeddings_norm_weight()
-        message[f"word embeddings norm_b"] = models.get_embedding_word_embeddings_norm_bias()
+        message["word embeddings norm_w"] = model.get_embedding_word_embeddings_norm_weight()
+        message["word embeddings norm_b"] = model.get_embedding_word_embeddings_norm_bias()
 
     return message
 
 
-def get_message_layer_norm(message, models, md, **kwargs):
+def get_message_layer_norm(message, model, md, **kwargs):
     # Get non-parallel tensors from tp_rank 0.
-    message["input norm weight"] = models.get_layers_input_layernorm_weight(**kwargs)
+    message["input norm weight"] = model.get_layers_input_layernorm_weight(**kwargs)
     if md.norm_has_bias:
-        message["input norm bias"] = models.get_layers_input_layernorm_bias(**kwargs)
+        message["input norm bias"] = model.get_layers_input_layernorm_bias(**kwargs)
 
-    message["post norm weight"] = models.get_layers_self_attention_post_attention_layernorm_weight(**kwargs)
+    message["post norm weight"] = model.get_layers_self_attention_post_attention_layernorm_weight(**kwargs)
     if md.norm_has_bias:
-        message["post norm bias"] = models.get_layers_self_attention_post_attention_layernorm_bias(**kwargs)
+        message["post norm bias"] = model.get_layers_self_attention_post_attention_layernorm_bias(**kwargs)
 
     return message
 
@@ -272,9 +272,9 @@ def _load_checkpoint(queue, args):
         for pp_rank in range(pp_size):
             model_mg.set_pipeline_model_parallel_rank(pp_rank)
             model_mg.get_modules_from_pretrained(pp_stage_cache_flag=True)
-            kwargs = {"vp_rank": vp_rank}
+            kwargs = {"vp_rank": vp_rank, 'pp_rank': pp_rank}
             for layer_num in range(len(model_mg.get_layers_module(**kwargs))):
-                kwargs["layer_num"] = layer_num
+                kwargs["layer_idx"] = layer_num
                 message = {}
                 message = get_message_layer_norm(message, model_mg, md, **kwargs)
                 message = get_message_layer_attn(message, model_mg, md, **kwargs)

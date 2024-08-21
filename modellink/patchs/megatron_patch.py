@@ -43,7 +43,7 @@ from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
 from ..arguments import parse_args_decorator
-from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
+from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper, load_args_from_checkpoint_wrapper
 from ..initialize import initialize_megatron
 from ..utils import emit
 from ..arguments import process_args
@@ -289,6 +289,7 @@ def patch_miscellaneous():
     PatchManager.register_patch('megatron.training.arguments._print_args', print_args_wrapper)
     PatchManager.register_patch('megatron.training.global_vars.build_tokenizer', build_tokenizer)
     PatchManager.register_patch('megatron.training.checkpointing._load_base_checkpoint', _load_base_checkpoint_wrapper)
+    PatchManager.register_patch('megatron.training.checkpointing.load_args_from_checkpoint', load_args_from_checkpoint_wrapper)
 
 
 def patch_datasets():
