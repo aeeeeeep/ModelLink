@@ -8,6 +8,6 @@ python tools/checkpoint/convert_ckpt.py \
     --saver megatron \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 2 \
-    --load-dir ./model_from_hf/Llama2-hf/ \
-    --save-dir ./model_weights/Llama2-legacy/ \
-    --tokenizer-model ./model_from_hf/Llama2-hf/tokenizer.model
+    --load-dir ./model_from_hf/llama-2-hf/ \
+    --save-dir ./model_weights/llama-2-legacy/ \
+    --tokenizer-model ./model_from_hf/llama-2-hf/tokenizer.model
