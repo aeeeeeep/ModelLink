@@ -33,10 +33,11 @@ GPT_ARGS="
     --context-parallel-algo megatron_cp_algo \
     --no-create-attention-mask-in-dataloader \
     --no-shared-storage \
-    --sparse-model 4 \
+    --sparse-mode 4 \
     --micro-batch-size 1 \
     --global-batch-size 32 \
     --sequence-parallel \
+    --use-mc2 \
     --use-flash-attn \
     --use-rotary-position-embeddings \
     --use-fused-rmsnorm \

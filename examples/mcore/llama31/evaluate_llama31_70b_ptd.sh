@@ -39,10 +39,10 @@ torchrun $DISTRIBUTED_ARGS evaluation.py   \
        --use-mcore-models \
        --seq-length 131072 \
        --max-position-embeddings 131072 \
-       --num-layers 32  \
-       --hidden-size 4096  \
-       --ffn-hidden-size 14336 \
-       --num-attention-heads 32  \
+       --num-layers 80  \
+       --hidden-size 8192  \
+       --ffn-hidden-size 28672 \
+       --num-attention-heads 64  \
        --group-query-attention \
        --num-query-groups 8 \
        --swiglu \
@@ -59,7 +59,7 @@ torchrun $DISTRIBUTED_ARGS evaluation.py   \
        --make-vocab-size-divisible-by 1 \
        --padded-vocab-size 128256 \
        --bf16  \
-       --seed 42 | tee logs/evaluation_llama31_8b_${TASK}.log
+       --seed 42 | tee logs/evaluation_llama31_70b_mcore_${TASK}.log
 
 
 
