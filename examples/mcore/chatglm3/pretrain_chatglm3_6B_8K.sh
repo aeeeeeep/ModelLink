@@ -50,6 +50,7 @@ GPT_ARGS="
     --position-embedding-type rope \
     --no-rope-fusion \
     --use-partial-rope \
+    --rotary-percent 0.5 \
     --normalization RMSNorm \
     --use-fused-rmsnorm \
     --swiglu \

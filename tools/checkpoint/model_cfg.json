@@ -13,7 +13,8 @@
         "moe_flag": false,
         "tokenizer_type": "Llama2Tokenizer",
         "group_query_attention": false,
-        "qkv_type": "unpack"
+        "qkv_type": "unpack",
+        "fc_type": "gate_up_down"
       },
       "config_hf_key_mapping": {
         "max_position_embeddings": "max_position_embeddings",
@@ -46,6 +47,37 @@
     },
     "llama2": {
       "__base__": "base"
+    },
+    "chatglm3": {
+      "__base__": "base",
+      "config_set_value": {
+        "seq_length": 32768,
+        "global_batch_size": 16,
+        "group_query_attention": true,
+        "qkv_type": "pack_gqa",
+        "fc_type": "h_to_4h"
+      },
+      "config_hf_key_mapping": {
+        "max_position_embeddings": "seq_length",
+        "num_layers": "num_layers",
+        "num_key_value_heads": "multi_query_group_num",
+        "vocab_size": "padded_vocab_size",
+        "intermediate_size": "ffn_hidden_size",
+        "norm_epsilon": "layernorm_epsilon"
+      },
+      "model_hf_key_mapping": {
+        "model": "module[tp_rank]",
+        "embedding_word_embeddings": "module[tp_rank].transformer.embedding.word_embeddings",
+        "layers": "module[tp_rank].transformer.encoder.layers",
+        "layers_input_layernorm": "module[tp_rank].transformer.encoder.layers[layer_idx].input_layernorm",
+        "layers_self_attention_linear_qkv_pack": "module[tp_rank].transformer.encoder.layers[layer_idx].self_attention.query_key_value",
+        "layers_self_attention_linear_proj": "module[tp_rank].transformer.encoder.layers[layer_idx].self_attention.dense",
+        "layers_self_attention_pre_mlp_layernorm": "module[tp_rank].transformer.encoder.layers[layer_idx].post_attention_layernorm",
+        "layers_mlp_linear_fc1": "module[tp_rank].transformer.encoder.layers[layer_idx].mlp.dense_h_to_4h",
+        "layers_mlp_linear_fc2": "module[tp_rank].transformer.encoder.layers[layer_idx].mlp.dense_4h_to_h",
+        "final_layernorm": "module[tp_rank].transformer.encoder.final_layernorm",
+        "output_layer": "module[tp_rank].transformer.output_layer"
+      }
     }
   }
 }

@@ -73,6 +73,7 @@ GPT_ARGS="
     --no-rope-fusion \
     --use-distributed-optimizer \
     --use-partial-rope \
+    --rotary-percent 0.5 \
     --use-flash-attn \
     --use-fused-rmsnorm \
     --use-fused-swiglu \

@@ -6,6 +6,7 @@ import json
 from types import SimpleNamespace
 from tqdm import tqdm
 import torch
+import torch.nn as nn
 from transformers import AutoModelForCausalLM
 from megatron.core import mpu
 from megatron.training.arguments import validate_args
@@ -203,22 +204,22 @@ class HuggingfaceModel(ModelBase):
         nh = self.args.num_attention_heads
         ng = (self.args.num_key_value_heads if self.args.group_query_attention else self.args.num_attention_heads)
         # dim = self.args['kv_channels']
-        dim = self.args.hidden_size // self.args.num_key_value_heads
+        dim = self.args.hidden_size // self.args.num_attention_heads
         if not nh % ng == 0:
             raise ValueError("nh % ng should equal 0")
 
         def qkv_concatenate_weight(qkv):
             return torch.cat([
-                qkv[0].weight.reshape((ng, dim * nh // ng, -1)),
-                qkv[1].weight.reshape((ng, dim, -1)),
-                qkv[2].weight.reshape((ng, dim, -1)),
+                qkv[0].reshape((ng, dim * nh // ng, -1)),
+                qkv[1].reshape((ng, dim, -1)),
+                qkv[2].reshape((ng, dim, -1)),
             ], dim=1).reshape((-1, self.args.hidden_size))
 
         def qkv_concatenate_bias(qkv):
             return torch.cat([
-                qkv[0].bias.reshape((ng, dim * nh // ng)),
-                qkv[1].bias.reshape((ng, dim)),
-                qkv[2].bias.reshape((ng, dim)),
+                qkv[0].reshape((ng, dim * nh // ng)),
+                qkv[1].reshape((ng, dim)),
+                qkv[2].reshape((ng, dim)),
             ], dim=1).reshape((-1))
 
         qkv_type = self.args.qkv_type
@@ -226,17 +227,42 @@ class HuggingfaceModel(ModelBase):
             q_proj = self.get_layers_self_attention_linear_q_proj_module(layer_idx=layer_idx)
             k_proj = self.get_layers_self_attention_linear_k_proj_module(layer_idx=layer_idx)
             v_proj = self.get_layers_self_attention_linear_v_proj_module(layer_idx=layer_idx)
-            query_key_value = [q_proj, k_proj, v_proj]
-            self.layers_self_attention_linear_qkv_caches["weight"] = (qkv_concatenate_weight(query_key_value))
+            query_key_value_weight = [q_proj.weight, k_proj.weight, v_proj.weight]
+            query_key_value_bias = [q_proj.bias, k_proj.bias, v_proj.bias]
+            self.layers_self_attention_linear_qkv_caches["weight"] = (qkv_concatenate_weight(query_key_value_weight))
             if self.args_cmd.add_qkv_bias:
-                self.layers_self_attention_linear_qkv_caches["bias"] = (qkv_concatenate_bias(query_key_value))
+                self.layers_self_attention_linear_qkv_caches["bias"] = (qkv_concatenate_bias(query_key_value_bias))
+        elif qkv_type == "pack_gqa":
+            qkv_pack = self.get_layers_self_attention_linear_qkv_pack_module(layer_idx=layer_idx)
+            qkv_pack_weight = qkv_pack.weight
+            full_q = dim * nh
+            end_k = full_q + ng * dim
+            hs = self.args.hidden_size
+            q_weight = qkv_pack_weight[:full_q, :]
+            k_weight = qkv_pack_weight[full_q:end_k, :]
+            v_weight = qkv_pack_weight[end_k:, :]
+            query_key_value_weight = [q_weight, k_weight, v_weight]
+            self.layers_self_attention_linear_qkv_caches["weight"] = (qkv_concatenate_weight(query_key_value_weight))
+            if self.args_cmd.add_qkv_bias:
+                qkv_pack_bias = qkv_pack.bias
+                q_bias = qkv_pack_bias[:full_q]
+                k_bias = qkv_pack_bias[full_q:end_k]
+                v_bias = qkv_pack_bias[end_k:]
+                query_key_value_bias = [q_bias, k_bias, v_bias]
+                self.layers_self_attention_linear_qkv_caches["bias"] = (qkv_concatenate_bias(query_key_value_bias))
         else:
             raise ValueError(f"Unsupported types. {qkv_type}")
 
     def get_layers_mlp_linear_fc1_weight(self, layer_idx=0):
-        gate_proj = self.get_layers_mlp_gate_proj_weight(layer_idx=layer_idx)
-        up_proj = self.get_layers_mlp_up_proj_weight(layer_idx=layer_idx)
-        return torch.cat([gate_proj, up_proj], dim=0)
+        fc_type = self.args.fc_type
+        if fc_type == "h_to_4h":
+            return self.get_layers_mlp_linear_fc1_module(layer_idx=layer_idx).weight
+        elif fc_type == "gate_up_down":
+            gate_proj = self.get_layers_mlp_gate_proj_weight(layer_idx=layer_idx)
+            up_proj = self.get_layers_mlp_up_proj_weight(layer_idx=layer_idx)
+            return torch.cat([gate_proj, up_proj], dim=0)
+        else:
+            raise ValueError(f"Unsupported fc_type {fc_type}")
 
     def get_layers_self_attention_linear_qkv_weight(self, layer_idx):
         self._get_layers_self_attention_linear_qkv_module(layer_idx=layer_idx)

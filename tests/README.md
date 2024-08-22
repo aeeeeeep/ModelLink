@@ -13,8 +13,8 @@
         <th>Memory</th>
     </tr>
     <tr>
-        <td rowspan="7">ST</td>
-        <td rowspan="5">Pretrain</td>
+        <td rowspan="8">ST</td>
+        <td rowspan="6">Pretrain</td>
         <td>Mcore</td>
         <td>TP，PP，VPP，重计算，enable_recompute_layers_per_pp_rank</td>
         <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_ptd.sh">llama2_tp2_pp4_vpp2.sh</a></td>
@@ -26,6 +26,14 @@
         <td>Mcore</td>
         <td>CP，分布式优化器，reuse_fp32_param，recompute_activation_function, fused_rmsnorm，fused_swiglu，fused_rope，overlap_grad_reduce, overlap_param_gather</td>
         <td><a href="st/shell_scripts/llama2_tp2_cp4_mem_recompute.sh">llama2_tp2_cp4_mem_recompute.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>Mcore</td>
+        <td>partial_rope</td>
+        <td><a href="st/shell_scripts//shell_scripts/chatglm3_tp1_pp2_rope.sh">chatglm3_tp1_pp2_rope.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
@@ -120,7 +128,7 @@
     <tr>
         <td>Checkpoint</td>
         <td>Mcore, Legacy</td>
-        <td>mcore_dynamic, mcore_vpp, legacy_dynamic</td>
+        <td>mcore_dynamic, mcore_vpp, mcore_pack_gqa, legacy_dynamic</td>
         <td><a href="ut/checkpoint">checkpoint</a></td>
         <td>Y</td>
         <td></td>
