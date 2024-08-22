@@ -71,6 +71,18 @@ class CovertMCoreVPPCkptFromHuggingfaceArgs:
     num_layers_per_virtual_pipeline_stage = "2"
 
 
+class CovertMCoreChatGLM3CkptFromHuggingfaceArgs:
+    model_type = "GPT"
+    loader = "hf_mcore"
+    saver = "mg_mcore"
+    target_tensor_parallel_size = "1"
+    target_pipeline_parallel_size = "2"
+    load_dir = "/data/chatglm3-6b-base-hf/"
+    save_dir = "/data/chatglm3-6b-base-mg-tp1pp2-mcore-test/"
+    base_dir = "/data/chatglm3-6b-base-mg-tp1pp2-mcore-base/"
+    tokenizer_model = "/data/chatglm3-6b-base-hf/tokenizer.model"
+
+
 class TestConvertCkptFromHuggingface:
 
     def test_file_exsit(self):
@@ -92,7 +104,7 @@ class TestConvertCkptFromHuggingface:
         including embedding, final_norm, output and encoder. In the encoder, there will be some different layers 
         to compose the unique transformer layer and all these layer stack to compose the entity of the model.
         """
-        base_dir = Path(__file__).absolute().parent.parent.parent
+        base_dir = Path(__file__).absolute().parents[3]
         file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
@@ -108,8 +120,8 @@ class TestConvertCkptFromHuggingface:
             "--num-layer-list", args.num_layer_list,
 
         ]
-        subprocess.run(["python3", file_path] + arguments)
-        judge_expression(weight_compare(args.base_dir, args.save_dir))
+        exit_code = subprocess.run(["python3", file_path] + arguments).returncode
+        assert exit_code == 0 and weight_compare(args.base_dir, args.save_dir), "convert_mcore_dynamic_weights_form_huggingface failed!"
 
     def test_convert_mcore_vpp_weights_form_huggingface(self):
         args = CovertMCoreVPPCkptFromHuggingfaceArgs()
@@ -118,7 +130,7 @@ class TestConvertCkptFromHuggingface:
         including embedding, final_norm, output and encoder. In the encoder, there will be some different layers 
         to compose the unique transformer layer and all these layer stack to compose the entity of the model.
         """
-        base_dir = Path(__file__).absolute().parent.parent.parent
+        base_dir = Path(__file__).absolute().parents[3]
         file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
@@ -133,8 +145,8 @@ class TestConvertCkptFromHuggingface:
             "--model-type-hf", "llama2",
             "--num-layers-per-virtual-pipeline-stage", args.num_layers_per_virtual_pipeline_stage
         ]
-        subprocess.run(["python3", file_path] + arguments)
-        judge_expression(weight_compare(args.base_dir, args.save_dir))
+        exit_code = subprocess.run(["python3", file_path] + arguments).returncode
+        assert exit_code == 0 and weight_compare(args.base_dir, args.save_dir), "convert_mcore_vpp_weights_form_huggingface failed!"
 
     def test_convert_dynamic_weights_form_huggingface(self):
         args = CovertDynamicCkptFromHuggingfaceArgs()
@@ -143,7 +155,7 @@ class TestConvertCkptFromHuggingface:
         including embedding, final_norm, output and encoder. In the encoder, there will be some different layers 
         to compose the unique transformer layer and all these layer stack to compose the entity of the model.
         """
-        base_dir = Path(__file__).absolute().parent.parent.parent
+        base_dir = Path(__file__).absolute().parents[3]
         file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
@@ -156,8 +168,33 @@ class TestConvertCkptFromHuggingface:
             "--save-dir", args.save_dir,
             "--tokenizer-model", args.tokenizer_model
         ]
-        subprocess.run(["python", file_path] + arguments)
-        judge_expression(weight_compare(args.base_dir, args.save_dir))
+        exit_code = subprocess.run(["python", file_path] + arguments).returncode
+        assert exit_code == 0 and weight_compare(args.base_dir, args.save_dir), "convert_legacy_dynamic_weights_form_huggingface failed!"
+
+    def test_convert_mcore_pack_gqa_form_huggingface(self):
+        args = CovertMCoreChatGLM3CkptFromHuggingfaceArgs()
+        """
+        Test whether the weight to be converted as we want in `--save-dir`. We will check the model layer name, 
+        including embedding, final_norm, output and encoder. In the encoder, there will be some different layers 
+        to compose the unique transformer layer and all these layer stack to compose the entity of the model.
+        """
+        base_dir = Path(__file__).absolute().parents[3]
+        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        arguments = [
+            "--model-type", args.model_type,
+            "--loader", args.loader,
+            "--saver", args.saver,
+            "--target-tensor-parallel-size", args.target_tensor_parallel_size,
+            "--target-pipeline-parallel-size", args.target_pipeline_parallel_size,
+            "--load-dir", args.load_dir,
+            "--save-dir", args.save_dir,
+            "--use-mcore-models",
+            "--add-qkv-bias",
+            "--model-type-hf", "chatglm3",
+            "--tokenizer-model", args.tokenizer_model
+        ]
+        exit_code = subprocess.run(["python", file_path] + arguments).returncode
+        assert exit_code == 0 and weight_compare(args.base_dir, args.save_dir), "convert_mcore_pack_gqa_form_huggingface failed!"
 
     def test_convert_weights_form_huggingface(self):
         args = CovertCkptFromHuggingfaceArgs()

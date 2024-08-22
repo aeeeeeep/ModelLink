@@ -2,31 +2,31 @@
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 NPUS_PER_NODE=8
-MASTER_ADDR=<local_rank>
+MASTER_ADDR=localhost
 MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$((NPUS_PER_NODE*$NNODES))
 
-CKPT_SAVE_DIR="your model save ckpt path"
-DATA_PATH="your data path"
-TOKENIZER_PATH="your tokenizer path"
-CKPT_LOAD_DIR="your model ckpt path"
+basepath=$(cd `dirname $0`; cd ../../../; pwd)
+
+CKPT_SAVE_DIR=/data/ckpt
+DATA_PATH=/data/chatglm3-dataset-alpaca/alpaca_text_document
+TOKENIZER_PATH=/data/chatglm3-6b-base-hf/
+CKPT_LOAD_DIR=/data/chatglm3-6b-base-mg-tp1pp2-mcore-base/ 
 
 TP=1
-PP=1
-CP=8
+PP=2
 MBS=1
-GBS=32
-SEQ_LEN=32768
-CP_ALGO=ulysses_cp_algo
+GBS=8
+SEQ_LEN=8192
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
     --nnodes $NNODES \
     --node_rank $NODE_RANK \
     --master_addr $MASTER_ADDR \
-    --master_port $MASTER_PORT \
+    --master_port $MASTER_PORT
 "
 
 GPT_ARGS="
@@ -42,8 +42,6 @@ GPT_ARGS="
     --seq-length ${SEQ_LEN} \
     --micro-batch-size ${MBS} \
     --global-batch-size ${GBS} \
-    --context-parallel-algo ${CP_ALGO} \
-    --context-parallel-size ${CP} \
     --max-position-embeddings ${SEQ_LEN} \
     --padded-vocab-size 65024 \
     --make-vocab-size-divisible-by 1 \
@@ -53,19 +51,18 @@ GPT_ARGS="
     --add-qkv-bias \
     --position-embedding-type rope \
     --no-rope-fusion \
-    --use-distributed-optimizer \
     --use-partial-rope \
     --rotary-percent 0.5 \
-    --use-flash-attn \
-    --use-fused-rmsnorm \
-    --use-fused-swiglu \
     --normalization RMSNorm \
+    --use-fused-rmsnorm \
     --swiglu \
-    --no-create-attention-mask-in-dataloader \
+    --use-fused-swiglu \
+    --use-flash-attn \
+    --use-distributed-optimizer \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --lr 1e-6 \
-    --train-iters 2000 \
+    --train-iters 15 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --attention-dropout 0.0 \
@@ -81,18 +78,19 @@ GPT_ARGS="
     --initial-loss-scale 4096 \
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
+    --no-save-optim \
+    --no-save-rng \
     --no-load-optim \
     --no-load-rng \
     --fp16 \
-    --kv-head-repeat-before-uly-alltoall \
-    --use-cp-send-recv-overlap \
     --overlap-grad-reduce \
     --overlap-param-gather \
+    --log-throughput
 "
 
 DATA_ARGS="
     --data-path $DATA_PATH \
-    --split 949,50,1 \
+    --split 949,50,1
 "
 
 OUTPUT_ARGS="
@@ -102,11 +100,10 @@ OUTPUT_ARGS="
     --eval-iters 10 \
 "
 
-python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
+torchrun $DISTRIBUTED_ARGS $basepath/pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --save $CKPT_SAVE_DIR \
-    | tee logs/train_mcore_chatglm3_6B_32K.log
-
+    --load ${CKPT_LOAD_DIR} \
+    --save $CKPT_SAVE_DIR
