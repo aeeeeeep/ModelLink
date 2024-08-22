@@ -89,8 +89,8 @@
 
 ```shell
 #!/bin/bash
-mkdir ./model_from_hf/llama2-hf/
-cd ./model_from_hf/llama2-hf/
+mkdir ./model_from_hf/llama-2-7b-hf/
+cd ./model_from_hf/llama-2-7b-hf/
 wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/config.json
 wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/generation_config.json
 wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/pytorch_model-00001-of-00002.bin
@@ -118,9 +118,9 @@ python tools/checkpoint/convert_ckpt.py \
     --target-tensor-parallel-size 2 \
     --target-pipeline-parallel-size 4 \
     --num-layer-list 8,8,8,8 \
-    --load-dir ./model_from_hf/llama2-hf/ \
-    --save-dir ./model_weights/llama2-legacy/ \
-    --tokenizer-model ./model_from_hf/llama2-hf/tokenizer.model
+    --load-dir ./model_from_hf/llama-2-7b-hf/ \
+    --save-dir ./model_weights/llama-2-7b-legacy/ \
+    --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
 ```
 
 【--target-tensor-parallel-size】
@@ -169,10 +169,10 @@ python tools/checkpoint/convert_ckpt.py \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/llama2-legacy/ \
+    --load-dir ./model_weights/llama-2-7b-legacy/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama2-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama2-hf/mg2hg/
+    --save-dir ./model_from_hf/llama-2-7b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-7b-hf/mg2hg/
 ```
 
 【启动脚本】
@@ -206,14 +206,14 @@ python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
     --loader megatron \
     --saver megatron \
-    --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+    --load-dir ./model_weights/llama-2-7b-legacy/ \
     --lora-load ./ckpt/llama-2-7b-lora \
     --lora-r 16 \
     --lora-alpha 32 \
     --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_weights/llama2-7b-lora2legacy
+    --save-dir ./model_weights/llama-2-7b-lora2legacy
 ```
 
 转换脚本命名风格及启动方法为：
@@ -232,14 +232,14 @@ python tools/checkpoint/convert_ckpt.py \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \
-    --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
+    --load-dir ./model_weights/llama-2-7b-legacy/ \
     --lora-load ./ckpt/llama-2-7b-lora \
     --lora-r 16 \
     --lora-alpha 32 \
     --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama2-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama2-hf/mg2hg/
+    --save-dir ./model_from_hf/llama-2-7b-hf/    # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-7b-hf/mg2hg/
 ```
 
 转换脚本命名风格及启动方法为：
@@ -249,13 +249,6 @@ bash examples/llama2/ckpt_convert_llama2_legacy2hf_lora.sh
 
 **注意：** lora参数值需与lora微调时的参数保持一致
 
-【lora权重评估】
-
-使用lora权重的评估脚本命名风格及启动方法为：
-
-```shell
-bash examples/llama2/evaluate_llama2_7B_lora_ptd.sh
-```
 
 ---
 
@@ -281,7 +274,7 @@ bash examples/llama2/evaluate_llama2_7B_lora_ptd.sh
 ```shell
 mkdir dataset
 cd dataset/
-wget https://huggingface.co/datasets/lsb/enwiki20230101/blob/main/data/train-00000-of-00042-d964455e17e96d5a.parquet
+wget https://huggingface.co/datasets/lsb/enwiki20230101/resolve/main/data/train-00000-of-00042-d964455e17e96d5a.parquet
 cd ..
 ```
 
@@ -296,7 +289,7 @@ mkdir ./dataset
 
 python ./preprocess_data.py \
     --input ./dataset/train-00000-of-00042-d964455e17e96d5a.parquet \
-    --tokenizer-name-or-path ./model_from_hf/llama2-hf \
+    --tokenizer-name-or-path ./model_from_hf/llama-2-hf \
     --tokenizer-type PretrainedFromHF \
     --handler-name GeneralPretrainHandler \
     --output-prefix ./dataset/enwiki \
@@ -342,7 +335,7 @@ bash examples/llama2/data_convert_llama2_pretrain.sh
 
 # Mcore
 # 命名及启动：examples/mcore/model_name/data_convert_xxx_pretrain.sh
-bash examples/mcore/mixtral/data_convert_mixtral_pretrain.sh
+bash examples/mcore/llama2/data_convert_llama2_pretrain.sh
 ```
 
 预训练数据集处理结果如下：
@@ -364,13 +357,13 @@ mkdir ./finetune_dataset
 
 python ./preprocess_data.py \
     --input ./dataset/train-00000-of-00042-d964455e17e96d5a.parquet \
-    --tokenizer-name-or-path ./model_from_hf/qwen-7b/ \
+    --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
     --output-prefix ./finetune_dataset/alpaca \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF \
     --handler-name AlpacaStyleInstructionHandler \
-    --prompt-type qwen  # <-- 需要填入模型模板
+    --prompt-type llama2  # <-- 需要填入模型模板
     # --map-keys '{"prompt":"instruction","query":"input","response":"output"}' # 默认值，可不传
 ```
 
@@ -416,7 +409,7 @@ Alpaca风格示例：
 
 目前支持的模板有：
 
-`['empty', 'default', 'chatglm3_system', 'chatml', 'qwen']`
+`['empty', 'default', 'chatglm3_system', 'chatml', 'qwen', llama2]`
 
 【--handler-name】
 
@@ -474,13 +467,13 @@ mkdir ./finetune_dataset
 
 python ./preprocess_data.py \
     --input ./dataset/sharegpt_formatted_data-evol-gpt4.jsonl \
-    --tokenizer-name-or-path ./model_from_hf/qwen-7b/ \
+    --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
     --output-prefix ./finetune_dataset/sharegpt \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF \
     --handler-name SharegptStyleInstructionHandler \
-    --prompt-type qwen  # <-- 需要填入模型模板
+    --prompt-type llama2  # <-- 需要填入模型模板
     # --map-keys '{"messages":"conversations", "tags":{"role_tag": "from","content_tag": "value","user_tag": "human","assistant_tag": "gpt","system_tag": "system", "observation_tag":"observation", "function_tag":"function_call"}}' # 默认值，可不传
 ```
 
@@ -526,13 +519,13 @@ mkdir ./finetune_dataset
 
 python ./preprocess_data.py \
     --input ./dataset/xxx.json \
-    --tokenizer-name-or-path ./model_from_hf/qwen-7b/ \
+    --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
     --output-prefix ./finetune_dataset/openai \
     --workers 4 \
     --log-interval 1000 \
     --tokenizer-type PretrainedFromHF \
     --handler-name SharegptStyleInstructionHandler \
-    --prompt-type qwen \
+    --prompt-type llama2 \
     --map-keys '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"}}'
 ```
 
@@ -557,8 +550,7 @@ ModelLink微调数据集处理脚本命名风格及启动方法为：
 ```shell
 # Legacy
 # 命名及启动：examples/model_name/data_convert_xxx_instruction.sh
-bash examples/qwen/data_convert_qwen_instruction.sh
-
+bash examples/llama2/data_convert_llama2_instruction.sh
 ```
 
 指令微调数据集处理结果如下：
@@ -569,7 +561,6 @@ bash examples/qwen/data_convert_qwen_instruction.sh
 ./finetune_dataset/alpaca_packed_input_ids_document.idx
 ./finetune_dataset/alpaca_packed_labels_document.bin
 ./finetune_dataset/alpaca_packed_labels_document.idx
-
 ```
 
 微调时，数据集路径输入 ./finetune_dataset/alpaca 即可
@@ -629,14 +620,17 @@ mcore分支的预训练脚本保存在 example/mcore 中各模型文件夹下：
 
 需根据实际情况修改路径和参数值：
 
-**示例：** examples/mcore/grok1/pretrain_grok1_40b_ptd.sh *(以grok1-40B为例)*
+**示例：** 
+
+examples/llama2/pretrain_llama2_7b_ptd.sh      *(legacy分支)*
+examples/mcore/llama2/pretrain_llama2_7b_ptd.sh *(mcore分支)*
 
 路径配置：包括**权重保存路径**、**权重加载路径**、**词表路径**、**数据集路径**
  ```shell
-    # 根据实际情况配置词表、数据集、模型参数保存路径
-    CKPT_SAVE_DIR="./ckpt"  #模型参数保存路径
-    CKPT_LOAD_DIR="./model_weights/Grok1-mcore"  #权重加载路径
-    TOKENIZER_MODEL="./model_from_hf/Grok1-hf/tokenizer.model"  #词表路径
+    # 根据实际情况配置权重保存、权重加载、词表、数据集路径
+    CKPT_SAVE_DIR="./ckpt/llama-2-7b"  #权重保存路径
+    CKPT_LOAD_DIR="./model_weights/llama-2-7b-legacy/"  #权重加载路径
+    TOKENIZER_MODEL="./model_from_hf/llama-2-7b-hf/tokenizer.model"  #词表路径
     DATA_PATH="./dataset/enwiki_text_document"  #数据集路径
 ```
 【--tokenizer-type】 
@@ -682,14 +676,19 @@ mcore分支的预训练脚本保存在 example/mcore 中各模型文件夹下：
 ```shell
     bash example/模型文件夹/pretrain_xxx_xxx.sh
 ```
+**示例：** *(以llama2-7B为例)*
+```shell
+    bash examples/llama2/pretrain_llama2_7b_ptd.sh
+```
+
 【mcore分支】 
 ```shell
     bash example/mcore/模型文件夹/pretrain_xxx_xxx.sh
 ```
 
-**示例：** *(以grok1-40B为例)*
+**示例：** 
 ```shell
-    bash examples/mcore/grok1/pretrain_grok1_40b_ptd.sh
+    bash examples/mcore/llama2/pretrain_llama2_7b_ptd.sh
 ```
 **注意**：
 - 多机训练需在多个终端同时启动预训练脚本(每个终端的预训练脚本只有NODE_RANK参数不同，其他参数均相同)
@@ -710,13 +709,13 @@ bash examples/llama2/generate_llama2_7b_ptd.sh
 
 # Mcore
 # 命名及启动：examples/mcore/model_name/generate_xxx.sh
-bash examples/mcore/mixtral/generate_mixtral_8x7b_ptd.sh
+bash examples/mcore/llama2/generate_llama2_7b_ptd.sh
 ```
 
 ```shell
 # 按实际情况修改启动脚本中模型权重路径和分词器路径
-CKPT_LOAD_DIR="./model_weights/Llama2-legacy/"
-TOKENIZER_PATH="./model_from_hf/Llama2-hf/"
+CHECKPOINT="./model_weights/llama-2-7b-legacy"
+TOKENIZER_PATH="./model_from_hf/llama-2-hf/"
 
 # 启动任务
 bash examples/llama2/generate_llama2_7b_ptd.sh
@@ -735,7 +734,7 @@ bash examples/llama2/evaluate_llama2_7b_ptd.sh
 
 # Mcore
 # 命名及启动：examples/mcore/model_name/evaluate_xxx.sh
-bash examples/mcore/mixtral/evaluate_mixtral_8x7b_ptd.sh
+bash examples/mcore/llama2/evaluate_llama2_7b_ptd.sh
 ```
 
 ```shell
@@ -743,8 +742,8 @@ bash examples/mcore/mixtral/evaluate_mixtral_8x7b_ptd.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh 
 
 # 修改模型参数路径和词表路径
-TOKENIZER_PATH="./model_from_hf/llama2-hf/"  #词表路径
-CHECKPOINT="./model_weights/llama2-legacy"  #模型路径
+TOKENIZER_PATH="./model_from_hf/llama-2-hf/"  #词表路径
+CHECKPOINT="./model_weights/llama-2-7b-legacy"  #权重路径
 # 配置任务和数据集路径
 DATA_PATH="./mmlu/data/test/"
 TASK="mmlu"
@@ -752,6 +751,14 @@ TASK="mmlu"
 # 启动评估脚本
 bash examples/llama2/evaluate_llama2_7B_ptd.sh
 ```
+【lora权重评估】
+
+使用lora权重的评估脚本命名风格及启动方法为：
+
+```shell
+bash examples/llama2/evaluate_llama2_7B_lora_ptd.sh
+```
+
 
 ModelLink已支持模型评估分数如下：
 
