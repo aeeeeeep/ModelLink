@@ -46,8 +46,8 @@ class TestInference(DistributedTest):
     test_config = create_testconfig(Path(__file__).with_suffix(".json"))
 
     
-    @pytest.mark.parametrize("params", test_config["test_greedy_search"])
-    def test_greedy_search(self, build_args, params):
+    @pytest.mark.parametrize("params", test_config["test_llama2_greedy_search"])
+    def test_llama2_greedy_search(self, build_args, params):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
         if dist.get_rank() == 0:
             handler, log_capture = setup_logger(PATTERN)
@@ -55,6 +55,22 @@ class TestInference(DistributedTest):
         main()
         if dist.get_rank() == 0:
             print("=============== llama2 greedy search =============")
+            print(log_capture)
+            context = acquire_context(log_capture)
+            assert [context] == [
+                "I'm doing well. I'm in the middle of a 3-day weekend, so I'm enjoying that."
+            ], "forward pass has been changed, check it!"
+
+
+    @pytest.mark.parametrize("params", test_config["test_chatglm3_legacy_greedy_search"])
+    def test_chatglm3_legacy_greedy_search(self, build_args, params):
+        os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
+        if dist.get_rank() == 0:
+            handler, log_capture = setup_logger(PATTERN)
+
+        main()
+        if dist.get_rank() == 0:
+            print("=============== chatglm3 legacy greedy search =============")
             print(log_capture)
             context = acquire_context(log_capture)
             assert [context] == [
