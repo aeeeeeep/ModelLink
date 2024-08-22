@@ -353,11 +353,14 @@ def align_dataset(dataset, dataset_attr, data_args):
         desc="Converting format of dataset",
     )
 
-    return dataset.map(
+    dataset = dataset.map(
         convert_func,
         remove_columns=column_names,
         **kwargs,
     )
+
+    dataset = dataset.filter(lambda x: len(x["prompt"]) != 0 and len(x["response"]) != 0)
+    return dataset
 
 
 def merge_dataset(all_datasets, data_args):

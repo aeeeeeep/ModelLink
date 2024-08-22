@@ -274,7 +274,7 @@ bash examples/llama2/evaluate_llama2_7B_lora_ptd.sh
 
 - [单轮对话：Alpaca数据集](https://huggingface.co/datasets/tatsu-lab/alpaca)
 - [多轮对话：ShareGPT数据集](https://huggingface.co/datasets/shibing624/roleplay-zh-sharegpt-gpt4-data)
-- [多轮对话：AlpacaHistroy数据集](https://huggingface.co/datasets/lenML/oaast_rm_zh_jieba)
+- [多轮对话：AlpacaHistroy数据集](https://huggingface.co/datasets/kimnt93/oaast-selected)
 
 数据集下载可以基于网页直接下载，也可以基于命令行下载，比如：
 
