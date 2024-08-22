@@ -55,7 +55,7 @@ GPT_ARGS="
     --num-query-groups 8 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_MODEL} \
-    --seq-length 32768 \
+    --seq-length 4096 \
     --max-position-embeddings 32768 \
     --micro-batch-size 1 \
     --global-batch-size 16 \
