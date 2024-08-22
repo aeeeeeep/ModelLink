@@ -30,6 +30,42 @@
                 "use-deter-comp": null
             }
         }
-    ]
+    ],
+    "test_chatglm3_legacy_mmlu_evaluate": {
+        "param": {
+            "task-data-path":"/data/eval_data/mmlu/data/test",
+            "task":"mmlu",
+            "seq-length": 8192,
+            "max-new-tokens": 1,
+            "max-position-embeddings": 8192,
+            "tensor-model-parallel-size": 2,
+            "pipeline-model-parallel-size": 4,
+            "num-layers": 28,
+            "hidden-size": 4096,
+            "ffn-hidden-size": 13696,
+            "num-attention-heads": 32,
+            "group-query-attention": null,
+            "num-query-groups": 2,
+            "disable-bias-linear": null,
+            "add-qkv-bias": null,
+            "swiglu": null,
+            "padded-vocab-size": 65024,
+            "make-vocab-size-divisible-by": 1,
+            "position-embedding-type": "rope",
+            "use-partial-rope": null,
+            "load":"/data/chatglm3-6b-base-mg-tp2pp4-legacy-base",
+            "normalization": "RMSNorm",
+            "tokenizer-type":"PretrainedFromHF",
+            "tokenizer-name-or-path":"/data/chatglm3-6b-base-hf/",
+            "tokenizer-not-use-fast": null,
+            "fp16": null,
+            "micro-batch-size": 1,
+            "exit-on-missing-checkpoint": null,
+            "no-load-rng": null,
+            "no-load-optim": null,
+            "untie-embeddings-and-output-weights": null,
+            "seed": 42
+        }
+    }
 }
 

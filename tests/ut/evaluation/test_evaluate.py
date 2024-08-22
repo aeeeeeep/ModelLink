@@ -60,3 +60,18 @@ class TestEvaluate(DistributedTest):
 
             expected_score = acquire_score(log_capture)
             assert math.isclose(expected_score, 0.4970, abs_tol=1e-2), f"score {expected_score}, forward pass has been changed, check it!"
+
+    @pytest.mark.parametrize("params", test_config["test_chatglm3_legacy_mmlu_evaluate"])
+    def test_chatglm3_legacy_mmlu_evaluate(self, build_args, params):
+        os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
+        if dist.get_rank() == 0:
+            handler, log_capture = setup_logger(PATTERN)
+
+        main()
+        if dist.get_rank() == 0:
+            print("=================== chatglm3 legacy MMLU score ===============")
+            print(log_capture)
+
+            expected_score = acquire_score(log_capture)
+            assert math.isclose(expected_score, 0.6161,
+                                abs_tol=1e-2), f"score {expected_score}, forward pass has been changed, check it!"
