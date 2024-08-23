@@ -274,7 +274,7 @@ bash examples/llama2/ckpt_convert_llama2_legacy2hf_lora.sh
 ```shell
 mkdir dataset
 cd dataset/
-wget https://huggingface.co/datasets/lsb/enwiki20230101/blob/main/data/train-00000-of-00042-d964455e17e96d5a.parquet
+wget https://huggingface.co/datasets/lsb/enwiki20230101/resolve/main/data/train-00000-of-00042-d964455e17e96d5a.parquet
 cd ..
 ```
 

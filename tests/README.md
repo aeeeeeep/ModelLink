@@ -66,7 +66,7 @@
         <td rowspan="1">LoRA</td>
         <td>Legacy</td>
         <td>CCLoRA, lora_fusion, 全重计算</td>
-        <td><a href="st/shell_scripts/tune_llama2_tp8_pp1_lora_ptd.sh">tune_llama2_tp8_pp1_lora_ptd.sh</a></td>
+        <td><a href="st/shell_scripts/tune_llama2_tp2_pp4_lora_ptd.sh">tune_llama2_tp2_pp4_lora_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
