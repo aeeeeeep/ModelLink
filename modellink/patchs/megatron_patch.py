@@ -39,7 +39,8 @@ from ..core import (initialize_model_parallel_decorator,
                    transformer_layer_forward, gpt_model_forward, get_num_layers_to_build_wrapper,
                    start_grad_sync_wrapper, distributed_data_parallel_init_wrapper,
                    clip_grad_norm_fp32_wrapper, distributed_optimizer_init_wrapper,
-                   indexed_dataset_builder_init_wrapper, add_item_wrapper, finalize_wrapper)
+                   indexed_dataset_builder_init_wrapper, add_item_wrapper, finalize_wrapper,
+                   transformer_block_init_wrapper, transformer_block_forward, core_mlp_init)
 
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
@@ -186,8 +187,13 @@ def patch_core_transformers(args):
                                 get_num_layers_to_build_wrapper)
 
     # Transformer block
+    PatchManager.register_patch('megatron.core.transformer.transformer_block.TransformerBlock.__init__',
+                                transformer_block_init_wrapper)
+    PatchManager.register_patch('megatron.core.transformer.transformer_block.TransformerBlock.forward',
+                                transformer_block_forward)
     PatchManager.register_patch('megatron.core.transformer.transformer_block.TransformerBlock._build_layers',
                                 _transformer_block_build_layers)
+    PatchManager.register_patch('megatron.core.transformer.mlp.MLP.__init__', core_mlp_init)
     PatchManager.register_patch('megatron.core.transformer.mlp.MLP.forward', core_mlp_forward_wrapper)
 
     # For mcore moe
