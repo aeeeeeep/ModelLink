@@ -8,7 +8,9 @@ NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$((NPUS_PER_NODE*$NNODES))
 
-CKPT_SAVE_DIR=/data/chatglm3-6b-base-mg-tp1pp2-legacy-base/
+basepath=$(cd `dirname $0`; cd ../../../; pwd)
+
+CKPT_SAVE_DIR=/data/ckpt
 DATA_PATH=/data/chatglm3-dataset-alpaca/alpaca_text_document
 TOKENIZER_PATH=/data/chatglm3-6b-base-hf/
 CKPT_LOAD_DIR=/data/chatglm3-6b-base-mg-tp1pp2-legacy-base/
@@ -90,6 +92,7 @@ OUTPUT_ARGS="
     --save-interval 2000 \
     --eval-interval 1000 \
     --eval-iters 10 \
+    --finetune
 "
 
 torchrun $DISTRIBUTED_ARGS $basepath/pretrain_gpt.py \
