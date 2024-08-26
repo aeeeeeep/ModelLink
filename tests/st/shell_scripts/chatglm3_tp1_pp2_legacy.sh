@@ -90,6 +90,7 @@ OUTPUT_ARGS="
     --save-interval 2000 \
     --eval-interval 1000 \
     --eval-iters 10 \
+    --finetune
 "
 
 torchrun $DISTRIBUTED_ARGS $basepath/pretrain_gpt.py \
