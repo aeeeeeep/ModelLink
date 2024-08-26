@@ -39,6 +39,16 @@ def get_num_layers_to_build_wrapper(fn):
     return wrapper
 
 
+def get_layer_offset_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self):
+        if self.config.num_layer_list:
+            pp_stage = parallel_state.get_pipeline_model_parallel_rank()
+            return self.config.layer_offset[pp_stage]
+        return fn(self)
+    return wrapper
+
+
 def transformer_block_init_wrapper(fn):
     @wraps(fn)
     def wrapper(self, *args, **kwargs):

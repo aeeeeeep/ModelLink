@@ -617,6 +617,20 @@ def _validate_group_limited_greedy(args):
             args.expert_model_parallel_size))
 
 
+def get_layer_offset(pp_size, num_layer_list):
+    """
+    Get layer number offset for pp stage. global_layer_number = local_layer_number + layer_number_offset
+    For instance, num-layer-list=1,3,3,1,
+    (1,123,123,1) + (0,1,4,7) = (1,234,567,8)
+    For each pp_stage, we have layer_number_offset = prefix_sum[pp_stage + 1]
+    """
+    prefix_sum = [0] * (pp_size + 1)
+    # take prefix_sum[0] as sentinel
+    for index, num_layers in enumerate(num_layer_list):
+        prefix_sum[index + 1] = prefix_sum[index] + num_layers
+    return prefix_sum
+
+
 def _validate_output_layer_slice_num(args):
     if args.output_layer_slice_num < 1:
         raise AssertionError('Output_layer_slice_num must be greater than 0.')
@@ -633,15 +647,19 @@ def core_transformer_config_from_args_wrapper(fn):
     @wraps(fn)
     def wrapper(args):
         config = fn(args)
-        # moe_expert_capacity_factor (float): The capacity factor for each expert, None means no token will be dropped. The default is None.
-        config.moe_expert_capacity_factor = args.moe_expert_capacity_factor
-        # moe_pad_expert_input_to_capacity (bool): If True, pads the input for each expert to match the expert capacity length, effective only after the moe_expert_capacity_factor is set. The default setting is False.
-        config.moe_pad_expert_input_to_capacity = args.moe_pad_expert_input_to_capacity
-        # The policy to drop tokens. Can be either "prob" or "position". If "prob", the tokens with the lowest probabilities will be dropped. If "position", tokens at the end of each batch will be dropped.
-        config.moe_token_drop_policy = args.moe_token_drop_policy
+        if args.moe_expert_capacity_factor:
+            # moe_expert_capacity_factor (float): The capacity factor for each expert, None means no token will be dropped. The default is None.
+            config.moe_expert_capacity_factor = args.moe_expert_capacity_factor
+            # moe_pad_expert_input_to_capacity (bool): If True, pads the input for each expert to match the expert capacity length, effective only after the moe_expert_capacity_factor is set. The default setting is False.
+            config.moe_pad_expert_input_to_capacity = args.moe_pad_expert_input_to_capacity
+            # The policy to drop tokens. Can be either "prob" or "position". If "prob", the tokens with the lowest probabilities will be dropped. If "position", tokens at the end of each batch will be dropped.
+            config.moe_token_drop_policy = args.moe_token_drop_policy
         if args.num_layer_list:
             # For num layer list, we turn string into int list and store it in transformer config.
             config.num_layer_list = list(map(int, args.num_layer_list.split(',')))
+            config.layer_offset = get_layer_offset(args.pipeline_model_parallel_size, config.num_layer_list)
+        else:
+            config.num_layer_list = None
 
         return config
 
