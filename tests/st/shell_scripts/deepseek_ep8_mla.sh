@@ -90,7 +90,7 @@ GPT_ARGS="
     --global-batch-size 64 \
     --make-vocab-size-divisible-by 1 \
     --lr 1.0e-5 \
-    --train-iters 1 \
+    --train-iters 2000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --disable-bias-linear \
