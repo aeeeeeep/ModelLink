@@ -23,6 +23,7 @@ from megatron.core.optimizer import (
     ConstantGradScaler, DynamicGradScaler,
     OptimizerConfig
 )
+import torch_npu.optim.NpuFusedAdamW as Adam1
 
 logger = getLogger(__name__)
 

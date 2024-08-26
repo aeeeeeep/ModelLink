@@ -1,0 +1,87 @@
+{
+    "CONVERT_CKPT_PARAM": [
+        "--model-type", "GPT",
+        "--model-type-hf", "chatglm3",
+        "--loader", "hf_mcore",
+        "--saver", "mg_mcore",
+        "--load-dir", "./model_from_hf/glm4-hf",
+        "--save-dir", "./model_weights/glm4-mcore",
+        "--target-tensor-parallel-size", "2",
+        "--target-pipeline-parallel-size", "2",
+        "--tokenizer-model", "./model_from_hf/glm4-hf/tokenizer.json",
+        "--add-qkv-bias",
+        "--use-mcore-models",
+        "--params-dtype", "bf16"
+    ],
+
+    "NETWORK_SIZE": [
+        "--num-layers", "40",
+        "--hidden-size", "4096",
+        "--ffn-hidden-size", "13696",
+        "--num-attention-heads", "32",
+        "--max-position-embeddings", "8192",
+        "--padded-vocab-size", "151552",
+        "--position-embedding-type", "rope",
+        "--use-rotary-position-embeddings",
+        "--use-partial-rope",
+        "--make-vocab-size-divisible-by", "1",
+        "--normalization", "RMSNorm",
+        "--norm-epsilon", "0.00000015625",
+        "--swiglu",
+        "--untie-embeddings-and-output-weights",
+        "--load", "./model_weights/glm4-mcore"
+    ],
+
+    "TOKENIZER_PARAM": [
+        "--tokenizer-type", "PretrainedFromHF",
+        "--tokenizer-name-or-path", "./model_from_hf/glm4-hf"
+    ],
+
+    "DISTRIBUTED_PARAM": [
+        "--tensor-model-parallel-size", "2",
+        "--pipeline-model-parallel-size", "2"
+    ],
+
+    "INFERENCE_PARAM": [
+        "--max-new-tokens", "256",
+        "--tokenizer-not-use-fast",
+        "--exit-on-missing-checkpoint",
+        "--attention-softmax-in-fp32"
+    ],
+
+    "INFERENCE_HF_CHAT_PARAM": [
+        "--hf-chat-template"
+    ],
+
+    "INFERENCE_PROMPT_CHAT_PARAM": [
+        "--prompt-type", "glm4"
+    ],
+
+    "EVALUATION_PARAM": [
+        "--tokenizer-not-use-fast",
+        "--task-data-path", "./evaluate/mmlu/data/test/",
+        "--task", "mmlu",
+        "--max-new-tokens", "1",
+        "--exit-on-missing-checkpoint"
+    ],
+
+    "AUXILIARY_PARAM": [
+        "--micro-batch-size", "1",
+        "--global-batch-size", "16",
+        "--no-masked-softmax-fusion",
+        "--disable-bias-linear",
+        "--add-qkv-bias",
+        "--no-gradient-accumulation-fusion",
+        "--bf16",
+        "--seed", "42",
+        "--group-query-attention",
+        "--attention-softmax-in-fp32",
+        "--no-load-optim",
+        "--no-load-rng",
+        "--attention-dropout", "0.0",
+        "--hidden-dropout", "0.0",
+        "--seq-length", "8192",
+        "--num-query-groups", "2",
+        "--use-mcore-models"
+    ]
+}
