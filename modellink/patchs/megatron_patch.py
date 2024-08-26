@@ -45,7 +45,7 @@ from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
 from ..data import build_pretraining_data_loader
 from ..tokenizer import build_tokenizer
 from ..arguments import parse_args_decorator
-from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper
+from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper, load_args_from_checkpoint_wrapper
 from ..initialize import initialize_megatron
 from ..utils import emit
 from ..arguments import process_args
@@ -290,6 +290,7 @@ def patch_model():
     # patch language model
     PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.forward', transformer_language_model_forward_wrapper)
     PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.__init__', transformer_language_model_init)
+    PatchManager.register_patch('megatron.training.checkpointing.load_args_from_checkpoint', load_args_from_checkpoint_wrapper)
 
 
 def patch_initialize():

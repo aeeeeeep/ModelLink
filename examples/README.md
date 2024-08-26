@@ -274,7 +274,7 @@ bash examples/llama2/ckpt_convert_llama2_legacy2hf_lora.sh
 ```shell
 mkdir dataset
 cd dataset/
-wget https://huggingface.co/datasets/lsb/enwiki20230101/blob/main/data/train-00000-of-00042-d964455e17e96d5a.parquet
+wget https://huggingface.co/datasets/lsb/enwiki20230101/resolve/main/data/train-00000-of-00042-d964455e17e96d5a.parquet
 cd ..
 ```
 
@@ -348,6 +348,13 @@ bash examples/mcore/llama2/data_convert_llama2_pretrain.sh
 
 ##### 2.2 微调数据集处理方法
 ###### 2.2.1 Alpaca风格数据集处理方法
+Alpaca风格微调数据集下载可以基于网页直接下载，也可以基于命令行下载，比如：
+```shell
+cd dataset/
+wget https://huggingface.co/datasets/tatsu-lab/alpaca/resolve/main/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet
+cd ..
+```
+
 在指令监督微调时，instruction 列对应的内容会与 input 列对应的内容拼接后作为人类指令，即人类指令为 instruction\ninput。而 output 列对应的内容为模型回答。如果指定了history，则会将历史对话内容也加入进来。如果指定system 列，则对应的内容将被作为系统提示词。
 
 ```shell
@@ -356,7 +363,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 mkdir ./finetune_dataset
 
 python ./preprocess_data.py \
-    --input ./dataset/train-00000-of-00042-d964455e17e96d5a.parquet \
+    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
     --tokenizer-name-or-path ./model_from_hf/llama-2-7b-hf/ \
     --output-prefix ./finetune_dataset/alpaca \
     --workers 4 \
@@ -458,6 +465,12 @@ Sharegpt风格示例：
     "tools": "工具描述（选填）"
   }
 ]
+```
+Sharegpt风格微调数据集下载可以基于网页直接下载，也可以基于命令行下载，比如：
+```shell
+cd dataset/
+wget https://huggingface.co/datasets/shibing624/roleplay-zh-sharegpt-gpt4-data/resolve/main/sharegpt_formatted_data-evol-gpt4.jsonl
+cd ..
 ```
 Sharegpt格式数据预处理脚本：
 ```shell
@@ -777,7 +790,7 @@ ModelLink已支持模型评估分数如下：
 | LLaMA2-7B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 45.7%     | 45.3%                                                                 | LLaMA2-13B   | [BoolQ](https://paperswithcode.com/dataset/boolq)                      | 82.2%     | [81.7](https://paperswithcode.com/sota/question-answering-on-boolq) |
 | LLaMA2-34B    | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 85.9%     | --                                                                    | LLaMA2-70B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 65.1%     | --                                                                  |
 | LLaMA3-8B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 65.3%     | 66.6%                                                                 | LLaMA3-70B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 78.3%     | 79.5%                                                               |
-| LLaMA3.1-8B   | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 65.26%    | 66.7%                                                                 | --           | --                                                                     | --        | --                                                                  |
+| LLaMA3.1-8B   | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 65.26%    | 66.7%                                                                 | LLaMA3.1-70B | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                | 81.8%     | 79.3%                                                               |
 | Mistral-7B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 56.3%     | 56.3%                                                                 | Mixtral-8x7B | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 66.0%     | 65.8%                                                               |
 | QWen-7B       | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 58.1%     | [58.2%](https://huggingface.co/Qwen/Qwen-7B)                          | Qwen-14B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 65.3%     | [66.3%](https://huggingface.co/Qwen/Qwen-14B)                       |
 | QWen-72B      | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 74.6%     | [77.4%](https://huggingface.co/Qwen/Qwen-72B)                         | QWen1.5-0.5B | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                   | 31.8%     | 31.8%                                                               |
