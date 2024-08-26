@@ -604,6 +604,15 @@ def _validate_transformer_block_build_layers(args):
             raise AssertionError('First-k-dense-replace and moe-layer-freq must be set together.')
     if args.num_experts is not None and args.use_mc2 and args.moe_grouped_gemm:
         raise AssertionError('Moe Grouped Gemm is not supported with mc2 in MOE model.')
+    enable_vpp = args.num_layers_per_virtual_pipeline_stage
+    enable_pp = args.pipeline_model_parallel_size > 1
+    if args.num_layer_list and enable_vpp:
+        if len(args.num_layer_list) != args.pipeline_model_parallel_size:
+            raise ValueError("len(args.num_layer_list) != args.pipeline_model_parallel_size")
+        if not enable_pp:
+            raise ValueError("Dynamic pipeline model should be enabled when pipeline parallel is enabled, a.k.a. pipeline_model_parallel_size > 1.")
+        if enable_vpp:
+            raise ValueError("Dynamic pipeline model and virtual pipeline cannot be enabled at the same time.")
 
 
 def _validate_group_limited_greedy(args):
@@ -658,6 +667,9 @@ def core_transformer_config_from_args_wrapper(fn):
             # For num layer list, we turn string into int list and store it in transformer config.
             config.num_layer_list = list(map(int, args.num_layer_list.split(',')))
             config.layer_offset = get_layer_offset(args.pipeline_model_parallel_size, config.num_layer_list)
+            # validate num_layer_list
+            if config.layer_offset[args.pipeline_model_parallel_size] != args.num_layers:
+                raise ValueError(f"Incorrect num_layer_list config since its sum({config.layer_offset[args.pipeline_model_parallel_size]} is unequal to total num layers({args.num_layers}).")
         else:
             config.num_layer_list = None
 
