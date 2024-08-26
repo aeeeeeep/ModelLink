@@ -639,6 +639,10 @@ def core_transformer_config_from_args_wrapper(fn):
         config.moe_pad_expert_input_to_capacity = args.moe_pad_expert_input_to_capacity
         # The policy to drop tokens. Can be either "prob" or "position". If "prob", the tokens with the lowest probabilities will be dropped. If "position", tokens at the end of each batch will be dropped.
         config.moe_token_drop_policy = args.moe_token_drop_policy
+        if args.num_layer_list:
+            # For num layer list, we turn string into int list and store it in transformer config.
+            config.num_layer_list = list(map(int, args.num_layer_list.split(',')))
+
         return config
 
     return wrapper
