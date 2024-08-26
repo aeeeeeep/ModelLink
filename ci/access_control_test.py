@@ -86,7 +86,3 @@ if __name__ == "__main__":
     # ut.run_ut()
     st = ST_Test()
     st.run_st()
-    ut = UT_Test()
-    ut.run_ut()
-    # st = ST_Test()
-    # st.run_st()

@@ -75,12 +75,11 @@ class CovertLegacyChatGLM3CkptFromHuggingfaceArgs:
     model_type = "GPT"
     loader = "chatglm3_hf"
     saver = "megatron"
-    target_tensor_parallel_size = "2"
-    target_pipeline_parallel_size = "4"
+    target_tensor_parallel_size = "1"
+    target_pipeline_parallel_size = "2"
     load_dir = "/data/chatglm3-6b-base-hf/"
-    # save_dir = "/data/chatglm3-6b-base-mg-tp1pp2-legacy-test/"
-    save_dir = "/data/chatglm3-6b-base-mg-tp2pp4-legacy-base/"
-    base_dir = "/data/chatglm3-6b-base-mg-tp2pp4-legacy-base/"
+    save_dir = "/data/chatglm3-6b-base-mg-tp1pp2-legacy-test/"
+    base_dir = "/data/chatglm3-6b-base-mg-tp1pp2-legacy-base/"
     tokenizer_model = "/data/chatglm3-6b-base-hf/tokenizer.model"
 
 
