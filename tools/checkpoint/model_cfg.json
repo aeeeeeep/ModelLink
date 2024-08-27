@@ -90,6 +90,14 @@
           "layers_mlp_up_proj": "model.layers[layer_idx].block_sparse_moe.experts[expert_idx].w3",
           "layers_mlp_linear_fc2": "model.layers[layer_idx].block_sparse_moe.experts[expert_idx].w2"
 	  }
+    },
+    "gemma": {
+      "__base__": "base",
+      "config_set_value": {
+        "seq_length": 4096,
+        "tie_word_embeddings": true,
+        "kv_channels": 256
+      }
     }
   }
 }
