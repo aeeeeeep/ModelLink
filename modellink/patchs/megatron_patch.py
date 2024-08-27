@@ -134,6 +134,7 @@ def patch_core_models(args):
     from ..core.transformer.dot_product_attention import dot_product_attention_init_wrapper, \
         dot_product_attention_forward_wrapper
     from ..core.transformer.attention import attention_init_wrapper, attention_forward
+    from ..core.models.gpt.gpt_model import gpt_model_init_wrapper
 
     # Embedding
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.get_pos_emb_on_this_cp_rank', get_pos_emb_on_this_cp_rank)
@@ -158,6 +159,7 @@ def patch_core_models(args):
     PatchManager.register_patch('megatron.training.utils.get_batch_on_this_cp_rank', get_batch_on_this_cp_rank)
     PatchManager.register_patch('megatron.training.dist_signal_handler.get_device', get_device_wrapper)
     PatchManager.register_patch('megatron.core.models.gpt.gpt_model.GPTModel.forward', gpt_model_forward)
+    PatchManager.register_patch('megatron.core.models.gpt.gpt_model.GPTModel.__init__', gpt_model_init_wrapper)
 
     # For recomputation
     from ..core.transformer.transformer_block import transformer_block_checkpointed_forward_wrapper
