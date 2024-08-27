@@ -152,15 +152,15 @@ def get_message_layer_attn(message, model, layer_idx, md=None, args=None):
     return message
 
 
-def _get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1, **kwargs):
+def get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1):
     # Grab all parallel tensors for this layer.
     mlp_l0_weight = []
     mlp_l0_bias = []
     mlp_l1_weight = []
-    mlp_l0_weight.append(model.get_layers_mlp_linear_fc1_weight(layer_idx=layer_idx, **kwargs))
-    mlp_l1_weight.append(model.get_layers_mlp_linear_fc2_weight(layer_idx=layer_idx, **kwargs))
+    mlp_l0_weight.append(model.get_layers_mlp_linear_fc1_weight(layer_idx=layer_idx))
+    mlp_l1_weight.append(model.get_layers_mlp_linear_fc2_weight(layer_idx=layer_idx))
     if md.linear_bias:
-        mlp_l0_bias.append(model.get_layers_mlp_linear_fc1_bias(layer_idx=layer_idx, **kwargs))
+        mlp_l0_bias.append(model.get_layers_mlp_linear_fc1_bias(layer_idx=layer_idx))
     # Handle gated linear units.
     if md.swiglu:
         # Concat all the first halves ('W's) and all the second halves ('V's).
@@ -174,7 +174,7 @@ def _get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1, **kwar
     # Simple concat of the rest.
     message["mlp l1 weight"] = torch.cat(mlp_l1_weight, dim=1)
     if md.linear_bias:
-        message["mlp l1 bias"] = model.get_layers_mlp_linear_fc2_bias(layer_idx=layer_idx, **kwargs)
+        message["mlp l1 bias"] = model.get_layers_mlp_linear_fc2_bias(layer_idx=layer_idx)
         if md.swiglu:
             for tp_rank in range(tp_size):
                 mlp_l0_bias[tp_rank] = torch.chunk(mlp_l0_bias[tp_rank], 2, dim=0)
@@ -184,22 +184,6 @@ def _get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1, **kwar
             message["mlp l0 bias"] = torch.cat(mlp_l0_bias, dim=0)
 
     return message
-
-
-def get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1):
-    margs = model.get_args()
-    if margs.num_experts:
-        # return _get_message_layer_mlp(message, model, layer_idx, md=md, tp_size=tp_size)
-        message["mlp_moe"] = {}
-        mlp_router_weight = model.get_layers_mlp_router_weight(layer_idx=layer_idx)
-        message["mlp_moe"]["mlp router weight"] = mlp_router_weight
-        for expert_idx in range(margs.num_experts):
-            kwargs = {'expert_idx': expert_idx}
-            expert = _get_message_layer_mlp({}, model, layer_idx, md=md, tp_size=tp_size, **kwargs)
-            message["mlp_moe"][f"expert {expert_idx}"] = expert
-        return message
-    else:
-        return _get_message_layer_mlp(message, model, layer_idx, md=md, tp_size=tp_size)
 
 
 def get_message_postprocess(model, md):
@@ -243,7 +227,6 @@ def _load_checkpoint(queue, args):
     model_mg.initialize_megatron_args(args_hf, queue)
 
     model_mg.set_tensor_model_parallel_world_size(model_mg.args.tensor_model_parallel_size)
-    model_mg.set_expert_model_parallel_world_size(model_mg.args.expert_model_parallel_size)
     model_mg.set_pipeline_model_parallel_world_size(model_mg.args.pipeline_model_parallel_size)
     model_mg.set_virtual_pipeline_model_parallel_world_size(model_mg.args.virtual_pipeline_model_parallel_size)
 
@@ -261,7 +244,7 @@ def _load_checkpoint(queue, args):
     model_mg.update_module(model_hf)
 
     def queue_put(name, msg):
-        logger.info(f"sending {name}")
+        print(f"sending {name}")
         msg["name"] = name
         queue.put(msg)
 

@@ -13,7 +13,7 @@ basepath=$(cd `dirname $0`; cd ../../../; pwd)
 CKPT_SAVE_DIR=/data/ckpt
 DATA_PATH=/data/chatglm3-dataset-alpaca/alpaca_text_document
 TOKENIZER_PATH=/data/chatglm3-6b-base-hf/
-CKPT_LOAD_DIR=/data/chatglm3-6b-base-mg-tp1pp2-mcore-base/ 
+CKPT_LOAD_DIR=/data/chatglm3-6b-base-mg-tp1pp2-legacy-base/
 
 TP=1
 PP=2
@@ -30,8 +30,6 @@ DISTRIBUTED_ARGS="
 "
 
 GPT_ARGS="
-    --use-mcore-models \
-    --transformer-impl local \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
@@ -50,19 +48,17 @@ GPT_ARGS="
     --disable-bias-linear \
     --add-qkv-bias \
     --position-embedding-type rope \
-    --no-rope-fusion \
     --use-partial-rope \
-    --rotary-percent 0.5 \
     --normalization RMSNorm \
     --use-fused-rmsnorm \
     --swiglu \
     --use-fused-swiglu \
     --use-flash-attn \
     --use-distributed-optimizer \
+    --use-mc2 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --lr 1e-6 \
-    --train-iters 15 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --attention-dropout 0.0 \
@@ -83,21 +79,21 @@ GPT_ARGS="
     --no-load-optim \
     --no-load-rng \
     --fp16 \
-    --overlap-grad-reduce \
-    --overlap-param-gather \
     --log-throughput
 "
 
 DATA_ARGS="
-    --data-path $DATA_PATH \
+    --data-path ${DATA_PATH} \
     --split 949,50,1
 "
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 1000 \
+    --train-iters 15 \
+    --save-interval 2000 \
     --eval-interval 1000 \
     --eval-iters 10 \
+    --finetune
 "
 
 torchrun $DISTRIBUTED_ARGS $basepath/pretrain_gpt.py \
@@ -105,5 +101,5 @@ torchrun $DISTRIBUTED_ARGS $basepath/pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --load ${CKPT_LOAD_DIR} \
+    --load $CKPT_LOAD_DIR \
     --save $CKPT_SAVE_DIR
