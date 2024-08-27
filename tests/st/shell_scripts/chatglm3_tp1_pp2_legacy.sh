@@ -78,7 +78,8 @@ GPT_ARGS="
     --no-save-rng \
     --no-load-optim \
     --no-load-rng \
-    --fp16
+    --fp16 \
+    --log-throughput
 "
 
 DATA_ARGS="
