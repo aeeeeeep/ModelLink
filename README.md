@@ -534,6 +534,18 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Pass】</td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="https://huggingface.co/Qwen">Qwen2</a></td>
+      <td><a href="https://huggingface.co/Qwen/Qwen2-72B/tree/main">72B</a></td>
+      <td> 4K</td>
+      <th>Mcore</th>
+      <td>4x8</td>
+      <td>BF16 </td>
+      <td> 368 </td>
+      <td><center>-- </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+    </tr> 
+    <tr>
       <td rowspan="1"><a href="https://huggingface.co/01-ai">Yi</a></td>
       <td><a href="https://huggingface.co/01-ai/Yi-34B/tree/main">34B</a></td>
       <td> 4K</td>
