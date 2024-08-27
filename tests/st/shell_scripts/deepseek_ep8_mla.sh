@@ -129,8 +129,8 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
+    --log-throughput \
     --save-interval 15 \
-    --eval-interval 2000 \
     --finetune \
     --eval-iters 0 \
     --no-save-optim \
