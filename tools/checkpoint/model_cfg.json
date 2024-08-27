@@ -25,25 +25,24 @@
         "vocab_size": "vocab_size",
         "intermediate_size": "intermediate_size",
         "norm_epsilon": "rms_norm_eps",
-        "tie_word_embeddings": "tie_word_embeddings",
-		"torch_dtype": "torch_dtype"
+        "tie_word_embeddings": "tie_word_embeddings"
       },
       "model_hf_key_mapping": {
-        "model": "module[0]",
-        "embedding_word_embeddings": "model.embed_tokens",
-        "embedding_word_embeddings_norm": "model.embedding.word_embeddings.norm",
-        "layers": "model.layers",
-        "layers_input_layernorm": "model.layers[layer_idx].input_layernorm",
-        "layers_self_attention_linear_proj": "model.layers[layer_idx].self_attn.o_proj",
-        "layers_self_attention_linear_q_proj": "model.layers[layer_idx].self_attn.q_proj",
-        "layers_self_attention_linear_k_proj": "model.layers[layer_idx].self_attn.k_proj",
-        "layers_self_attention_linear_v_proj": "model.layers[layer_idx].self_attn.v_proj",
-        "layers_self_attention_pre_mlp_layernorm": "model.layers[layer_idx].post_attention_layernorm",
-        "layers_mlp_gate_proj": "model.layers[layer_idx].mlp.gate_proj",
-        "layers_mlp_up_proj": "model.layers[layer_idx].mlp.up_proj",
-        "layers_mlp_linear_fc2": "model.layers[layer_idx].mlp.down_proj",
-        "final_layernorm": "model.norm",
-        "output_layer": "lm_head"
+        "model": "module[tp_rank]",
+        "embedding_word_embeddings": "module[tp_rank].model.embed_tokens",
+        "embedding_word_embeddings_norm": "module[tp_rank].model.embedding.word_embeddings.norm",
+        "layers": "module[tp_rank].model.layers",
+        "layers_input_layernorm": "module[tp_rank].model.layers[layer_idx].input_layernorm",
+        "layers_self_attention_linear_proj": "module[tp_rank].model.layers[layer_idx].self_attn.o_proj",
+        "layers_self_attention_linear_q_proj": "module[tp_rank].model.layers[layer_idx].self_attn.q_proj",
+        "layers_self_attention_linear_k_proj": "module[tp_rank].model.layers[layer_idx].self_attn.k_proj",
+        "layers_self_attention_linear_v_proj": "module[tp_rank].model.layers[layer_idx].self_attn.v_proj",
+        "layers_self_attention_pre_mlp_layernorm": "module[tp_rank].model.layers[layer_idx].post_attention_layernorm",
+        "layers_mlp_gate_proj": "module[tp_rank].model.layers[layer_idx].mlp.gate_proj",
+        "layers_mlp_up_proj": "module[tp_rank].model.layers[layer_idx].mlp.up_proj",
+        "layers_mlp_linear_fc2": "module[tp_rank].model.layers[layer_idx].mlp.down_proj",
+        "final_layernorm": "module[tp_rank].model.norm",
+        "output_layer": "module[tp_rank].lm_head"
       }
     },
     "llama2": {
@@ -67,29 +66,18 @@
         "norm_epsilon": "layernorm_epsilon"
       },
       "model_hf_key_mapping": {
-        "embedding_word_embeddings": "transformer.embedding.word_embeddings",
-        "layers": "transformer.encoder.layers",
-        "layers_input_layernorm": "transformer.encoder.layers[layer_idx].input_layernorm",
-        "layers_self_attention_linear_qkv_pack": "transformer.encoder.layers[layer_idx].self_attention.query_key_value",
-        "layers_self_attention_linear_proj": "transformer.encoder.layers[layer_idx].self_attention.dense",
-        "layers_self_attention_pre_mlp_layernorm": "transformer.encoder.layers[layer_idx].post_attention_layernorm",
-        "layers_mlp_linear_fc1": "transformer.encoder.layers[layer_idx].mlp.dense_h_to_4h",
-        "layers_mlp_linear_fc2": "transformer.encoder.layers[layer_idx].mlp.dense_4h_to_h",
-        "final_layernorm": "transformer.encoder.final_layernorm",
-        "output_layer": "transformer.output_layer"
+        "model": "module[tp_rank]",
+        "embedding_word_embeddings": "module[tp_rank].transformer.embedding.word_embeddings",
+        "layers": "module[tp_rank].transformer.encoder.layers",
+        "layers_input_layernorm": "module[tp_rank].transformer.encoder.layers[layer_idx].input_layernorm",
+        "layers_self_attention_linear_qkv_pack": "module[tp_rank].transformer.encoder.layers[layer_idx].self_attention.query_key_value",
+        "layers_self_attention_linear_proj": "module[tp_rank].transformer.encoder.layers[layer_idx].self_attention.dense",
+        "layers_self_attention_pre_mlp_layernorm": "module[tp_rank].transformer.encoder.layers[layer_idx].post_attention_layernorm",
+        "layers_mlp_linear_fc1": "module[tp_rank].transformer.encoder.layers[layer_idx].mlp.dense_h_to_4h",
+        "layers_mlp_linear_fc2": "module[tp_rank].transformer.encoder.layers[layer_idx].mlp.dense_4h_to_h",
+        "final_layernorm": "module[tp_rank].transformer.encoder.final_layernorm",
+        "output_layer": "module[tp_rank].transformer.output_layer"
       }
-    },
-    "mixtral": {
-      "__base__": "base",
-	  "config_set_value": {
-		  "moe_flag": true
-	  },
-	  "model_hf_key_mapping": {
-		  "layers_mlp_router": "model.layers[layer_idx].block_sparse_moe.gate",
-		  "layers_mlp_gate_proj": "model.layers[layer_idx].block_sparse_moe.experts[expert_idx].w1",
-          "layers_mlp_up_proj": "model.layers[layer_idx].block_sparse_moe.experts[expert_idx].w3",
-          "layers_mlp_linear_fc2": "model.layers[layer_idx].block_sparse_moe.experts[expert_idx].w2"
-	  }
     }
   }
 }

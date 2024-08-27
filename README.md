@@ -393,7 +393,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Pass】</td>
     </tr>
     <tr>
-      <td rowspan="3"><a href="https://modelscope.cn/organization/LLM-Research">LLaMA3.1</td>
+      <td rowspan="2"><a href="https://modelscope.cn/organization/LLM-Research">LLaMA3.1</td>
       <td><a href="https://modelscope.cn/models/LLM-Research/Meta-Llama-3.1-8B">8B</a></td>
       <td> 8K </td>
       <th>Mcore</th>
@@ -411,17 +411,6 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4x8</td>
       <td>BF16 </td>
       <td> 1297 </td>
-      <td> -- </td>
-      <td><center>【GTS】</td>
-      <td>【Test】</td>
-    </tr>
-    <tr>
-      <td><a href="https://modelscope.cn/models/LLM-Research/Meta-Llama-3.1-70B">70B</a></td>
-      <td>8K</td>
-      <th>Mcore</th>
-      <td>4x8</td>
-      <td>BF16 </td>
-      <td> 399 </td>
       <td> -- </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
