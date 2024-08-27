@@ -17,7 +17,7 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 basepath=$(cd `dirname $0`; cd ../../../; pwd)
 
 
-CKPT_SAVE_DIR="/data/deepseek-v2-random-tp1-pp1"
+CKPT_SAVE_DIR="/data/ckpt"
 DATA_PATH="/data/pretrain_dataset/alpaca_text_document"
 TOKENIZER_MODEL="/data/deepseek-v2-hf/"
 CKPT_LOAD_DIR="/data/deepseek-v2-random-tp1-pp1"
@@ -70,6 +70,7 @@ ROPE_ARGS="
     --rope-scaling-type yarn
 "
 
+# origin lr-warmup-iters=500, here we change it into 2 since total train_iter=15.
 GPT_ARGS="
     --use-distributed-optimizer \
     --use-flash-attn \
@@ -90,7 +91,7 @@ GPT_ARGS="
     --global-batch-size 64 \
     --make-vocab-size-divisible-by 1 \
     --lr 1.0e-5 \
-    --train-iters 2000 \
+    --train-iters 15 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --disable-bias-linear \
@@ -108,7 +109,7 @@ GPT_ARGS="
     --attention-softmax-in-fp32 \
     --min-lr 1.0e-7 \
     --weight-decay 1e-2 \
-    --lr-warmup-iters 500 \
+    --lr-warmup-iters 2 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
     --adam-beta2 0.999 \
@@ -128,7 +129,7 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 1 \
+    --save-interval 15 \
     --eval-interval 2000 \
     --finetune \
     --eval-iters 0 \
