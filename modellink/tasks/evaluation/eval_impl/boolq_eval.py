@@ -29,14 +29,17 @@ logger = logging.getLogger(__name__)
 
 
 class BoolqEval(DatasetEval):
-    def __init__(self, test_dir, batch_size,
+    def __init__(self, test_dir, eval_args,
                  instruction_template="{passage}\nQuestion: {question}?\nAnswer:"):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
-        self.batch_size = batch_size
+        self.batch_size = eval_args.evaluation_batch_size
         self.rank = dist.get_rank()
         self.file_pbar = None
         self.task_pbar = None
+        # BoolqEval not support n shot now.
+        self.eval_template = None
+        self.max_eval_samples = eval_args.max_eval_samples
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -58,6 +61,14 @@ class BoolqEval(DatasetEval):
             acc_n = 0
             instructions = []
             targets = []
+
+            if self.max_eval_samples is not None:
+                origin_len = len(boolq_question_list)
+                boolq_question_list = (
+                    boolq_question_list[0:min(self.max_eval_samples, origin_len)]
+                )
+
+                logger.info("%s length from %s to %s !!!", file, str(origin_len), str(len(boolq_question_list)))
 
             if self.rank == 0:
                 self.task_pbar = tqdm.tqdm(total=len(boolq_question_list), desc=file, leave=False)

@@ -93,7 +93,8 @@
     <tr>
         <td>Evaluation</td>
         <td>Legacy</td>
-        <td>mmlu</td>
+        <td>mmlu, prompt_mmlu,      
+        prompt_boolq, prompt_ceval</td>
         <td><a href="ut/evaluation/test_evaluate.py">test_evaluate.py</td>
         <td>Y</td>
         <td></td>

@@ -550,6 +550,14 @@ def _validate_inference_args(args):
         raise AssertionError('History turns of chat must greater than 0.')
 
 
+def _validate_evaluation_args(args):
+    # five shot only supported on mmlu and ceval now
+    if args.prompt_type is not None and hasattr(args, "task") and (args.task == "mmlu" or args.task == "ceval"):
+        train_dir = os.path.dirname(args.task_data_path) + "/dev/"
+        if not os.path.isdir(train_dir) or not os.path.isdir(args.task_data_path):
+            raise ValueError(f"Test and dev directory must exists when specify prompt_type in evaluation")
+
+
 def _validate_moe_expert_capacity_factor(args):
     if args.moe_expert_capacity_factor is not None:
         if args.moe_token_dispatcher_type != "alltoall":
@@ -650,6 +658,7 @@ def validate_args_decorator(megatron_validate_args):
         _validate_yarn(args)
         _validate_transformer_block_build_layers(args)
         _validate_group_limited_greedy(args)
+        _validate_evaluation_args(args)
 
         _validate_optimizer(args)
         from modellink.utils import print_args
