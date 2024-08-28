@@ -21,7 +21,7 @@ import pandas as pd
 import tqdm
 
 from torch import distributed as dist
-from .template import MMLU_TEMPLATE_DIR
+from .template import MMLU_TEMPLATE_DIR, get_eval_template
 from ..eval_api.dataset_eval import DatasetEval
 from ..eval_api.chat import Chat
 from ....error_utils import check_divisible_by_zero
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class MmluEval(DatasetEval):
-    def __init__(self, test_dir, batch_size,
+    def __init__(self, test_dir, eval_args,
                  instruction_template="{few_shot_examples}\n\n"
                                       "{question}\nAnswer:",
                  output_template1=r".*(?P<answer>[A|B|C|D])\..*",
@@ -38,10 +38,16 @@ class MmluEval(DatasetEval):
         self.test_dir = test_dir
         self.instruction_template = instruction_template
         self.output_template = [output_template1, output_template2]
-        self.batch_size = batch_size
+        self.batch_size = eval_args.evaluation_batch_size
         self.rank = dist.get_rank()
         self.file_pbar = None
         self.task_pbar = None
+        self.eval_template = None
+        self.prompt_type = None
+        if eval_args.prompt_type is not None:
+            self.prompt_type = eval_args.prompt_type.strip()
+            self.eval_template = get_eval_template(eval_args.eval_language)
+        self.max_eval_samples = eval_args.max_eval_samples
 
     def eval(self, chat: Chat) -> (dict, pd.DataFrame):
         answer_result = {}
@@ -65,6 +71,14 @@ class MmluEval(DatasetEval):
             instructions = []
             corrects = []
 
+            if self.max_eval_samples is not None:
+                origin_len = len(data_df)
+                data_df = (
+                    data_df[0:min(self.max_eval_samples, origin_len)]
+                )
+
+                logger.info("%s length from %s to %s !!!", subject_name, str(origin_len), str(len(data_df)))
+
             if subject_name not in mmlu_few_shot_template:
                 logging.error(f"missing '{subject_name}' instruction_template in {MMLU_TEMPLATE_DIR}")
                 if self.file_pbar is not None:
@@ -75,10 +89,28 @@ class MmluEval(DatasetEval):
                 self.task_pbar = tqdm.tqdm(total=len(data_df), desc=file, leave=False)
 
             for idx, row in data_df.iterrows():
-                test_question = f"{row['question']}\nA. {row['A']}\nB. {row['B']}\nC. {row['C']}\nD. {row['D']}"
-                instruction = self.instruction_template.format(few_shot_examples=mmlu_few_shot_template[subject_name],
-                                                               subject=subject,
-                                                               question=test_question)
+                instruction = None
+                if self.prompt_type is not None:
+                    train_dir = os.path.dirname(self.test_dir) + "/dev/"
+                    train_file_path = os.path.join(train_dir, subject_name + "_dev.csv")
+
+                    if not os.path.exists(train_file_path):
+                        raise FileExistsError("The file ({}) does not exist !".format(train_file_path))
+
+                    train_data_df = pd.read_csv(train_file_path, names=['question', 'A', 'B', 'C', 'D', 'answer'])
+                    support_set = (
+                        train_data_df.sample(min(5, len(train_data_df)))
+                    )
+                    instruction = self.eval_template.format_example(
+                        target_data=row,
+                        support_set=support_set,
+                        subject_name=subject_name,
+                    )
+                else:
+                    test_question = f"{row['question']}\nA. {row['A']}\nB. {row['B']}\nC. {row['C']}\nD. {row['D']}"
+                    instruction = self.instruction_template.format(few_shot_examples=mmlu_few_shot_template[subject_name],
+                                                                subject=subject,
+                                                                question=test_question)
                 instructions.append(instruction)
                 corrects.append(row['answer'])
 
@@ -91,7 +123,7 @@ class MmluEval(DatasetEval):
                                 if rank == 0:
                                     logger.info(instruction)
                                     match_flag = False
-                                    for template in self.output_template:
+                                    for template_idx, template in enumerate(self.output_template):
                                         try:
                                             result = re.match(template, answer)
                                             logger.info(f"correct: {corrects[index]}, AI: {result.group('answer')}")
@@ -103,7 +135,8 @@ class MmluEval(DatasetEval):
                                             match_flag = True
                                             break
                                         except Exception as e:
-                                            logger.info(e)
+                                            if template_idx == len(self.output_template) - 1:
+                                                logger.info(e)
                                             continue
                                     if not match_flag:
                                         logger.info("xx. AI answer: %s", answer)

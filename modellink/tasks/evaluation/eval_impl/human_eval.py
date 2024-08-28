@@ -80,8 +80,9 @@ def extract_answer_code(answer, task: dict):
 
 
 class HumanEval(DatasetEval):
-    def __init__(self, test_dir, instruction_template=None):
+    def __init__(self, test_dir, eval_args):
         self.test_dir = test_dir
+        instruction_template = eval_args.instruction_template
         if instruction_template:
             self.instruction_template = instruction_template
         else:
