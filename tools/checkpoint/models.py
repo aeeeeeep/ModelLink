@@ -258,15 +258,19 @@ class HuggingfaceModel(ModelBase):
         config_value = self.model_cfg.get(self.args_cmd.model_type_hf).get('config_set_value')
         for key_target in config_key_mapping:
             key_hf = config_key_mapping[key_target]
-            self.args[key_target] = self.args[key_hf]
+            try:
+                self.args[key_target] = self.args[key_hf]
+            except KeyError as e:
+                logger.warning(f"{key_target} was not found in the config file.")
         for key_target in config_value:
             self.args[key_target] = config_value[key_target]
 
         if (
                 "num_key_value_heads" in self.args and
-                self.args["num_attention_heads"] != self.args["num_key_value_heads"] and
-                self.args["num_key_value_heads"] != 1
+                self.args["num_attention_heads"] != self.args["num_key_value_heads"]
         ):
+            if self.args["num_attention_heads"] == 1:
+                raise AssertionError("Number of attention heads should be greater than 1!")
             self.args['group_query_attention'] = True
 
         self.args['untie_embeddings_and_output_weights'] = not self.args.get("tie_word_embeddings", False)
@@ -294,7 +298,7 @@ class HuggingfaceModel(ModelBase):
         # Reshape loaded weights.
         nh = self.args.num_attention_heads
         ng = (self.args.num_key_value_heads if self.args.group_query_attention else self.args.num_attention_heads)
-        dim = self.args.hidden_size // self.args.num_attention_heads
+        dim = self.args.kv_channels if hasattr(self.args, "kv_channels") else self.args.hidden_size // self.args.num_attention_heads
         if not nh % ng == 0:
             raise ValueError("nh % ng should equal 0")
 
@@ -510,14 +514,16 @@ class MegatronModel(ModelBase):
         self.args.llama = hf_args
         self.args.ffn_hidden_size = hf_args.intermediate_size
         self.args.gradient_accumulation_fusion = hf_args.gradient_accumulation_fusion
+        self.args.kv_channels = hf_args.kv_channels if hasattr(hf_args, "kv_channels") else None
         if self.args.add_dense_bias:
             self.args.skip_bias_add = False
 
         if (
                 hasattr(hf_args, "num_key_value_heads") and
-                hf_args.num_attention_heads != hf_args.num_key_value_heads and
-                hf_args.num_key_value_heads != 1
+                hf_args.num_attention_heads != hf_args.num_key_value_heads
         ):
+            if hf_args.num_attention_heads == 1:
+                raise AssertionError("Number of attention heads should be greater than 1!")
             self.args.group_query_attention = True
             self.args.num_query_groups = hf_args.num_key_value_heads
         if hasattr(hf_args, 'num_local_experts'):
