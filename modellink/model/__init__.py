@@ -22,5 +22,4 @@ from .transformer import (
 )
 from .language_model import transformer_language_model_forward_wrapper, transformer_language_model_init
 from .fused_layer_norm import norm_wrapper
-from .moe import SwitchMLP
 from .rms_norm import rms_norm_init_wrapper, rms_norm_forward

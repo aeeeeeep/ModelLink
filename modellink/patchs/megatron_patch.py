@@ -27,7 +27,7 @@ from mindspeed.initialize import _compile_dependencies
 
 from ..model import (
     GPTModel, parallel_transformer_init, transformer_language_model_forward_wrapper,
-    norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper,
+    norm_wrapper, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
     ParallelAttention_wrapper, transformer_language_model_init,
     ParallelAttentionForward, parallel_transformer_forward, parallel_mlp_init_wrapper,
@@ -273,7 +273,6 @@ def patch_model():
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelMLP.__init__', parallel_mlp_init_wrapper)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelMLP.forward', parallel_mlp_forward_wrapper)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformerLayer.__init__', parallel_transformer_layer_init_wrapper)
-    PatchManager.register_patch('megatron.legacy.model.transformer.SwitchMLP', SwitchMLP)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.__init__', parallel_transformer_init)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.forward', parallel_transformer_forward)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.state_dict_for_save_checkpoint',
