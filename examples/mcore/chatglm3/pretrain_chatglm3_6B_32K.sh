@@ -100,6 +100,8 @@ OUTPUT_ARGS="
     --save-interval 1000 \
     --eval-interval 1000 \
     --eval-iters 10 \
+    --save $CKPT_SAVE_DIR \
+    --load $CKPT_LOAD_DIR \
 "
 
 python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
@@ -107,6 +109,4 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --save $CKPT_SAVE_DIR \
     | tee logs/train_mcore_chatglm3_6B_32K.log
-

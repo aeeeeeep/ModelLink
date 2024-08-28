@@ -60,7 +60,7 @@ GPT_ARGS="
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --lr 1e-6 \
-    --train-iters 2000 \
+    --train-iters 1000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --attention-dropout 0.0 \
@@ -93,6 +93,8 @@ OUTPUT_ARGS="
     --save-interval 1000 \
     --eval-interval 1000 \
     --eval-iters 10 \
+    --save $CKPT_SAVE_DIR \
+    --load $CKPT_LOAD_DIR \
 "
 
 python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
@@ -100,5 +102,4 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --save $CKPT_SAVE_DIR \
     | tee logs/train_mcore_chatglm3_6B_8K.log
