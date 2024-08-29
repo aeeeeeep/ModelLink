@@ -1,6 +1,6 @@
 #!/bin/bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-
+# 多机参数
 NPUS_PER_NODE=8
 MASTER_ADDR=localhost
 MASTER_PORT=6003
@@ -20,18 +20,21 @@ DISTRIBUTED_ARGS="
     --master_addr ${MASTER_ADDR} \
     --master_port ${MASTER_PORT}
 "
+
 GPT_ARGS="
     --tensor-model-parallel-size 2 \
     --pipeline-model-parallel-size 2 \
+    --context-parallel-algo megatron_cp_algo \
+    --context-parallel-size 4 \
     --sequence-parallel \
     --num-layers 40 \
     --hidden-size 4096 \
     --ffn-hidden-size 13696 \
     --num-attention-heads 32 \
-    --seq-length 8192 \
+    --seq-length 32768 \
     --micro-batch-size 1 \
-    --global-batch-size 64 \
-    --max-position-embeddings 8192 \
+    --global-batch-size 16 \
+    --max-position-embeddings 32768 \
     --padded-vocab-size 151552 \
     --make-vocab-size-divisible-by 1 \
     --group-query-attention \
@@ -39,22 +42,21 @@ GPT_ARGS="
     --disable-bias-linear \
     --add-qkv-bias \
     --position-embedding-type rope \
-    --use-partial-rope
     --overlap-grad-reduce
+    --use-partial-rope \
+    --rotary-base 5000000 \
     --use-fused-rmsnorm \
     --normalization RMSNorm \
     --swiglu \
-    --use-mc2 \
     --use-distributed-optimizer \
     --use-flash-attn \
-    --use-fused-swiglu \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --load ${CKPT_LOAD_DIR} \
-    --save ${CKPT_SAVE_DIR} \
-    --lr 1.25e-6 \
     --norm-epsilon 1.5625e-07 \
+    --lr 1.25e-6 \
     --train-iters 2000 \
+    --no-shared-storage \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --attention-dropout 0.0 \
@@ -72,22 +74,20 @@ GPT_ARGS="
     --no-gradient-accumulation-fusion \
     --no-load-optim \
     --no-load-rng \
-    --no-rope-fusion \
-    --no-bias-swiglu-fusion \
     --use-mcore-models \
     --bf16
 "
 
 DATA_ARGS="
     --data-path ${DATA_PATH} \
-    --split 100,0,0
+    --split 949,50,1
 "
 
 OUTPUT_ARGS="
     --log-interval 1 \
     --save-interval 2000 \
-    --eval-interval 2000 \
-    --eval-iters 0 \
+    --eval-interval 1000 \
+    --eval-iters 10 \
 "
 
 torchrun ${DISTRIBUTED_ARGS} pretrain_gpt.py \
@@ -95,4 +95,6 @@ torchrun ${DISTRIBUTED_ARGS} pretrain_gpt.py \
     ${DATA_ARGS} \
     ${OUTPUT_ARGS} \
     --distributed-backend nccl \
-    | tee logs/train_mcore_glm4_9b_8k_ptd.log
+    --save ${CKPT_SAVE_DIR} \
+    | tee logs/tune_mcore_glm4_9b_32k_npu.log
+

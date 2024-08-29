@@ -4,11 +4,11 @@
         "--model-type-hf", "chatglm3",
         "--loader", "hf_mcore",
         "--saver", "mg_mcore",
-        "--load-dir", "./model_from_hf/glm4-hf",
-        "--save-dir", "./model_weights/glm4-mcore",
+        "--load-dir", "./model_from_hf/glm4_hf",
+        "--save-dir", "./model_weights/glm4_mcore",
         "--target-tensor-parallel-size", "2",
         "--target-pipeline-parallel-size", "2",
-        "--tokenizer-model", "./model_from_hf/glm4-hf/tokenizer.json",
+        "--tokenizer-model", "./model_from_hf/glm4_hf/tokenizer.json",
         "--add-qkv-bias",
         "--use-mcore-models",
         "--params-dtype", "bf16"
@@ -29,12 +29,12 @@
         "--norm-epsilon", "0.00000015625",
         "--swiglu",
         "--untie-embeddings-and-output-weights",
-        "--load", "./model_weights/glm4-mcore"
+        "--load", "./model_weights/glm4_mcore"
     ],
 
     "TOKENIZER_PARAM": [
         "--tokenizer-type", "PretrainedFromHF",
-        "--tokenizer-name-or-path", "./model_from_hf/glm4-hf"
+        "--tokenizer-name-or-path", "./model_from_hf/glm4_hf"
     ],
 
     "DISTRIBUTED_PARAM": [

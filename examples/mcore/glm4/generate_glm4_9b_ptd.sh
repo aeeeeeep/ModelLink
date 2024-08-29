@@ -11,11 +11,11 @@ MASTER_PORT=6003
 NNODES=1
 NODE_RANK=0
 NPUS_PER_NODE=2
-WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
+WORLD_SIZE=$((${NPUS_PER_NODE}*${NNODES}))
 
-DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
+DISTRIBUTED_ARGS="--nproc_per_node ${NPUS_PER_NODE} --nnodes ${NNODES} --node_rank ${NODE_RANK} --master_addr ${MASTER_ADDR} --master_port ${MASTER_PORT}"
 
-torchrun $DISTRIBUTED_ARGS inference.py \
+torchrun ${DISTRIBUTED_ARGS} inference.py \
        --tensor-model-parallel-size 1  \
        --pipeline-model-parallel-size 2  \
        --num-layers 40  \
@@ -41,9 +41,9 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --max-new-tokens 256 \
        --micro-batch-size 1 \
        --global-batch-size 16 \
-       --load $CHECKPOINT  \
+       --load ${CHECKPOINT}  \
        --tokenizer-type PretrainedFromHF  \
-       --tokenizer-name-or-path $TOKENIZER_PATH \
+       --tokenizer-name-or-path ${TOKENIZER_PATH} \
        --tokenizer-not-use-fast \
        --untie-embeddings-and-output-weights \
        --attention-softmax-in-fp32 \
