@@ -47,7 +47,9 @@ MOE_ARGS="
     --moe-intermediate-size 1536 \
     --moe-router-load-balancing-type group_limited_greedy \
     --topk-group 3 \
-    --moe-aux-loss-coeff 0.001 \
+    --moe-aux-loss-coeff 0.003 \
+    --moe-device-level-aux-loss-coeff 0.05 \
+    --moe-comm-aux-loss-coeff 0.02 \
     --routed-scaling-factor 16.0 \
     --seq-aux
 "
@@ -71,13 +73,14 @@ GPT_ARGS="
     --pipeline-model-parallel-size ${PP} \
     --expert-model-parallel-size ${EP} \
     --sequence-parallel \
+    --output-layer-slice-num 8 \
     --num-layers 2 \
     --hidden-size 5120 \
     --ffn-hidden-size 12288 \
     --num-attention-heads 128 \
     --tokenizer-type PretrainedFromHF  \
     --tokenizer-name-or-path ${TOKENIZER_MODEL} \
-    --seq-length 4096 \
+    --seq-length 8192 \
     --max-position-embeddings 163840 \
     --micro-batch-size 1 \
     --global-batch-size 64 \
