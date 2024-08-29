@@ -2,7 +2,7 @@
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 NPUS_PER_NODE=8
-MASTER_ADDR=<local_rank>
+MASTER_ADDR=localhost
 MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
@@ -97,9 +97,11 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 1000 \
-    --eval-interval 1000 \
+    --save-interval 2000 \
+    --eval-interval 2000 \
     --eval-iters 10 \
+    --save $CKPT_SAVE_DIR \
+    --load $CKPT_LOAD_DIR \
 "
 
 python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
@@ -107,6 +109,4 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --save $CKPT_SAVE_DIR \
     | tee logs/train_mcore_chatglm3_6B_32K.log
-

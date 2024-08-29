@@ -173,6 +173,7 @@ def _get_message_layer_mlp(message, model, md=None, **kwargs):
             message[f"mlp l0 bias V"] = torch.cat([b[1] for b in mlp_l0_bias], dim=0)
         else:
             message[f"mlp l0 bias"] = torch.cat(mlp_l0_bias, dim=0)
+        message[f"mlp l1 bias"] = model.get_layers_mlp_linear_fc2_bias(**kwargs)
 
 
 def get_message_layer_mlp(message, model, md=None, **kwargs):
