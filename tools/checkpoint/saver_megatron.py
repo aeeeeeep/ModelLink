@@ -57,7 +57,7 @@ def save_huggingface(args, model):
     for name_param_h, name_param_m in zip(hf_model.named_parameters(), model.named_parameters()):
         name_param_h[1].data.copy_(name_param_m[1])
 
-    save_dir = os.path.join(args.save_dir, 'mg2hg')
+    save_dir = os.path.join(args.save_dir, 'mg2hf')
     print(f'save weight to {save_dir}')
     hf_model.save_pretrained(save_dir)
 
@@ -145,7 +145,7 @@ def save_huggingface_llama(args, model, model_args):
         if name_param_h[0] in hf2mg_map.keys():
             name_param_h[1].data.copy_(hf2mg_map[name_param_h[0]])
 
-    save_dir = os.path.join(args.save_dir, 'mg2hg')
+    save_dir = os.path.join(args.save_dir, 'mg2hf')
     print(f'save weight to {save_dir}')
     hf_model.save_pretrained(save_dir)
 
@@ -237,7 +237,7 @@ def save_huggingface_qwen(args, model, model_args):
         if name_param_h[0] in hf2mg_map.keys():
             name_param_h[1].data.copy_(hf2mg_map[name_param_h[0]])
 
-    save_dir = os.path.join(args.save_dir, "mg2hg")
+    save_dir = os.path.join(args.save_dir, "mg2hf")
     print(f"save weight to {save_dir}")
     hf_model.save_pretrained(save_dir)
 
@@ -315,7 +315,7 @@ def save_huggingface_chatglm3(args, model, model_args):
         if name_param_h[0] in hf2mg_map.keys():
             name_param_h[1].data.copy_(hf2mg_map[name_param_h[0]])
 
-    save_dir = os.path.join(args.save_dir, 'mg2hg')
+    save_dir = os.path.join(args.save_dir, 'mg2hf')
     print(f'save weight to {save_dir}')
     hf_model.save_pretrained(save_dir)
 
