@@ -94,7 +94,7 @@
         <td>Evaluation</td>
         <td>Legacy</td>
         <td>mmlu, prompt_mmlu,      
-        prompt_boolq, prompt_ceval</td>
+        prompt_boolq, prompt_ceval, qwen2_mmlu</td>
         <td><a href="ut/evaluation/test_evaluate.py">test_evaluate.py</td>
         <td>Y</td>
         <td></td>
@@ -129,7 +129,7 @@
     <tr>
         <td>Checkpoint</td>
         <td>Mcore, Legacy</td>
-        <td>mcore_dynamic, mcore_vpp, mcore_pack_gqa, legacy_dynamic</td>
+        <td>mcore_dynamic, mcore_vpp, mcore_pack_gqa, legacy_dynamic, mcore_qwen2</td>
         <td><a href="ut/checkpoint">checkpoint</a></td>
         <td>Y</td>
         <td></td>

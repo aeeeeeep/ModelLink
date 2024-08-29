@@ -83,6 +83,18 @@ class CovertMCoreChatGLM3CkptFromHuggingfaceArgs:
     tokenizer_model = "/data/chatglm3-6b-base-hf/tokenizer.model"
 
 
+class CovertMCoreQwen2CkptFromHuggingfaceArgs:
+    model_type = "GPT"
+    loader = "hf_mcore"
+    saver = "mg_mcore"
+    target_tensor_parallel_size = "1"
+    target_pipeline_parallel_size = "1"
+    load_dir = "/data/Qwen2-1.5B/"
+    save_dir = "/data/qwen2-1.5b-base-mg-tp1pp1-mcore-test/"
+    base_dir = "/data/qwen2-1.5b-hf-v0.1-tp1-pp1/"
+    tokenizer_model = "/data/Qwen2-1.5B/tokenizer.model"
+
+
 class TestConvertCkptFromHuggingface:
 
     def test_file_exsit(self):
@@ -269,3 +281,29 @@ class TestConvertCkptFromHuggingface:
         judge_expression(weight_common_content['encoder']['layers.0.mlp.dense_4h_to_h.weight'].size() == torch.Size([4096, 5504]))
         judge_expression(weight_common_content['encoder']['layers.0.input_norm.weight'].size() == torch.Size([4096]))
         judge_expression(weight_common_content['encoder']['layers.0.post_attention_norm.weight'].size() == torch.Size([4096]))
+
+    def test_convert_weights_qwen2_mcore_form_huggingface(self):
+        args = CovertMCoreQwen2CkptFromHuggingfaceArgs()
+        """
+        Test whether the weight to be converted as we want in `--save-dir`. We will check the model layer name,
+        including embedding, final_norm, output and encoder. In the encoder, there will be some different layers
+        to compose the unique transformer layer and all these layer stack to compose the entity of the model.
+        """
+        base_dir = Path(__file__).absolute().parents[3]
+        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        arguments = [
+            "--model-type", args.model_type,
+            "--loader", args.loader,
+            "--saver", args.saver,
+            "--target-tensor-parallel-size", args.target_tensor_parallel_size,
+            "--target-pipeline-parallel-size", args.target_pipeline_parallel_size,
+            "--load-dir", args.load_dir,
+            "--save-dir", args.save_dir,
+            "--use-mcore-models",
+            "--add-qkv-bias",
+            "--model-type-hf", "llama2",
+            "--params-dtype", "bf16",
+            "--tokenizer-model", args.tokenizer_model,
+        ]
+        exit_code = subprocess.run(["python", file_path] + arguments).returncode
+        assert exit_code == 0 and weight_compare(args.base_dir, args.save_dir), "convert_weights_qwen2_mcore_form_huggingface failed!"
