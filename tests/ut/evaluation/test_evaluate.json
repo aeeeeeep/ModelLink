@@ -30,6 +30,116 @@
                 "use-deter-comp": null
             }
         }
+    ],
+
+    "test_qwen_prompt_mmlu_evaluate": [
+        {
+            "param": {
+                "task-data-path":"/data/eval_data/full/mmlu/test",
+                "task":"mmlu",
+                "tensor-model-parallel-size": 8,
+                "pipeline-model-parallel-size": 1, 
+                "num-layers": 32,
+                "hidden-size": 4096,
+                "ffn-hidden-size": 11008,
+                "num-attention-heads": 32, 
+                "seq-length": 8192,
+                "max-new-tokens": 1,
+                "max-position-embeddings": 32768,
+                "make-vocab-size-divisible-by": 16, 
+                "micro-batch-size": 2, 
+                "normalization": "RMSNorm", 
+                "position-embedding-type": "rope",
+                "swiglu": null,
+                "tokenizer-not-use-fast": null,
+                "untie-embeddings-and-output-weights": null,
+                "disable-bias-linear": null,
+                "bf16": null,
+                "no-load-rng": null,
+                "no-load-optim": null,
+                "load":"/data/Qwen-7B-tp8-pp1/",
+                "tokenizer-type":"PretrainedFromHF",  
+                "tokenizer-name-or-path":"/data/qwen-7b/",
+                "use-deter-comp": null,
+                "exit-on-missing-checkpoint": null,
+                "max-eval-samples": 2,
+                "prompt-type": "qwen",
+                "add-qkv-bias":null
+            }
+        }
+    ], 
+    "test_qwen_prompt_boolq_evaluate": [
+        {
+            "param": {
+                "task-data-path":"/data/eval_data/full/boolq/test",
+                "task":"boolq",
+                "tensor-model-parallel-size": 8,
+                "pipeline-model-parallel-size": 1, 
+                "num-layers": 32,
+                "hidden-size": 4096,
+                "ffn-hidden-size": 11008,
+                "num-attention-heads": 32, 
+                "seq-length": 8192,
+                "max-new-tokens": 1,
+                "max-position-embeddings": 32768,
+                "make-vocab-size-divisible-by": 16, 
+                "micro-batch-size": 2, 
+                "normalization": "RMSNorm", 
+                "position-embedding-type": "rope",
+                "swiglu": null,
+                "tokenizer-not-use-fast": null,
+                "untie-embeddings-and-output-weights": null,
+                "disable-bias-linear": null,
+                "bf16": null,
+                "no-load-rng": null,
+                "no-load-optim": null,
+                "load":"/data/Qwen-7B-tp8-pp1/",
+                "tokenizer-type":"PretrainedFromHF",  
+                "tokenizer-name-or-path":"/data/qwen-7b/",
+                "use-deter-comp": null,
+                "exit-on-missing-checkpoint": null,
+                "max-eval-samples": 30,
+                "prompt-type": "qwen",
+                "add-qkv-bias":null
+            }
+        }
+    ],
+
+    "test_qwen_prompt_ceval_evaluate": [
+        {
+            "param": {
+                "task-data-path":"/data/eval_data/full/ceval/val",
+                "task":"ceval",
+                "tensor-model-parallel-size": 8,
+                "pipeline-model-parallel-size": 1, 
+                "num-layers": 32,
+                "hidden-size": 4096,
+                "ffn-hidden-size": 11008,
+                "num-attention-heads": 32, 
+                "seq-length": 8192,
+                "max-new-tokens": 1,
+                "max-position-embeddings": 32768,
+                "make-vocab-size-divisible-by": 16, 
+                "micro-batch-size": 2, 
+                "normalization": "RMSNorm", 
+                "position-embedding-type": "rope",
+                "swiglu": null,
+                "tokenizer-not-use-fast": null,
+                "untie-embeddings-and-output-weights": null,
+                "disable-bias-linear": null,
+                "bf16": null,
+                "no-load-rng": null,
+                "no-load-optim": null,
+                "load":"/data/Qwen-7B-tp8-pp1/",
+                "tokenizer-type":"PretrainedFromHF",  
+                "tokenizer-name-or-path":"/data/qwen-7b/",
+                "use-deter-comp": null,
+                "exit-on-missing-checkpoint": null,
+                "max-eval-samples": 2,
+                "prompt-type": "qwen",
+                "add-qkv-bias":null
+            }
+        }
     ]
 }
 

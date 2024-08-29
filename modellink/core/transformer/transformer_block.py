@@ -13,16 +13,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from contextlib import nullcontext
+from functools import wraps
 
 import torch
-from functools import wraps
 from torch import Tensor
-from megatron.core import tensor_parallel, parallel_state, mpu
+from megatron.core import InferenceParams, tensor_parallel, parallel_state, mpu
 from megatron.core.packed_seq_params import PackedSeqParams
 from megatron.training import get_args
 from megatron.core.models.gpt.gpt_layer_specs import _get_mlp_module_spec
 from megatron.core.transformer import build_module
 from megatron.core.transformer.custom_layers.transformer_engine import TENorm
+from megatron.core.utils import make_sharded_tensor_for_checkpoint, make_viewless_tensor
 
 
 def get_num_layers_to_build_wrapper(fn):
@@ -39,6 +41,17 @@ def get_num_layers_to_build_wrapper(fn):
             num_layers_to_build = num_layer_list[pp_stage]
 
         return num_layers_to_build
+    return wrapper
+
+
+def transformer_block_init_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        fn(self, *args, **kwargs)
+        _args = get_args()
+        self.input_embeds_norm = _args.input_embeds_norm
+        self.hidden_size = _args.hidden_size
+
     return wrapper
 
 
@@ -94,6 +107,115 @@ def transformer_block_checkpointed_forward_wrapper(forward_func):
         return output
 
     return block_method_checkpointed_forward
+
+
+def transformer_block_forward(
+    self,
+    hidden_states: Tensor,
+    attention_mask: Tensor,
+    context: Tensor = None,
+    context_mask: Tensor = None,
+    rotary_pos_emb: Tensor = None,
+    inference_params: InferenceParams = None,
+    packed_seq_params: PackedSeqParams = None,
+):
+    # hidden_states (float): [s, b, h]
+    # attention_mask (bool): [1, 1, s, s]
+
+    if not self.pre_process:
+        # See set_input_tensor()
+        hidden_states = self.input_tensor
+
+    # Viewless tensor.
+    # - We only need to create a viewless tensor in the case of micro batch
+    #   size (mbs) == 1, since in this case, 'hidden_states.transpose()'
+    #   above creates a view tensor, and '.contiguous()' is a pass-through.
+    #   For mbs >= 2, '.contiguous()' creates a new tensor, eliminating
+    #   the need to make it viewless.
+    #
+    #   However, we don't explicitly check mbs == 1 here because
+    #   make_viewless_tensor() has negligible overhead when its input
+    #   is already viewless.
+    #
+    # - For the 'else' case above, calling make_viewless_tensor() here is
+    #   likely redundant, since p2p_communication.py (likely originator)
+    #   already creates viewless tensors. That said, make_viewless_tensor()
+    #   is called here to be future-proof and corner-case-proof.
+    if self.input_embeds_norm and self.pre_process:
+        hidden_states = hidden_states * (self.hidden_size ** 0.5)
+
+    hidden_states = make_viewless_tensor(
+        inp=hidden_states, requires_grad=True, keep_graph=True,
+    )
+
+    if self.config.sequence_parallel:
+        rng_context = tensor_parallel.get_cuda_rng_tracker().fork()
+    else:
+        rng_context = nullcontext()
+
+    if self.config.fp8:
+        import transformer_engine  # To keep out TE dependency when not training in fp8
+
+        if self.config.fp8 == "e4m3":
+            fp8_format = transformer_engine.common.recipe.Format.E4M3
+        elif self.config.fp8 == "hybrid":
+            fp8_format = transformer_engine.common.recipe.Format.HYBRID
+        else:
+            raise ValueError("E4M3 and HYBRID are the only supported FP8 formats.")
+
+        fp8_recipe = transformer_engine.common.recipe.DelayedScaling(
+            margin=self.config.fp8_margin,
+            interval=self.config.fp8_interval,
+            fp8_format=fp8_format,
+            amax_compute_algo=self.config.fp8_amax_compute_algo,
+            amax_history_len=self.config.fp8_amax_history_len,
+            override_linear_precision=(False, False, not self.config.fp8_wgrad),
+        )
+        fp8_group = None
+        if parallel_state.model_parallel_is_initialized():
+            fp8_group = parallel_state.get_amax_reduction_group(with_context_parallel=True)
+        fp8_context = transformer_engine.pytorch.fp8_autocast(
+            enabled=True, fp8_recipe=fp8_recipe, fp8_group=fp8_group
+        )
+    else:
+        fp8_context = nullcontext()
+
+    with rng_context and fp8_context:
+        # Forward pass.
+        if self.config.recompute_granularity == 'full' and self.training:
+            hidden_states = self._checkpointed_forward(
+                hidden_states=hidden_states,
+                attention_mask=attention_mask,
+                context=context,
+                context_mask=context_mask,
+                rotary_pos_emb=rotary_pos_emb,
+                packed_seq_params=packed_seq_params,
+            )
+        else:
+            for layer in self.layers:
+                with self.offload_context:
+                    hidden_states, context = layer(
+                        hidden_states=hidden_states,
+                        attention_mask=attention_mask,
+                        context=context,
+                        context_mask=context_mask,
+                        rotary_pos_emb=rotary_pos_emb,
+                        inference_params=inference_params,
+                        packed_seq_params=packed_seq_params,
+                    )
+
+                if (
+                        torch.is_grad_enabled()
+                        and self.config.cpu_offloading
+                        and self.group_prefetch_offload_commit_async is not None
+                ):
+                    hidden_states = self.group_prefetch_offload_commit_async(hidden_states)
+
+    # Final layer norm.
+    if self.post_process and self.post_layer_norm:
+        hidden_states = self.final_layernorm(hidden_states)
+
+    return hidden_states
 
 
 def _block_method_checkpointed_forward_func(

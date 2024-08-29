@@ -462,7 +462,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
     </tr>
     </tr>
        <tr>
-      <td rowspan="7"><a href="https://huggingface.co/Qwen">Qwen1.5</a></td>
+      <td rowspan="8"><a href="https://huggingface.co/Qwen">Qwen1.5</a></td>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-0.5B/tree/main">0.5B</a> </td>
       <td> 8K </td>
       <th>Legacy</th>
@@ -532,7 +532,29 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 317 </td>
       <td><center>【GTS】</td>    
       <td>【Pass】</td>
+      <tr>
+      <td> <a href="https://huggingface.co/Qwen/Qwen1.5-110B/tree/main">110B</a> </td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td> 8x8 </td>
+      <td> BF16 </td>
+      <td> 223 </td>
+      <td> -- </td>
+      <td><center>【GTS】</td>    
+      <td>【Test】</td>
     </tr>
+    <tr>
+      <td rowspan="1"><a href="https://huggingface.co/Qwen">Qwen2</a></td>
+      <td><a href="https://huggingface.co/Qwen/Qwen2-72B/tree/main">72B</a></td>
+      <td> 4K</td>
+      <th>Mcore</th>
+      <td>4x8</td>
+      <td>BF16 </td>
+      <td> 368 </td>
+      <td><center>-- </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+    </tr> 
     <tr>
       <td rowspan="1"><a href="https://huggingface.co/01-ai">Yi</a></td>
       <td><a href="https://huggingface.co/01-ai/Yi-34B/tree/main">34B</a></td>
@@ -573,24 +595,24 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td rowspan="2"><a href="https://huggingface.co/google">Gemma</a></td>
       <td><a href="https://huggingface.co/google/gemma-2b/tree/main">2B</a></td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 6821 </td>
+      <td> 7067 </td>
       <td> 7602 </td>
       <td><center>【GTS】</td>
-      <td>【Pass】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
       <td><a href="https://huggingface.co/google/gemma-7b">7B</a></td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td>1x8</td>
       <td>BF16 </td>
-      <td> 2938 </td>
+      <td> 2939 </td>
       <td> 2607 </td>
       <td><center>【GTS】</td>
-      <td>【Pass】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
       <td rowspan="2">GPT3</td>
