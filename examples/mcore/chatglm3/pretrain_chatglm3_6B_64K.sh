@@ -1,16 +1,17 @@
 #!/bin/bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
-NPUS_PER_NODE=8
-
+# Please enter ip of your server.
 IPs=('IP1' 'IP2')
 LOCAL_HOST=`hostname -I|awk -F " " '{print$1}'`
-echo $LOCAL_HOST
+echo LOCAL_HOST $LOCAL_HOST
+
 NPUS_PER_NODE=8
 MASTER_ADDR=${IPs[0]}
 MASTER_PORT=6010
 NNODES=${#IPs[@]}
 NODE_RANK=""
+WORLD_SIZE=$((NPUS_PER_NODE*$NNODES))
 
 for i in "${!IPs[@]}";
 do
@@ -21,8 +22,6 @@ do
         break
     fi
 done
-
-WORLD_SIZE=$((NPUS_PER_NODE*$NNODES))
 
 
 CKPT_SAVE_DIR="your model save ckpt path"
