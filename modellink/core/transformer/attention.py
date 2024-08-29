@@ -86,7 +86,7 @@ def attention_forward(
                            args.context_parallel_algo in ['ulysses_cp_algo', 'hybrid_cp_algo'] and \
                            args.kv_head_repeat_before_uly_alltoall
     heads_per_gqa_group = self.num_attention_heads_per_partition // self.num_query_groups_per_partition
-    if should_kv_repeat_before_uly and heads_per_gqa_group > 1:
+    if (should_kv_repeat_before_uly or inference_params) and heads_per_gqa_group > 1:
         key = key.repeat_interleave(heads_per_gqa_group, dim=2)
         value = value.repeat_interleave(heads_per_gqa_group, dim=2)
 

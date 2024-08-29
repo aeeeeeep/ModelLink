@@ -60,7 +60,9 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --exit-on-missing-checkpoint \
        --make-vocab-size-divisible-by 1 \
        --padded-vocab-size 128256 \
+       --use-kv-cache \
+       --use-flash-attn \
        --bf16 \
        --seed 42 \
-       | tee logs/generate_llama31_8b.log
+       | tee logs/chat_llama31_8b.log
 
