@@ -60,7 +60,7 @@ GPT_ARGS="
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
     --lr 1e-6 \
-    --train-iters 1000 \
+    --train-iters 2000 \
     --lr-decay-style cosine \
     --untie-embeddings-and-output-weights \
     --attention-dropout 0.0 \
@@ -90,8 +90,8 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 1000 \
-    --eval-interval 1000 \
+    --save-interval 2000 \
+    --eval-interval 2000 \
     --eval-iters 10 \
     --save $CKPT_SAVE_DIR \
     --load $CKPT_LOAD_DIR \
