@@ -12,8 +12,8 @@ CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
 TOKENIZER_MODEL="your tokenizer path"
 CKPT_LOAD_DIR="your model ckpt path"
-TP=8
-PP=1
+TP=1
+PP=2
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
@@ -31,16 +31,18 @@ GPT_ARGS="
     --use-mc2 \
     --use-fused-rmsnorm \
     --use-fused-rotary-pos-emb \
-    --num-layers 28 \
-    --hidden-size 3072 \
-    --ffn-hidden-size 24576 \
-    --num-attention-heads 16 \
+    --num-layers 18 \
+    --hidden-size 2048 \
+    --ffn-hidden-size 16384 \
+    --num-attention-heads 8 \
+    --group-query-attention \
+    --num-query-groups 1 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_MODEL} \
     --seq-length 8192 \
     --max-position-embeddings 8192 \
-    --micro-batch-size 2 \
-    --global-batch-size 64 \
+    --micro-batch-size 1 \
+    --global-batch-size 256 \
     --kv-channels 256 \
     --make-vocab-size-divisible-by 1 \
     --lr 1.25e-6 \
@@ -66,6 +68,7 @@ GPT_ARGS="
     --adam-beta1 0.9 \
     --adam-beta2 0.95 \
     --initial-loss-scale 4096 \
+    --use-distributed-optimizer \
     --no-gradient-accumulation-fusion \
     --no-load-optim \
     --no-load-rng \
@@ -92,4 +95,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --distributed-backend nccl \
     --load ${CKPT_LOAD_DIR} \
     --save ${CKPT_SAVE_DIR} \
-    | tee logs/train_gemma_7b_mcore.log
+    | tee logs/train_gemma_2b_mcore.log

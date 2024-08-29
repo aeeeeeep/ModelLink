@@ -2,6 +2,7 @@
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 mkdir ./dataset
 
+# 数据集下载地址 https://huggingface.co/datasets/pleisto/wikipedia-cn-20230720-filtered/resolve/main/wikipedia-cn-20230720-filtered.json?download=true
 python ./preprocess_data.py \
    --input ./dataset/wikipedia-cn-20230720-filtered.json \
    --tokenizer-name-or-path ./model_from_hf/gemma_hf/ \

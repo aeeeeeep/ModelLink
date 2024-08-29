@@ -34,7 +34,8 @@ def moe_layer_init_wrapper(init_func):
             config.ffn_hidden_size = global_args.n_shared_experts * self.config.ffn_hidden_size
             self.shared_experts = MLP(config, MLPSubmodules(linear_fc1=ColumnParallelLinear,
                                                                  linear_fc2=RowParallelLinear,))
-
+            # For using layer_number when recompute activation function is enabled.
+            self.shared_experts.layer_number = self.layer_number
     return moe_layer_init
 
 
