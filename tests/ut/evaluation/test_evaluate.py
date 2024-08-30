@@ -33,7 +33,7 @@ PATTERN = r"acc = (.*)"
 def acquire_score(log_capture):
     # Acquire the final score for evaluation tasks, still universal.
     score_str = log_capture[0]
-    score_pattern = r"(\d+\.\d+)"
+    score_pattern = r"(\d+\.\d+(?:e[+-]?\d+)?)"
     match = re.search(score_pattern, score_str)
     if match:
         score = float(match.group(1).strip())
@@ -103,4 +103,51 @@ class TestEvaluate(DistributedTest):
 
             expected_score = acquire_score(log_capture)
             assert math.isclose(expected_score, 0.6154, abs_tol=1e-2), f"score {expected_score}, forward pass has been changed, check it!"
-   
+
+
+    @pytest.mark.parametrize("params", test_config["test_llama2_agieval_evaluate"])
+    def test_llama2_agieval_evaluate(self, build_args, params):
+        os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
+        if dist.get_rank() == 0:
+            handler, log_capture = setup_logger(PATTERN)
+
+        main()
+        if dist.get_rank() == 0:
+            print("=================== llama2 AGIEVAL score ===============")
+            print(log_capture)
+
+            expected_score = acquire_score(log_capture)
+            assert math.isclose(expected_score, 0.192771,
+                                abs_tol=1e-2), f"score {expected_score}, forward pass has been changed, check it!"
+
+
+    @pytest.mark.parametrize("params", test_config["test_llama2_bbh_evaluate"])
+    def test_llama2_bbh_evaluate(self, build_args, params):
+        os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
+        if dist.get_rank() == 0:
+            handler, log_capture = setup_logger(PATTERN)
+
+        main()
+        if dist.get_rank() == 0:
+            print("=================== llama2 BBH score ===============")
+            print(log_capture)
+
+            expected_score = acquire_score(log_capture)
+            assert math.isclose(expected_score, 0.7441860465116279,
+                                abs_tol=1e-2), f"score {expected_score}, forward pass has been changed, check it!"
+
+
+    @pytest.mark.parametrize("params", test_config["test_llama2_humaneval_evaluate"])
+    def test_llama2_humaneval_evaluate(self, build_args, params):
+        os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
+        if dist.get_rank() == 0:
+            handler, log_capture = setup_logger(PATTERN)
+
+        main()
+        if dist.get_rank() == 0:
+            print("=================== llama2 HUMANEVAL score ===============")
+            print(log_capture)
+
+            expected_score = acquire_score(log_capture)
+            assert math.isclose(expected_score, 0.3333333333333333,
+                                abs_tol=1e-2), f"score {expected_score}, forward pass has been changed, check it!"
