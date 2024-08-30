@@ -76,7 +76,7 @@
         <td rowspan="9">UT</td>
         <td>Inference</td>
         <td>Legacy</td>
-        <td>greedy_search,  deterministic_computation</td>
+        <td>greedy_search, lora_inference, deterministic_computation</td>
         <td><a href="ut/inference/test_inference.py">test_inference.py</td>
         <td>Y</td>
         <td></td>
@@ -86,7 +86,7 @@
         <td>Evaluation</td>
         <td>Legacy</td>
         <td>mmlu, prompt_mmlu,      
-        prompt_boolq, prompt_ceval, qwen2_mmlu</td>
+        prompt_boolq, prompt_ceval, qwen2_mmlu, lora_mmlu</td>
         <td><a href="ut/evaluation/test_evaluate.py">test_evaluate.py</td>
         <td>Y</td>
         <td></td>
