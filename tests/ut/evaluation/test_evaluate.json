@@ -32,6 +32,7 @@
         }
     ],
 
+
     "test_qwen_prompt_mmlu_evaluate": [
         {
             "param": {
@@ -67,7 +68,9 @@
                 "add-qkv-bias":null
             }
         }
-    ], 
+    ],
+
+
     "test_qwen_prompt_boolq_evaluate": [
         {
             "param": {
@@ -105,6 +108,7 @@
         }
     ],
 
+
     "test_qwen_prompt_ceval_evaluate": [
         {
             "param": {
@@ -138,6 +142,114 @@
                 "max-eval-samples": 2,
                 "prompt-type": "qwen",
                 "add-qkv-bias":null
+            }
+        }
+    ],
+
+
+    "test_llama2_agieval_evaluate": [
+        {
+            "param": {
+                "task-data-path":"/data/eval_data/agieval",
+                "task":"agieval",
+                "tensor-model-parallel-size": 8,
+                "pipeline-model-parallel-size": 1,
+                "num-layers": 32,
+                "use-mcore-models": null,
+                "hidden-size": 4096,
+                "ffn-hidden-size": 11008,
+                "num-attention-heads": 32,
+                "seq-length": 4096,
+                "max-new-tokens": 1,
+                "evaluation-batch-size": 1,
+                "max-position-embeddings": 4096,
+                "make-vocab-size-divisible-by": 1,
+                "micro-batch-size": 1,
+                "normalization": "RMSNorm",
+                "position-embedding-type": "rope",
+                "swiglu": null,
+                "tokenizer-not-use-fast": null,
+                "untie-embeddings-and-output-weights": null,
+                "disable-bias-linear": null,
+                "fp16": null,
+                "no-load-rng": null,
+                "no-load-optim": null,
+                "load":"/data/ci/ckpt",
+                "tokenizer-type":"PretrainedFromHF",
+                "tokenizer-name-or-path":"/data/llama-2-7b-hf",
+                "use-deter-comp": null
+            }
+        }
+    ],
+
+
+    "test_llama2_bbh_evaluate": [
+        {
+            "param": {
+                "task-data-path":"/data/eval_data/bbh/test",
+                "task":"bbh",
+                "tensor-model-parallel-size": 8,
+                "pipeline-model-parallel-size": 1,
+                "use-mcore-models": null,
+                "num-layers": 32,
+                "hidden-size": 4096,
+                "ffn-hidden-size": 11008,
+                "num-attention-heads": 32,
+                "seq-length": 4096,
+                "max-new-tokens": 32,
+                "evaluation-batch-size": 4,
+                "max-position-embeddings": 4096,
+                "make-vocab-size-divisible-by": 1,
+                "micro-batch-size": 1,
+                "normalization": "RMSNorm",
+                "position-embedding-type": "rope",
+                "swiglu": null,
+                "tokenizer-not-use-fast": null,
+                "untie-embeddings-and-output-weights": null,
+                "disable-bias-linear": null,
+                "fp16": null,
+                "no-load-rng": null,
+                "no-load-optim": null,
+                "load":"/data/ci/ckpt",
+                "tokenizer-type":"PretrainedFromHF",
+                "tokenizer-name-or-path":"/data/llama-2-7b-hf",
+                "use-deter-comp": null
+            }
+        }
+    ],
+
+    
+    "test_llama2_humaneval_evaluate": [
+        {
+            "param": {
+                "task-data-path":"/data/eval_data/human_eval",
+                "task":"human_eval",
+                "tensor-model-parallel-size": 8,
+                "pipeline-model-parallel-size": 1,
+                "num-layers": 32,
+                "use-mcore-models": null,
+                "hidden-size": 4096,
+                "ffn-hidden-size": 11008,
+                "num-attention-heads": 32,
+                "seq-length": 4096,
+                "max-new-tokens": 200,
+                "evaluation-batch-size": 1,
+                "max-position-embeddings": 4096,
+                "make-vocab-size-divisible-by": 1,
+                "micro-batch-size": 1,
+                "normalization": "RMSNorm",
+                "position-embedding-type": "rope",
+                "swiglu": null,
+                "tokenizer-not-use-fast": null,
+                "untie-embeddings-and-output-weights": null,
+                "disable-bias-linear": null,
+                "fp16": null,
+                "no-load-rng": null,
+                "no-load-optim": null,
+                "load":"/data/ci/ckpt",
+                "tokenizer-type":"PretrainedFromHF",
+                "tokenizer-name-or-path":"/data/llama-2-7b-hf",
+                "use-deter-comp": null
             }
         }
     ]

@@ -21,17 +21,16 @@ ModelLink旨在为华为 [昇腾芯片](https://www.hiascend.com/) 上提供端�
 
 
 当前ModelLink支撑大模型使用功能:
-* [制作预训练数据集](#jump11)/[制作指令微调数据集](#jump12) 【NAIE】【昇腾】
-* [预训练](#jump13)/[全参微调](#jump14)/[低参微调](#jump15) 【昇腾】【GTS】【NAIE】
-* [流式推理/人机对话](#jump16) 【NAIE】【昇腾】
-* [评估基线数据集](#jump17)【NAIE】
-* [加速算法/融合算子/并行策略](#jump18)【昇腾】【计算算法部】【计算研究部】
-* [基于昇腾芯片采集Profiling数据](#jump19) 【昇腾】
-* [Huggingface与Megatron-LM权重转换](#jump20) 【昇腾】【OCK】
-* [基于昇腾芯片的确定性计算功能](#jump21) 【昇腾】
-* [基于昇腾芯片的高可用特性](#jump22) 【计算研究部】
+* [制作预训练数据集](./examples/README.md)/[制作指令微调数据集](./examples/README.md) 【NAIE】【昇腾】
+* [预训练](./examples/README.md)/[全参微调](./examples/README.md)/[低参微调](./examples/README.md) 【昇腾】【GTS】【NAIE】
+* [流式推理/人机对话](./examples/README.md)/[评估基线数据集](./examples/README.md) 【NAIE】【昇腾】
+* [加速算法/融合算子/并行策略](./examples/README.md)【昇腾】【计算算法部】【计算研究部】
+* [基于昇腾芯片采集Profiling数据](#jump1) 【昇腾】
+* [Huggingface与Megatron-LM权重转换](#jump2) 【昇腾】【OCK】
+* [基于昇腾芯片的确定性计算功能](#jump3) 【昇腾】
+* [基于昇腾芯片的高可用特性](#jump4) 【计算研究部】
 
-强化学习等特性持续研发中....
+奖励模型、DPO、PPO等特性持续研发中....
 
 ---
 
@@ -551,7 +550,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4x8</td>
       <td>BF16 </td>
       <td> 368 </td>
-      <td><center>-- </td>
+      <td>-- </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
     </tr> 
@@ -654,7 +653,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
 
 ---
 
-## Huggingface与Megatron-LM权重转换
+## <span id="jump2"> Huggingface与Megatron-LM权重转换
 
 ModelLink支持Huggingface、Megatron-Legacy以及Megatron-Core之间的权重格式互转，具体功能列表如下：
 
@@ -1026,7 +1025,54 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
 
 ---
 
-## 基于昇腾芯片采集Profiling数据
+
+## 大模型Benchmark基线评估
+
+ModelLink支持大模型在公开基准数据集上进行准确率评估，当前支持的Benchmark如下：
+
+| Benchmark | 下载链接                                                                                     | 验证集  | ModelLink                                                            | OpenCompass                                                      |
+|-----------|------------------------------------------------------------------------------------------|------|----------------------------------------------------------------------|------------------------------------------------------------------|
+| MMLU      | [GitHub](https://people.eecs.berkeley.edu/~hendrycks/data.tar)                           | test | [45.73%](./examples/mcore/llama2/evaluate_llama2_7b_mmlu_ptd.sh)     | [45.3%](https://hub.opencompass.org.cn/dataset-detail/MMLU)      |
+| CEval     | [HuggingFace](https://huggingface.co/datasets/ceval/ceval-exam/blob/main/ceval-exam.zip) | val  | [33.87%](./examples/mcore/llama2/evaluate_llama2_7b_ceval_ptd.sh)    | [32.5%](https://hub.opencompass.org.cn/dataset-detail/C-Eval)    |
+| BoolQ     | [Juhe](https://www.juhe.cn/market/product/id/10243)                                      | dev  | [75.44%](./examples/mcore/llama2/evaluate_llama2_7b_boolq_ptd.sh)    | [74.9%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)     |
+| BBH       | [GitHub](https://github.com/suzgunmirac/BIG-Bench-Hard/tree/main/bbh)                    | test | [34.4%](./examples/mcore/llama2/evaluate_llama2_7b_bbh_ptd.sh)       | [32.5%](https://hub.opencompass.org.cn/dataset-detail/BBH)       |
+| AGIEval   | [GitHub](https://github.com/ruixiangcui/AGIEval/tree/main)                               | test | [20.6%](./examples/mcore/llama2/evaluate_llama2_7b_agieval_ptd.sh)   | [20.6%](https://hub.opencompass.org.cn/dataset-detail/AGIEval)   |
+| HumanEval | [GitHub](https://github.com/openai/human-eval/tree/master/data)                          | test | [12.8%](./examples/mcore/llama2/evaluate_llama2_7b_humaneval_ptd.sh) | [12.2%](https://hub.opencompass.org.cn/dataset-detail/HumanEval) |
+
+ModelLink已支持模型的评估数据统计如下：
+
+
+| 模型            | 任务                             | ModelLink | 社区值                                                         | 模型           | 任务                                        | ModelLink | 社区值                                                                  |
+|---------------|--------------------------------|-----------|-------------------------------------------------------------|--------------|-------------------------------------------|-----------|----------------------------------------------------------------------|
+| Aquila-7B     | BoolQ                          | 77.3%     | --                                                          | Aquila2-7B   | BoolQ | 77.8%     | [77.6%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)         |
+| Aquila2-34B   | BoolQ                          | 88.0%     | [87.0%](https://hub.opencompass.org.cn/dataset-detail/BoolQ) | Baichuan-7B  | BoolQ | 69.0%     | [67.0%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)         |
+| Baichuan-13B  | BoolQ                          | 74.7%     | [73.6%](https://hub.opencompass.org.cn/dataset-detail/BoolQ) | Baichuan2-7B | BoolQ | 70.0%     | [63.2%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)         |
+| Baichuan2-13B | BoolQ    | 78.0%     | [67.0%](https://hub.opencompass.org.cn/dataset-detail/BoolQ) | Bloom-7B     | MMLU                                      | 25.1%     | [25.4%](https://hub.opencompass.org.cn/dataset-detail/MMLU)          |
+| Bloom-176B    | BoolQ  | 64.5%     | --                                                          | ChatGLM3-6B  | MMLU                                      | 61.5%     | [61.4%](https://hub.opencompass.org.cn/dataset-detail/MMLU)          |
+| CodeLLaMA-34B | HumanEval | 48.78%    | [48.8%](https://paperswithcode.com/sota/code-generation-on-humaneval) | Gemma-2B     | MMLU                                      | 39.4%     | [39.7%](https://hub.opencompass.org.cn/dataset-detail/MMLU)          |
+| Gemma-7B      | MMLU                    | 52.2%     | [52.2%](https://hub.opencompass.org.cn/dataset-detail/MMLU) | InternLM-7B  | MMLU                                      | 48.7%     | [51.0%](https://huggingface.co/internlm/internlm-7b)                 |
+| LLaMA-7B      | BoolQ | 74.6%     | [75.4%](https://hub.opencompass.org.cn/dataset-detail/BoolQ) | LLaMA-13B    | BoolQ | 79.6%     | [78.7%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)         |
+| LLaMA-33B     | BoolQ | 83.2%     | [83.1%](https://paperswithcode.com/sota/question-answering-on-boolq) | LLaMA-65B    | BoolQ | 85.7%     | [86.6%](https://paperswithcode.com/sota/question-answering-on-boolq) |
+| LLaMA2-7B     | MMLU                   | 45.7%     | [45.3%](https://hub.opencompass.org.cn/dataset-detail/MMLU) | LLaMA2-13B   | BoolQ            | 82.2%     | [81.7%](https://paperswithcode.com/sota/question-answering-on-boolq) |
+| LLaMA2-34B    | BoolQ | 85.9%     | --                                                          | LLaMA2-70B   | BoolQ | 65.1%     | --                                                                   |
+| LLaMA3-8B     | MMLU                   | 65.3%     | [66.6%](https://hub.opencompass.org.cn/dataset-detail/MMLU) | LLaMA3-70B   | BoolQ | 78.3%     | [79.5%]((https://hub.opencompass.org.cn/dataset-detail/BoolQ))       |
+| LLaMA3.1-8B   | MMLU                | 65.26%    | [66.7%](https://hub.opencompass.org.cn/dataset-detail/MMLU) | LLaMA3.1-70B | MMLU                                      | 81.8%     | [79.3%](https://hub.opencompass.org.cn/dataset-detail/MMLU)          |
+| Mistral-7B    | MMLU               | 56.3%     | [56.3%](https://hub.opencompass.org.cn/dataset-detail/MMLU) | Mixtral-8x7B | MMLU                                      | 66.0%     | [65.8%](https://hub.opencompass.org.cn/dataset-detail/MMLU)          |
+| QWen-7B       | MMLU                | 58.1%     | [58.2%](https://huggingface.co/Qwen/Qwen-7B)                | Qwen-14B     | MMLU                                      | 65.3%     | [66.3%](https://huggingface.co/Qwen/Qwen-14B)                        |
+| QWen-72B      | MMLU          | 74.6%     | [77.4%](https://huggingface.co/Qwen/Qwen-72B)               | QWen1.5-0.5B | MMLU      | 31.8%     | [31.8%](https://hub.opencompass.org.cn/dataset-detail/MMLU)          |
+| QWen1.5-1.8b  | MMLU          | 46.2%     | [46.8%](https://qwenlm.github.io/zh/blog/qwen1.5/)          | QWen1.5-4B   | BoolQ | 55.0%     | [56.1%](https://qwenlm.github.io/zh/blog/qwen1.5)                    |
+| QWen1.5-7B    | MMLU           | 60.3%     | [61.0%](https://qwenlm.github.io/zh/blog/qwen1.5/)          | QWen1.5-14B  | MMLU     | 67.3%     | [67.6%](https://qwenlm.github.io/zh/blog/qwen1.5)                    |
+| QWen1.5-32B   | MMLU           | 72.6%     | [73.4%](https://huggingface.co/Qwen/Qwen-72B)               | QWen1.5-72B  | MMLU    | 77.5%     | [77.5%](https://qwenlm.github.io/zh/blog/qwen1.5)                    |
+| Qwen1.5-110B  |              MMLU              | 80.4%     | [80.4%](https://qwenlm.github.io/zh/blog/qwen1.5-110b/)               |         Qwen2-72B   |                    MMLU                   | 83.6%     | [84.2%](https://qwenlm.github.io/zh/blog/qwen2/)                     |
+| Yi-34B        | MMLU         | 76.3%     | [75.8%](https://hub.opencompass.org.cn/dataset-detail/MMLU) | --           | --                                        | --        | --                                                                   |
+
+具体的评估方法见[examples/README.md](./examples/README.md)
+
+---
+
+
+
+## <span id="jump1"> 基于昇腾芯片采集Profiling数据
 Modellink支持基于昇腾芯片采集profiling数据，以提供对模型运行情况的分析，主要API如下：
 
 
@@ -1045,7 +1091,7 @@ Modellink支持基于昇腾芯片采集profiling数据，以提供对模型运�
 
 ---
 
-## 基于昇腾芯片的确定性计算功能
+## <span id="jump3"> 基于昇腾芯片的确定性计算功能
 昇腾芯片默认采用了不确定计算加速模型训练，有时为了重复实验与对比实验需要确定性的计算结果，ModelLink使能确定性计算的开关如下：
 
 - 启动命令中加入开关
@@ -1060,7 +1106,7 @@ export HCCL_DETERMINISTIC=True
 ---
 
 
-## 基于昇腾芯片的高可用特性
+## <span id="jump4"> 基于昇腾芯片的高可用特性
 分布式优化器的思想是通过将优化器状态均匀地分布在数据并行组中来节省内存。基于该思想，设计了将数据并行组切分成两个副本数据并行组的方案，副本优化器将优化器状态均匀分布在副本数据并行组，实现优化器状态均有备份。结合华为自研的高可用框架，可实现以下功能：
 1. 训练过程中，支持故障场景保存临终checkpoint，训练结果0损失。
 2. 训练过程中，支持HBM的UCE故障检测，并完成在线修复，达到Step级重计算。

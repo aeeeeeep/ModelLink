@@ -81,7 +81,7 @@
         <td>Y</td>
     </tr>
     <tr>
-        <td rowspan="9">UT</td>
+        <td rowspan="13">UT</td>
         <td>Inference</td>
         <td>Legacy</td>
         <td>greedy_search,  deterministic_computation</td>
@@ -94,17 +94,31 @@
         <td>Evaluation</td>
         <td>Legacy</td>
         <td>mmlu, prompt_mmlu,      
-        prompt_boolq, prompt_ceval</td>
+        prompt_boolq, prompt_ceval, bbh, agieval, humaneval</td>
         <td><a href="ut/evaluation/test_evaluate.py">test_evaluate.py</td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
     <tr>
-        <td>CP</td>
-        <td>Mcore</td>
-        <td>hybrid, ring_attn, ulysses</td>
-        <td><a href="ut/dist_algo/context_parallel">context_parallel</a></td>
+        <td rowspan="3">CP</td>
+        <td rowspan="3">Mcore</td>
+        <td>hybrid</td>
+        <td><a href="ut/dist_algo/context_parallel/test_hybrid_context_parallel.py">test_hybrid_context_parallel.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>ring_attn</td>
+        <td><a href="ut/dist_algo/context_parallel/test_ringattn_context_parallel.py">test_ringattn_context_parallel.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>ulysses</td>
+        <td><a href="ut/dist_algo/context_parallel/test_ulysses_context_parallel.py"> test_ulysses_context_parallel.py </a></td>
         <td>Y</td>
         <td></td>
         <td></td>
@@ -127,10 +141,26 @@
         <td></td>
     </tr>
     <tr>
-        <td>Checkpoint</td>
-        <td>Mcore, Legacy</td>
-        <td>mcore_dynamic, mcore_vpp, mcore_pack_gqa, legacy_dynamic</td>
-        <td><a href="ut/checkpoint">checkpoint</a></td>
+        <td rowspan="3">Checkpoint</td>
+        <td > Legacy </td>
+        <td>legacy2hf_lora</td>
+        <td><a href="ut/checkpoint/test_convert_ckpt_to_huggingface.py">test_convert_ckpt_to_huggingface.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td > Mcore </td>
+        <td>mcore_dynamic, mcore_vpp, mcore_pack_gqa</td>
+        <td><a href="ut/checkpoint/test_convert_ckpt_from_huggingface.py">test_convert_ckpt_from_huggingface.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td > Legacy </td>
+        <td>legacy2legacy_lora</td>
+        <td><a href="ut/checkpoint/test_convert_ckpt_from_megatron.py">test_convert_ckpt_from_megatron.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
