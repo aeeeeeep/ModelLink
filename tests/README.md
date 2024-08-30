@@ -13,8 +13,8 @@
         <th>Memory</th>
     </tr>
     <tr>
-        <td rowspan="8">ST</td>
-        <td rowspan="6">Pretrain</td>
+        <td rowspan="7">ST</td>
+        <td rowspan="5">Pretrain</td>
         <td>Mcore</td>
         <td>TP，PP，VPP，重计算，enable_recompute_layers_per_pp_rank</td>
         <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_ptd.sh">llama2_tp2_pp4_vpp2.sh</a></td>
@@ -55,14 +55,6 @@
         <td>Y</td>
     </tr>
     <tr>
-        <td>Legacy</td>
-        <td>TP，PP，EP，MoeAllGather，FusedRMSNorm，Topk，AuxLoss</td>
-        <td><a href="st/shell_scripts/mixtral_legacy_tp2_ep4_ptd.sh">mixtral_legacy_tp2_ep4_ptd.sh</a></td>
-        <td>Y</td>
-        <td>Y</td>
-        <td>Y</td>
-    </tr>
-    <tr>
         <td rowspan="1">LoRA</td>
         <td>Legacy</td>
         <td>CCLoRA, lora_fusion, 全重计算</td>
@@ -94,7 +86,7 @@
         <td>Evaluation</td>
         <td>Legacy</td>
         <td>mmlu, prompt_mmlu,      
-        prompt_boolq, prompt_ceval</td>
+        prompt_boolq, prompt_ceval, qwen2_mmlu</td>
         <td><a href="ut/evaluation/test_evaluate.py">test_evaluate.py</td>
         <td>Y</td>
         <td></td>
@@ -129,7 +121,7 @@
     <tr>
         <td>Checkpoint</td>
         <td>Mcore, Legacy</td>
-        <td>mcore_dynamic, mcore_vpp, mcore_pack_gqa, legacy_dynamic</td>
+        <td>mcore_dynamic, mcore_vpp, mcore_pack_gqa, legacy_dynamic, mcore_qwen2</td>
         <td><a href="ut/checkpoint">checkpoint</a></td>
         <td>Y</td>
         <td></td>
