@@ -18,7 +18,7 @@ CKPT_LOAD_DIR=/data/llama-2-7b-mg-tp2-pp4-mcore-vpp2-test
 DATA_PATH=/data/pretrain_dataset/alpaca_text_document
 TOKENIZER_MODEL=/data/llama-2-7b-hf/tokenizer.model
 TP=2
-PP=4
+PP=1
 pip install /home/high_availability/mindio_ttp-1.0.0-cp38-cp38-linux_aarch64.whl --force-reinstall
 DISTRIBUTED_ARGS=(
     --nproc_per_node $GPUS_PER_NODE
@@ -31,7 +31,6 @@ DISTRIBUTED_ARGS=(
 DIST_ALGO=(
     --tensor-model-parallel-size ${TP}
     --pipeline-model-parallel-size ${PP}
-    --num-layers-per-virtual-pipeline-stage 2
     --sequence-parallel
 )
 
@@ -44,7 +43,7 @@ ACCELERATE_ARGS=(
 
 MODEL_ARGS=(
     --use-mcore-models
-    --num-layers 32
+    --num-layers 16
     --hidden-size 4096
     --ffn-hidden-size 11008
     --num-attention-heads 32
@@ -59,7 +58,7 @@ TRAINING_ARGS=(
     --global-batch-size 32
     --make-vocab-size-divisible-by 1
     --lr 1.25e-6
-    --train-iters 5
+    --train-iters 15
     --lr-decay-style cosine
     --untie-embeddings-and-output-weights
     --disable-bias-linear
