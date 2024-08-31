@@ -19,7 +19,7 @@ DATA_PATH=/data/pretrain_dataset/alpaca_text_document
 TOKENIZER_MODEL=/data/llama-2-7b-hf/tokenizer.model
 TP=2
 PP=4
-pip install /home/high_availability/mindio_ttp-1.0.0-cp38-cp38-linux_aarch64.whl
+pip install /home/high_availability/mindio_ttp-1.0.0-cp38-cp38-linux_aarch64.whl --force-reinstall
 DISTRIBUTED_ARGS=(
     --nproc_per_node $GPUS_PER_NODE
     --nnodes $NNODES
