@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import torch
 from torch import Tensor
 from functools import wraps
 
@@ -106,6 +106,10 @@ def gpt_model_forward(self, input_ids: Tensor,
     if args.output_multiplier_scale:
         logits = logits * args.output_multiplier_scale
 
+    if args.output_logit_softcapping:
+        logits = logits / args.output_logit_softcapping
+        logits = torch.tanh(logits)
+        logits = logits * args.output_logit_softcapping
 
     if labels is None:
         # [s b h] => [b s h]

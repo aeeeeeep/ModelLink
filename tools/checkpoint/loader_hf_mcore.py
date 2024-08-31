@@ -55,6 +55,8 @@ def add_arguments(parser):
                             'This is added for computational efficiency reasons.')
     group.add_argument('--use-mcore-models', action='store_true',
                        help='Use the implementation from megatron core')
+    group.add_argument('--post-norm', action='store_true',
+                       help='post norm after attention or mlp.')
 
 
 def verify_transformers_version():
@@ -116,10 +118,16 @@ def get_message_preprocess(model, md):
     return message
 
 
-def get_message_layer_norm(message, model, layer_idx, md):
+def get_message_layer_norm(message, model, layer_idx, md, args=None):
     # Get non-parallel tensors from tp_rank 0.
     message["input norm weight"] = model.get_layers_input_layernorm_weight(layer_idx=layer_idx)
     message["post norm weight"] = model.get_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx)
+
+    if args.post_norm:
+        message["post norm weight"] = model.get_layers_self_attention_post_attention_layernorm_weight(
+            layer_idx=layer_idx)
+        message["pre mlp norm weight"] = model.get_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx)
+        message["post mlp norm weight"] = model.get_layers_self_attention_post_mlp_layernorm_weight(layer_idx=layer_idx)
 
     if md.norm_has_bias:
         message["input norm bias"] = model.get_layers_input_layernorm_bias(layer_idx=layer_idx)
@@ -272,7 +280,7 @@ def _load_checkpoint(queue, args):
     for layer_idx in range(margs.num_layers):
         # Grab all parallel tensors for this layer.
         message = {}
-        message = get_message_layer_norm(message, model_mg, layer_idx, md)
+        message = get_message_layer_norm(message, model_mg, layer_idx, md, args)
         message = get_message_layer_attn(message, model_mg, layer_idx, md, args)
         message = get_message_layer_mlp(message, model_mg, layer_idx, md)
 

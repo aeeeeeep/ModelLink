@@ -381,6 +381,13 @@ def _add_network_args(parser):
                        help='Geglu activate function.')
     group.add_argument('--input-embeds-norm', action='store_true', default=False,
                        help='input normalization.')
+    group.add_argument('--gelu-tanh', action='store_true', default=False,
+                       help='Tanh Geglu activate function.')
+    group.add_argument('--output-logit-softcapping', type=float, help='output logit softcapping.')
+    group.add_argument('--attn-logit-softcapping', type=float, help='attention logit softcapping.')
+    group.add_argument('--query-pre-attn-scalar', type=int, help='attention scalar.')
+    group.add_argument('--interleave-sliding-window', type=int,
+                       help='Window size when use interleave sliding window attention.')
     return parser
 
 

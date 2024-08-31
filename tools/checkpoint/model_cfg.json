@@ -94,9 +94,24 @@
     "gemma": {
       "__base__": "base",
       "config_set_value": {
-        "seq_length": 4096,
+        "seq_length": 8192,
         "tie_word_embeddings": true,
         "kv_channels": 256
+      }
+    },
+    "gemma2": {
+      "__base__": "base",
+      "config_set_value": {
+        "seq_length": 8192,
+        "tie_word_embeddings": true
+	  },
+      "config_hf_key_mapping": {
+        "kv_channels": "head_dim"
+      },
+      "model_hf_key_mapping": {
+        "layers_self_attention_post_attention_layernorm": "model.layers[layer_idx].post_attention_layernorm",
+        "layers_self_attention_pre_mlp_layernorm": "model.layers[layer_idx].pre_feedforward_layernorm",
+        "layers_self_attention_post_mlp_layernorm": "model.layers[layer_idx].post_feedforward_layernorm"
       }
     },
     "bloom": {

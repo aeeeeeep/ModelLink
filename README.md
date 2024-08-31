@@ -672,6 +672,29 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
+      <td rowspan="2"><a href="https://huggingface.co/google">Gemma2</a></td>
+      <td><a href="https://huggingface.co/google/gemma-2-9b/tree/main">9B</a></td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 1713 </td>
+      <td> 1595 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td><a href="https://huggingface.co/google/gemma-2-27b/tree/main">27B</a></td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td>2x8</td>
+      <td>BF16 </td>
+      <td> 827 </td>
+      <td> 800 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
       <td rowspan="2">GPT3</td>
       <td>175B</td>
       <td> 2K </td>
