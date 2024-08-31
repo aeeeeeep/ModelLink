@@ -177,22 +177,16 @@ def _validate_cp_args(args):
 
     if args.context_parallel_algo == 'ulysses_cp_algo':
         assert args.seq_length % args.context_parallel_size == 0, f"sequence length must be divisible by context_parallel_size"
-        head, remainder = divmod(args.num_attention_heads,
-                                 args.context_parallel_size * args.tensor_model_parallel_size)
-        assert head >= 1 and remainder == 0, f"num_attention_heads must be divisible by context_parallel_size * tensor_model_parallel_size"
+        _check_attention_head(args, args.context_parallel_size)
+
     if args.context_parallel_algo == 'megatron_cp_algo':
         assert args.seq_length % (
                     2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size"
-        _check_attention_head(args, args.context_parallel_size)
 
     if args.context_parallel_algo == 'hybrid_cp_algo':
         assert args.ulysses_degree_in_cp is not None, "--ulysses-degree-in-cp must be specified in hybrid_cp_algo"
         ring_degree, remainder = divmod(args.context_parallel_size, args.ulysses_degree_in_cp)
-        assert ring_degree > 1 and remainder == 0, "--ulysses-degree-in-cp must be devisible by --context-parallel-size"
-
-        head, remainder = divmod(args.num_attention_heads,
-                                 args.ulysses_degree_in_cp * args.tensor_model_parallel_size)
-        assert head >= 1 and remainder == 0, f"num_attention_heads must be divisible by ulysse-degree-in-cp * tensor_model_parallel_size in hybrid cp"
+        assert ring_degree > 1 and remainder == 0, "--ulysses-degree-in-cp must be divisible by --context-parallel-size"
         assert args.seq_length % (
                     2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size in hybrid cp"
         _check_attention_head(args, args.ulysses_degree_in_cp)
