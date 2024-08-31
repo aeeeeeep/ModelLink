@@ -60,3 +60,19 @@ class TestInference(DistributedTest):
             assert [context] == [
                 "I'm doing well. I'm in the middle of a 3-day weekend, so I'm enjoying that."
             ], "forward pass has been changed, check it!"
+
+
+    @pytest.mark.parametrize("params", test_config["test_lora_inference"])
+    def test_lora_inference(self, build_args, params):
+        os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
+        if dist.get_rank() == 0:
+            handler, log_capture = setup_logger(PATTERN)
+
+        main()
+        if dist.get_rank() == 0:
+            print("=============== lora_inference =============")
+            print(log_capture)
+            context = acquire_context(log_capture)
+            assert [context] == [
+                "I'm doing well. I'm in the middle of a 3-day weekend, so I'm enjoying that."
+            ], "forward pass has been changed, check it!"

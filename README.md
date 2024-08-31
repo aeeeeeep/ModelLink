@@ -544,7 +544,26 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
-      <td rowspan="3"><a href="https://huggingface.co/Qwen">Qwen2</a></td>
+      <td rowspan="7"><a href="https://huggingface.co/Qwen">Qwen2</a></td>
+      <td rowspan="2"> <a href="https://huggingface.co/Qwen/Qwen2-0.5B/tree/main">0.5B</a> </td>
+      <td> 4K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 28618 </td>
+      <td> 34859 </td>
+      <td><center>【GTS】</td>
+      <td><center>【Test】</td>
+      <tr>
+      <td> 32K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 11338 </td>
+      <td><center> -- </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+      <tr>
       <td rowspan="2"> <a href="https://huggingface.co/Qwen/Qwen2-1.5B/tree/main">1.5B</a> </td>
       <td> 4K </td>
       <th> Mcore </th>
@@ -560,7 +579,26 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 7281 </td>
-      <td><center> -- </td>
+      <td><center> 8538 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+      <tr>
+      <td rowspan="2"><a href="https://huggingface.co/Qwen/Qwen2-7B/tree/main">7B</a></td>
+      <td> 4K</td>
+      <th>Mcore</th>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 4034 </td>
+      <td>4241 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+      <tr>
+      <td> 32K</td>
+      <th>Mcore</th>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2040 </td>
+      <td>2045 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
       <tr>

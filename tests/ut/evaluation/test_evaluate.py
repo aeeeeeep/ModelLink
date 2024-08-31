@@ -104,6 +104,20 @@ class TestEvaluate(DistributedTest):
             expected_score = acquire_score(log_capture)
             assert math.isclose(expected_score, 0.6154, abs_tol=1e-2), f"score {expected_score}, forward pass has been changed, check it!"
   
+    @pytest.mark.parametrize("params", test_config["test_lora_mmlu_evaluate"])
+    def test_lora_mmlu_evaluate(self, build_args, params):
+        os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
+        if dist.get_rank() == 0:
+            handler, log_capture = setup_logger(PATTERN)
+        
+        main()
+        if dist.get_rank() == 0:
+            print("=================== lora mmlu evaluate score ===============")
+            print(log_capture)
+
+            expected_score = acquire_score(log_capture)
+            assert math.isclose(expected_score, 0.5087, abs_tol=2e-2), f"score {expected_score}, forward pass has been changed, check it!"
+
 
 class TestEvaluateWorldSize1(DistributedTest):
     world_size = 1
@@ -122,3 +136,5 @@ class TestEvaluateWorldSize1(DistributedTest):
 
             expected_score = acquire_score(log_capture)
             assert math.isclose(expected_score, 0.547, abs_tol=2e-2), f"score {expected_score}, forward pass has been changed, check it!" 
+
+    

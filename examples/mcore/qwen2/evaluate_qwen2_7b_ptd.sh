@@ -1,24 +1,24 @@
 #!/bin/bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
-# Change for multinode config
+TOKENIZER_PATH="your tokenizer directory path"
+CHECKPOINT="your model directory path"
+
+# configure task and data path
+DATA_PATH="./mmlu/test/"
+TASK="mmlu"
+
+# distributed config
 MASTER_ADDR=localhost
-MASTER_PORT=6013
+MASTER_PORT=6014
 NNODES=1
 NODE_RANK=0
 NPUS_PER_NODE=8
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
-# please fill these path configurations
-CHECKPOINT="Your ckpt file path"
-TOKENIZER_PATH="Your vocab file path"
-DATA_PATH="Your data path (such as ./mmlu/test/)"
-TASK="mmlu"
-
-TP=8
-PP=1
-MBS=1
-SEQ_LEN=32768
+TP=4
+PP=2
+SEQ_LENGTH=32768
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
@@ -28,6 +28,7 @@ DISTRIBUTED_ARGS="
     --master_port $MASTER_PORT
 "
 
+
 # Different task needs different max_new_tokens value, please follow the instruction in readme.
 torchrun $DISTRIBUTED_ARGS evaluation.py \
        --use-mcore-models \
@@ -35,36 +36,34 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --task ${TASK} \
        --tensor-model-parallel-size ${TP} \
        --pipeline-model-parallel-size ${PP} \
-       --micro-batch-size ${MBS}  \
-       --seq-length ${SEQ_LEN} \
-       --max-position-embeddings ${SEQ_LEN} \
-       --tokenizer-type PretrainedFromHF  \
-       --tokenizer-name-or-path ${TOKENIZER_PATH} \
+       --seq-length ${SEQ_LENGTH} \
+       --max-position-embeddings ${SEQ_LENGTH} \
        --max-new-tokens 1 \
-       --make-vocab-size-divisible-by 1 \
-       --padded-vocab-size 152064 \
-       --rotary-base 1000000 \
-       --num-layers 80  \
-       --hidden-size 8192  \
-       --ffn-hidden-size 49152 \
-       --num-attention-heads 64 \
-       --group-query-attention \
-       --num-query-groups 8 \
-       --add-qkv-bias \
+       --num-layers 28  \
+       --hidden-size 3584  \
+       --ffn-hidden-size 18944 \
+       --num-attention-heads 28  \
        --disable-bias-linear \
-       --untie-embeddings-and-output-weights \
        --swiglu \
        --position-embedding-type rope \
-       --load $CHECKPOINT \
+       --load ${CHECKPOINT} \
        --normalization RMSNorm \
-       --norm-epsilon 1e-06 \
+       --tokenizer-type PretrainedFromHF  \
+       --tokenizer-name-or-path ${TOKENIZER_PATH} \
        --tokenizer-not-use-fast \
+       --micro-batch-size 1  \
        --exit-on-missing-checkpoint \
        --no-load-rng \
        --no-load-optim \
+       --untie-embeddings-and-output-weights \
+       --add-qkv-bias \
+       --make-vocab-size-divisible-by 1 \
+       --padded-vocab-size 152064 \
+       --rotary-base 1000000 \
        --no-gradient-accumulation-fusion \
        --attention-softmax-in-fp32 \
        --seed 42 \
-       --bf16 \
+       --group-query-attention \
+       --num-query-groups 4 \
        --no-chat-template \
-       | tee logs/eval_mcore_qwen15_110b_${TASK}.log
+       | tee logs/evaluation_mcore_qwen2_7b_${TASK}.log

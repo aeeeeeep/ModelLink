@@ -338,6 +338,8 @@ def _add_network_size_args(parser):
                        help="Use mc2 for compute-comm overlap in tp.")
     group.add_argument('--sliding-window', type=int, default=None,
                        help='Window size when use sliding window attention.')
+    group.add_argument('--output-layer-slice-num', type=int, default=1,
+                       help='Set the number of slices for the weight of the output_layer')
     return parser
 
 
@@ -540,15 +542,6 @@ def _validate_instruction_finetune(args):
             raise AssertionError('Context parallelism is forbidden when use variable seq lengths.')
 
 
-def _valid_lora(args):
-    """
-    check for LoRA
-    """
-    if args.lora_fusion:
-        if not args.sequence_parallel:
-            raise AssertionError('lora_fusion for CCLoRA is forbidden without sequence_parallel.')
-
-
 def _validate_inference_args(args):
     if args.prompt_type is not None and hasattr(args, "hf_chat_template") and args.hf_chat_template:
         raise AssertionError('Prompt-type is forbidden when use huggingface chat template.')
@@ -619,6 +612,18 @@ def _validate_group_limited_greedy(args):
             args.expert_model_parallel_size))
 
 
+def _validate_output_layer_slice_num(args):
+    if args.output_layer_slice_num < 1:
+        raise AssertionError('Output_layer_slice_num must be greater than 0.')
+    elif args.output_layer_slice_num > 1:
+        if args.tensor_model_parallel_size > 1:
+            raise AssertionError('When output_layer_slice_num is greater than 1, only support TP size is 1.')
+        if (args.padded_vocab_size is not None) and (args.padded_vocab_size % args.output_layer_slice_num != 0):
+            raise AssertionError('Output_layer_slice_num needs to be divisible by padded_vocab_size.')
+        elif (args.vocab_size is not None) and (args.vocab_size % args.output_layer_slice_num != 0):
+            raise AssertionError('Output_layer_slice_num needs to be divisible by vocab_size.')
+
+
 def core_transformer_config_from_args_wrapper(fn):
     @wraps(fn)
     def wrapper(args):
@@ -658,7 +663,6 @@ def validate_args_decorator(megatron_validate_args):
         _validate_instruction_finetune(args)
         _validate_position_embedding(args)
         _validate_high_availability(args)
-        _valid_lora(args)
         _validate_inference_args(args)
         _validate_moe_expert_capacity_factor(args)
         _validate_mla(args)
@@ -666,6 +670,7 @@ def validate_args_decorator(megatron_validate_args):
         _validate_transformer_block_build_layers(args)
         _validate_group_limited_greedy(args)
         _validate_evaluation_args(args)
+        _validate_output_layer_slice_num(args)
 
         _validate_optimizer(args)
         from modellink.utils import print_args

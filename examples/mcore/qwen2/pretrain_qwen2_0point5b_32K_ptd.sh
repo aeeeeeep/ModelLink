@@ -1,23 +1,26 @@
 #!/bin/bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export HCCL_CONNECT_TIMEOUT=1800
 
-MASTER_ADDR=localhost
 NPUS_PER_NODE=8
-MASTER_PORT=6666
-NNODES=8
+MASTER_ADDR=localhost
+MASTER_PORT=6011
+NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 # please fill these path configurations
-CKPT_LOAD_DIR="your model ckpt path"
 CKPT_SAVE_DIR="your model save ckpt path"
 DATA_PATH="your data path"
 TOKENIZER_PATH="your tokenizer path"
+CKPT_LOAD_DIR="your model ckpt path"
 
-TP=8
-PP=8
-SEQ_LENGTH=8192
+TP=1
+PP=1
+CP=2
+MBS=1
+GBS=16
+SEQ_LEN=32768
+CP_ALGO=megatron_cp_algo
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
@@ -31,54 +34,61 @@ GPT_ARGS="
     --use-mcore-models \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
-    --num-layer-list 7,8,9,10,11,11,12,12 \
+    --context-parallel-size ${CP} \
+    --context-parallel-algo ${CP_ALGO} \
     --sequence-parallel \
-    --num-layers 80 \
-    --hidden-size 8192 \
-    --ffn-hidden-size 49152 \
-    --num-attention-heads 64 \
+    --use-distributed-optimizer \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
-    --seq-length ${SEQ_LENGTH} \
-    --max-position-embeddings ${SEQ_LENGTH} \
-    --micro-batch-size 1 \
-    --global-batch-size 64 \
-    --make-vocab-size-divisible-by 1 \
-    --lr 1.25e-6 \
-    --train-iters 5000 \
-    --lr-decay-style cosine \
-    --untie-embeddings-and-output-weights \
+    --seq-length ${SEQ_LEN} \
+    --max-position-embeddings ${SEQ_LEN} \
+    --micro-batch-size ${MBS} \
+    --global-batch-size ${GBS} \
+    --group-query-attention \
+    --num-query-groups 2 \
+    --num-layers 24 \
+    --hidden-size 896 \
+    --ffn-hidden-size 4864 \
+    --num-attention-heads 14 \
+    --rotary-base 1000000 \
+    --normalization RMSNorm \
+    --norm-epsilon 1e-06 \
+    --swiglu \
+    --add-qkv-bias \
     --disable-bias-linear \
     --attention-dropout 0.0 \
-    --init-method-std 0.01 \
     --hidden-dropout 0.0 \
+    --make-vocab-size-divisible-by 1 \
+    --padded-vocab-size 151936 \
+    --lr 1.25e-6 \
+    --train-iters 2000 \
+    --lr-decay-style cosine \
+    --lr-warmup-fraction 0.01 \
+    --init-method-std 0.01 \
     --position-embedding-type rope \
-    --normalization RMSNorm \
-    --swiglu \
-    --use-flash-attn \
     --use-fused-rmsnorm \
     --use-fused-rotary-pos-emb \
     --use-rotary-position-embeddings \
     --use-fused-swiglu \
     --use-mc2 \
+    --overlap-grad-reduce \
+    --use-flash-attn \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
     --min-lr 1.25e-7 \
     --weight-decay 1e-1 \
-    --lr-warmup-fraction 0.01 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
     --adam-beta2 0.95 \
-    --add-qkv-bias \
     --initial-loss-scale 4096 \
     --no-gradient-accumulation-fusion \
+    --rope-scaling-factor 8 \
+    --rope-scaling-original-max-position-embeddings 4096 \
+    --rope-scaling-type yarn \
     --no-load-optim \
     --no-load-rng \
-    --bf16 \
-    --rotary-base 1000000 \
-    --padded-vocab-size 152064 \
-    --group-query-attention \
-    --num-query-groups 8
+    --seed 42 \
+    --bf16
 "
 
 DATA_ARGS="
@@ -88,8 +98,8 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 5000 \
-    --eval-interval 5000 \
+    --save-interval 1000 \
+    --eval-interval 1000 \
     --eval-iters 0 \
 "
 
@@ -100,5 +110,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --distributed-backend nccl \
     --load ${CKPT_LOAD_DIR} \
     --save ${CKPT_SAVE_DIR} \
-    | tee logs/pretrain_mcore_qwen15_110b.log
-
+    | tee logs/train_mcore_qwen2_0point5b_32k.log
