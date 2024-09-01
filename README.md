@@ -706,6 +706,27 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
+      <tr>
+      <td rowspan="2"> <a href="https://huggingface.co/internlm">Intern2</a> </td>
+      <td rowspan="2"> <a href="https://huggingface.co/Internlm/Internlm2-chat-20b/tree/main">20B</a> </td>
+      <td> 4K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 1141 </td>
+      <td> 1348 </td>
+      <td><center>【GTS】</td>
+      <td><center>【Test】</td>
+      <tr>
+      <td> 32K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 4982 </td>
+      <td><center> 5476 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+      <tr>
   </tbody>
 </table>
 
