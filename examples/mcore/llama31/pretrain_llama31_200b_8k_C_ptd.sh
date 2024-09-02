@@ -1,10 +1,13 @@
 #!/bin/bash
+export PYTORCH_NPU_ALLOC_CONF="expandable_segments:True"
 export CUDA_DEVICE_MAX_CONNECTIONS=1
+export HCCL_CONNECT_TIMEOUT=7200
+export HCCL_EXEC_TIMEOUT=5600
 
 GPUS_PER_NODE=16
 MASTER_ADDR=localhost #主节点IP
 MASTER_PORT=6010
-NNODES=48
+NNODES=8
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
@@ -13,10 +16,9 @@ DATA_PATH="your data path"
 TOKENIZER_MODEL="your tokenizer path"
 CKPT_LOAD_DIR="your model ckpt path"
 
-CP_TYPE='ulysses_cp_algo' #'ulysses_cp_algo', 'megatron_cp_algo', 'hybrid_cp_algo'
 TP=16
-PP=8
-CP=1
+PP=4
+NUM_LAYERS=62
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -27,67 +29,68 @@ DISTRIBUTED_ARGS="
 "
 
 GPT_ARGS="
-    --use-mcore-models \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
-    --num-layer-list 12,17,17,17,17,17,17,12
+    --num-layer-list 15,16,16,15 \
+    --reuse-fp32-param \
+    --overlap-grad-reduce \
+    --overlap-param-gather \
+    --use-distributed-optimizer \
+    --micro-batch-size 1 \
+    --global-batch-size 512 \
     --sequence-parallel \
-    --num-layers 126 \
+    --use-flash-attn \
+    --use-rotary-position-embeddings \
+    --use-fused-rotary-pos-emb \
+    --use-fused-rmsnorm \
+    --use-fused-swiglu \
+    --tokenizer-type PretrainedFromHF \
+    --tokenizer-name-or-path ${TOKENIZER_MODEL} \
+    --num-layers ${NUM_LAYERS} \
     --hidden-size 16384 \
     --ffn-hidden-size 53248 \
     --num-attention-heads 128 \
-    --tokenizer-type PretrainedFromHF \
-    --tokenizer-name-or-path ${TOKENIZER_MODEL} \
+    --group-query-attention \
+    --num-query-groups 16 \
     --seq-length 8192 \
-    --max-position-embeddings 131072 \
-    --rotary-base 500000 \
     --rope-scaling-type llama3 \
     --rope-scaling-factor 8.0 \
     --low-freq-factor 1.0 \
     --high-freq-factor 4.0 \
     --original-max-position-embeddings 8192 \
+    --max-position-embeddings 131072 \
     --make-vocab-size-divisible-by 1 \
     --untie-embeddings-and-output-weights \
+    --disable-bias-linear \
     --attention-dropout 0.0 \
     --init-method-std 0.01 \
     --hidden-dropout 0.0 \
-    --disable-bias-linear \
-    --group-query-attention \
-    --num-query-groups 16 \
-    --vocab-size 128256 \
     --position-embedding-type rope \
+    --rotary-base 500000 \
     --normalization RMSNorm \
     --norm-epsilon 1e-5 \
-    --use-fused-rmsnorm \
-    --use-fused-rotary-pos-emb \
     --swiglu \
-    --use-flash-attn \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
-    --use-fused-swiglu \
-    --use-mc2 \
-    --no-gradient-accumulation-fusion \
-    --context-parallel-size  ${CP} \
-    --kv-head-repeat-before-uly-alltoall \
-    --no-shared-storage \
-    --micro-batch-size 1 \
-    --global-batch-size 32  \
     --lr 1.25e-6 \
     --train-iters 2000 \
     --lr-decay-style cosine \
     --min-lr 1.25e-7 \
-    --weight-decay 0.1 \
+    --weight-decay 1e-1 \
+    --lr-warmup-fraction 0.01 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
-    --initial-loss-scale 4096.0 \
     --adam-beta2 0.95 \
-    --adam-eps 1e-5 \
+    --initial-loss-scale 4096 \
+    --no-gradient-accumulation-fusion \
     --no-load-optim \
     --no-load-rng \
     --no-save-optim \
     --no-save-rng \
-    --lr-warmup-fraction 0.01 \
+    --no-shared-storage \
     --bf16 \
+    --use-mcore-models \
+
 "
 
 DATA_ARGS="
@@ -96,17 +99,18 @@ DATA_ARGS="
 "
 
 OUTPUT_ARGS="
+    --log-throughput \
     --log-interval 1 \
-    --save-interval 10000 \
-    --eval-interval 10000 \
-    --eval-iters 0 \
+    --save-interval 2000 \
+    --eval-interval 2000 \
+    --eval-iters 10 \
 "
 
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \
-    --load ${CKPT_LOAD_DIR} \
-    --save ${CKPT_SAVE_DIR} \
     --distributed-backend nccl \
-    | tee logs/train_llama3.1_405b_8k_126_layer_tp16pp8dp6_32_2000.log
+    --load ${CKPT_LOAD_DIR}
+    --save ${CKPT_SAVE_DIR} \
+    | tee logs/train_llama31_mcore_200b_8k.log
