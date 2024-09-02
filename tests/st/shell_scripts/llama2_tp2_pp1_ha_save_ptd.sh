@@ -35,13 +35,6 @@ DIST_ALGO=(
     --sequence-parallel
 )
 
-ACCELERATE_ARGS=(
-    --enable-recompute-layers-per-pp-rank \
-    --recompute-granularity full \
-    --recompute-method block \
-    --recompute-num-layers 1 \
-)
-
 MODEL_ARGS=(
     --use-mcore-models
     --num-layers 8
