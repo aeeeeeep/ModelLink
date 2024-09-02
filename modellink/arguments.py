@@ -648,14 +648,34 @@ def _validate_optimizer(args):
         raise AssertionError('reuse-fp32-param and enable-high-availability do not support enabling together.')
 
 
+def _store_variables(args):
+    variable_dict = dict()
+    variable_dict["variable_seq_lengths"] = args.variable_seq_lengths
+    # Moe models require `--sequence-parallel` to be turned on before Megatron core_v0.7.0,
+    # which conflicted with the behavior of turning it off by default during inference and evaluation.
+    variable_dict["origin_sequence_parallel"] = args.sequence_parallel
+    if args.num_experts is not None and hasattr(args, "temperature") and args.temperature is not None:
+        args.sequence_parallel = True
+    return variable_dict
+
+
+def _restore_variables(args, variable_dict):
+    args.variable_seq_lengths = variable_dict["variable_seq_lengths"]
+    # Moe models require `--sequence-parallel` to be turned on before Megatron core_v0.7.0,
+    # which conflicted with the behavior of turning it off by default during inference and evaluation.
+    if args.num_experts is not None and hasattr(args, "temperature") and args.temperature is not None:
+        args.sequence_parallel = variable_dict["origin_sequence_parallel"]
+
+
 def validate_args_decorator(megatron_validate_args):
     @wraps(megatron_validate_args)
     def wrapper(args, defaults=None):
         if defaults is None:
             defaults = {}
-        variable_seq_lengths = args.variable_seq_lengths
+
+        variable_dict = _store_variables(args)
         megatron_validate_args(args, defaults)
-        args.variable_seq_lengths = variable_seq_lengths
+        _restore_variables(args, variable_dict)
 
         args.use_mc2 = False
 

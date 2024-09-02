@@ -4,7 +4,6 @@
 export HCCL_CONNECT_TIMEOUT=1200
 export COMBINED_ENABLE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export TOKENIZERS_PARALLELISM=false
 
 MASTER_ADDR=localhost
 MASTER_PORT=6000
@@ -27,22 +26,30 @@ DISTRIBUTED_ARGS="
     --master_port $MASTER_PORT
 "
 
+MOE_ARGS="
+    --num-experts 8 \
+    --expert-model-parallel-size 1 \
+    --moe-router-topk 2 \
+"
+
 GPT_ARGS="
+    --use-mcore-models \
+    --transformer-impl local \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --task $TASK \
     --task-data-path $DATA_PATH \
     --max-new-tokens 1 \
-    --num-layers 32 \
-    --hidden-size 4096 \
-    --ffn-hidden-size 14336 \
-    --num-attention-heads 32 \
+    --num-layers 56 \
+    --hidden-size 6144 \
+    --ffn-hidden-size 16384 \
+    --num-attention-heads 48 \
     --group-query-attention \
     --num-query-groups 8 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
-    --seq-length 4096 \
-    --max-position-embeddings 32768 \
+    --seq-length 65536 \
+    --max-position-embeddings 65536 \
     --micro-batch-size 1 \
     --make-vocab-size-divisible-by 1 \
     --untie-embeddings-and-output-weights \
@@ -51,20 +58,16 @@ GPT_ARGS="
     --normalization RMSNorm \
     --use-fused-rmsnorm \
     --swiglu \
-    --no-gradient-accumulation-fusion \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
     --load ${CHECKPOINT}  \
     --no-load-optim \
     --no-load-rng \
     --bf16 \
-    --seed 42 \
-    --rotary-base 1000000 \
-    --use-mcore-models \
-    --transformer-impl local
+    --seed 42
 "
 
 torchrun $DISTRIBUTED_ARGS evaluation.py \
     $GPT_ARGS \
-    --distributed-backend nccl 
-    | tee logs/evaluation_mcore_mistral_${TASK}.log
+    $MOE_ARGS \
+    --distributed-backend nccl | tee logs/evaluation_mcore_mixtral_8x22b_${TASK}.log
