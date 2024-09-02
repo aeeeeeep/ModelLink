@@ -32,8 +32,8 @@ DISTRIBUTED_ARGS="
 GPT_ARGS="
     --use-mcore-models \
     --sequence-parallel \
-	--context-parallel-size ${CP} \
-	--context-parallel-algo ulysses_cp_algo \
+    --context-parallel-size ${CP} \
+    --context-parallel-algo ulysses_cp_algo \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --num-layers 48 \
@@ -69,7 +69,7 @@ GPT_ARGS="
     --no-gradient-accumulation-fusion \
     --use-mc2 \
     --use-flash-attn \
-	--use-fused-rotary-pos-emb \
+    --use-fused-rotary-pos-emb \
     --use-rotary-position-embeddings \
     --use-fused-swiglu \
     --use-fused-rmsnorm \
@@ -81,11 +81,11 @@ GPT_ARGS="
     --attention-softmax-in-fp32 \
     --no-load-optim \
     --no-load-rng \
-	--seed 42 \
+    --seed 42 \
     --bf16 \
-	--use-distributed-optimizer \
-	--overlap-grad-reduce \
-	--no-shared-storage
+    --use-distributed-optimizer \
+    --overlap-grad-reduce \
+    --no-shared-storage
 "
 
 DATA_ARGS="
