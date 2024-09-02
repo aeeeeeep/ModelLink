@@ -13,8 +13,8 @@ WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
 basepath=$(cd `dirname $0`; cd ../../../; pwd)
 
-CKPT_SAVE_DIR=/data/ckpt
-CKPT_LOAD_DIR=/data/llama-2-7b-mg-tp2-pp4-mcore-vpp2-test
+CKPT_SAVE_DIR=/data/high_availability
+CKPT_LOAD_DIR=/data/high_availability
 DATA_PATH=/data/pretrain_dataset/alpaca_text_document
 TOKENIZER_MODEL=/data/llama-2-7b-hf/tokenizer.model
 TP=2
@@ -43,7 +43,7 @@ ACCELERATE_ARGS=(
 
 MODEL_ARGS=(
     --use-mcore-models
-    --num-layers 16
+    --num-layers 8
     --hidden-size 4096
     --ffn-hidden-size 11008
     --num-attention-heads 32
