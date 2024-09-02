@@ -114,3 +114,16 @@ torchrun ${DISTRIBUTED_ARGS[@]} $basepath/pretrain_gpt.py \
     --finetune \
     --log-throughput \
     --distributed-backend nccl
+
+torchrun ${DISTRIBUTED_ARGS[@]} $basepath/pretrain_gpt.py \
+    ${DIST_ALGO[@]} \
+    ${MODEL_ARGS[@]} \
+    ${TRAINING_ARGS[@]} \
+    ${ACCELERATE_ARGS[@]} \
+    ${DATA_ARGS[@]} \
+    ${OUTPUT_ARGS[@]} \
+    --load ${CKPT_LOAD_DIR} \
+    --save ${CKPT_SAVE_DIR} \
+    --finetune \
+    --log-throughput \
+    --distributed-backend nccl
