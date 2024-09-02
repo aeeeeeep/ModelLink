@@ -380,7 +380,7 @@ class HuggingfaceModel(ModelBase):
                 v_bias = qkv_pack_bias[end_k:, :]
                 query_key_value_bias = [q_bias, k_bias, v_bias]
                 self.layers_self_attention_linear_qkv_caches["bias"] = (qkv_concatenate_bias(query_key_value_bias))
-		else:
+        else:
             raise ValueError(f"Unsupported types. {qkv_type}")
             
     def has_layers_mlp_linear_fc1_bias(self, **kwargs):

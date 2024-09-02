@@ -28,10 +28,10 @@ DISTRIBUTED_ARGS="
 "
 
 GPT_ARGS="
-	--finetune \
-	--is-instruction-dataset \
-	--variable-seq-lenghts \
-	--prompt-type chatml \
+    --finetune \
+    --is-instruction-dataset \
+    --variable-seq-lenghts \
+    --prompt-type chatml \
     --use-mcore-models \
     --sequence-parallel \
     --tensor-model-parallel-size ${TP} \
@@ -67,20 +67,20 @@ GPT_ARGS="
     --adam-beta2 0.999 \
     --no-load-optim \
     --no-load-rng \
-	--seed 1234 \
+    --seed 1234 \
     --norm-epsilon 1e-5 \
-	--rotary-base 1000000 \
+    --rotary-base 1000000 \
     --lr-decay-style constant \
     --untie-embeddings-and-output-weights \
     --use-mc2 \
-	--use-flash-attn \
+    --use-flash-attn \
     --use-rotary-position-embeddings \
-	--use-fused-rotary-pos-emb \
-	--use-partial-rope \
+    --use-fused-rotary-pos-emb \
+    --use-partial-rope \
     --use-fused-rmsnorm \
     --use-fused-swiglu \
     --use-distributed-optimizer \
-	--bf16
+    --bf16
 "
 
 DATA_ARGS="
@@ -102,4 +102,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --distributed-backend nccl \
     --load ${CKPT_LOAD_DIR} \
     --save ${CKPT_SAVE_DIR} \
-    | tee logs/finetune_internlm2_20b_chat_mcore.log
+    | tee logs/finetune_internlm2_20b_mcore.log

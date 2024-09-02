@@ -8,7 +8,7 @@ python ./preprocess_data.py \
         --output-prefix ./dataset/internlm2-chat-20b/alpaca \
         --workers 4 \
         --log-interval 1000 \
-        --tokenizer-type PretrainedFromHF
-		--tokenizer-not-use-fast \
-		--handler-name AlpacaStyleInstructionHandler \
-		--prompt-type chatml
+        --tokenizer-type PretrainedFromHF \
+        --tokenizer-not-use-fast \
+        --handler-name AlpacaStyleInstructionHandler \
+        --prompt-type chatml

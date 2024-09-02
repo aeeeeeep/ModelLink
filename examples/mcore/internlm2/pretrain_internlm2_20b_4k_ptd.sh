@@ -64,7 +64,7 @@ GPT_ARGS="
     --no-gradient-accumulation-fusion \
     --use-mc2 \
     --use-flash-attn \
-	--use-fused-rotary-pos-emb \
+    --use-fused-rotary-pos-emb \
     --use-rotary-position-embeddings \
     --use-fused-swiglu \
     --use-fused-rmsnorm \
@@ -76,7 +76,7 @@ GPT_ARGS="
     --attention-softmax-in-fp32 \
     --no-load-optim \
     --no-load-rng \
-	--seed 42 \
+    --seed 42 \
     --bf16
 "
 
@@ -99,4 +99,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     --distributed-backend nccl \
     --load ${CKPT_LOAD_DIR} \
     --save ${CKPT_SAVE_DIR} \
-    | tee logs/train_internlm2_20b_4k_t4p2_l48_mcore.log
+    | tee logs/train_internlm2_20b_4k_mcore.log
