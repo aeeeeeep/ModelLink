@@ -427,21 +427,6 @@ def _add_training_args(parser):
     group.add_argument('--swap-attention', action='store_true', default=False,
                        help='switch to open swap-attention feature.'
                             'The default is False.')
-
-    group.add_argument('--adaptive-recompute-device-size',
-                       type=int, default=-1,
-                       help='The memory size for adaptive selective recompute strategy. '
-                            'The default is -1. If this parameter > 0, '
-                            'will activate adaptive selective recompute. ')
-    group.add_argument('--adaptive-recompute-profiling-step',
-                       type=int, default=10,
-                       help='The profiling step for adaptive selective recompute strategy. '
-                            'The default is 10. If activate adaptive selective recompute, '
-                            'will solve graph after step 10. ')
-    group.add_argument('--adaptive-recompute-device-swap',
-                       action='store_true', default=False,
-                       help='switch to open adaptive recompute feature. '
-                            'The default is False.')
     return parser
 
 
@@ -682,12 +667,15 @@ def _restore_variables(args, variable_dict):
         args.sequence_parallel = variable_dict["origin_sequence_parallel"]
 
 
-def add_dummy_args(args):
+def _add_dummy_args(args):
     """
     For arguments in mindspeed-core which is currently unsupported in mindspeed-llm.
     """
     # reduce_recompute_for_last_chunk would be registered if recompute-in-advance is supported.
     args.reduce_recompute_for_last_chunk = False
+    args.adaptive_recompute_device_swap = False
+    args.adaptive_recompute_device_size = -1
+    args.adaptive_recompute_profiling_step = 10
 
 
 def validate_args_decorator(megatron_validate_args):
@@ -719,7 +707,7 @@ def validate_args_decorator(megatron_validate_args):
 
         _validate_optimizer(args)
 
-        add_dummy_args(args)
+        _add_dummy_args(args)
 
         from modellink.utils import print_args
         print_args('ModelLink Arguments', args)

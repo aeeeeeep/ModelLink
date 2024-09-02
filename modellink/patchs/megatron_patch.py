@@ -371,13 +371,13 @@ def patch_optimizer():
         PatchManager.register_patch('megatron.core.optimizer.optimizer_config.OptimizerConfig.__init__', optimizer_config_init_wrapper)
         PatchManager.register_patch('megatron.core.optimizer.distrib_optimizer.DistributedOptimizer.__init__', reuse_fp32_param_distrib_optimizer_init_wrapper)
 
-    adaptive_recompute_enable = args.adaptive_recompute_device_size > 0 or args.adaptive_recompute_device_swap
-    if (adaptive_recompute_enable and not args.memory_fragmentation) or args.swap_attention:
+    if args.swap_attention:
         from mindspeed.core.memory.adaptive_recomputing.adaptive_recompute import allowed_recomputing_module_wrapper
         from mindspeed.core.memory.adaptive_recomputing.adaptive_recompute import setup_model_and_optimizer_wrapper
-        from mindspeed.core.memory.adaptive_recomputing.pluggable_allocator_adpator import change_allocator
         from megatron.legacy.model.transformer import ParallelTransformerLayer
-        if not args.swap_attention:
-            change_allocator()
-        allowed_recomputing_module_wrapper(ParallelTransformerLayer)
+        from megatron.core.transformer.transformer_layer import TransformerLayer
+        if hasattr(args, "use_mcore_models") and args.use_mcore_models:
+            allowed_recomputing_module_wrapper(TransformerLayer)
+        else:
+            allowed_recomputing_module_wrapper(ParallelTransformerLayer)
         PatchManager.register_patch('megatron.training.training.setup_model_and_optimizer', setup_model_and_optimizer_wrapper)
