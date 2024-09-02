@@ -106,7 +106,6 @@ torchrun ${DISTRIBUTED_ARGS[@]} $basepath/pretrain_gpt.py \
     ${DIST_ALGO[@]} \
     ${MODEL_ARGS[@]} \
     ${TRAINING_ARGS[@]} \
-    ${ACCELERATE_ARGS[@]} \
     ${DATA_ARGS[@]} \
     ${OUTPUT_ARGS[@]} \
     --load ${CKPT_LOAD_DIR} \
@@ -119,7 +118,6 @@ torchrun ${DISTRIBUTED_ARGS[@]} $basepath/pretrain_gpt.py \
     ${DIST_ALGO[@]} \
     ${MODEL_ARGS[@]} \
     ${TRAINING_ARGS[@]} \
-    ${ACCELERATE_ARGS[@]} \
     ${DATA_ARGS[@]} \
     ${OUTPUT_ARGS[@]} \
     --load ${CKPT_LOAD_DIR} \
