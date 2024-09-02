@@ -59,7 +59,7 @@ TRAINING_ARGS=(
     --global-batch-size 32
     --make-vocab-size-divisible-by 1
     --lr 1.25e-6
-    --train-iters 10
+    --train-iters 15
     --lr-decay-style cosine
     --untie-embeddings-and-output-weights
     --disable-bias-linear
