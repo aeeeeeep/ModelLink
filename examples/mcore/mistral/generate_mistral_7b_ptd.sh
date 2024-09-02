@@ -66,4 +66,4 @@ torchrun $DISTRIBUTED_ARGS inference.py \
     $MOE_ARGS \
     --distributed-backend nccl \
     --prompt-type mixtral \
-    | tee logs/generate_mixtral.log
+    | tee logs/generate_mcore_mistral.log

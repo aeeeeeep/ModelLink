@@ -4,8 +4,12 @@
 export HCCL_CONNECT_TIMEOUT=1200
 export COMBINED_ENABLE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
-export TOKENIZERS_PARALLELISM=false
 
+# please fill these path configurations
+CHECKPOINT="your model ckpt path"
+TOKENIZER_PATH="your tokenizer path"
+
+# Change for multinode config
 MASTER_ADDR=localhost
 MASTER_PORT=6000
 NNODES=1
@@ -13,11 +17,6 @@ NODE_RANK=0
 GPUS_PER_NODE=8
 TP=8
 PP=1
-
-CHECKPOINT="Your ckpt file path"
-TOKENIZER_PATH="Your vocab file path"
-DATA_PATH="Your data path (such as ./mmlu/test/)"
-TASK="mmlu"
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -27,22 +26,25 @@ DISTRIBUTED_ARGS="
     --master_port $MASTER_PORT
 "
 
+MOE_ARGS="
+    --num-experts 8 \
+    --expert-model-parallel-size 1 \
+    --moe-router-topk 2 \
+"
+
 GPT_ARGS="
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
-    --task $TASK \
-    --task-data-path $DATA_PATH \
-    --max-new-tokens 1 \
-    --num-layers 32 \
-    --hidden-size 4096 \
-    --ffn-hidden-size 14336 \
-    --num-attention-heads 32 \
+    --num-layers 56 \
+    --hidden-size 6144 \
+    --ffn-hidden-size 16384 \
+    --num-attention-heads 48 \
     --group-query-attention \
     --num-query-groups 8 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_PATH} \
-    --seq-length 4096 \
-    --max-position-embeddings 32768 \
+    --seq-length 65536 \
+    --max-position-embeddings 65536 \
     --micro-batch-size 1 \
     --make-vocab-size-divisible-by 1 \
     --untie-embeddings-and-output-weights \
@@ -58,13 +60,15 @@ GPT_ARGS="
     --no-load-optim \
     --no-load-rng \
     --bf16 \
-    --seed 42 \
+    --max-new-tokens 256 \
     --rotary-base 1000000 \
     --use-mcore-models \
     --transformer-impl local
 "
 
-torchrun $DISTRIBUTED_ARGS evaluation.py \
+torchrun $DISTRIBUTED_ARGS inference.py \
     $GPT_ARGS \
-    --distributed-backend nccl 
-    | tee logs/evaluation_mcore_mistral_${TASK}.log
+    $MOE_ARGS \
+    --distributed-backend nccl \
+    --prompt-type mixtral \
+    | tee logs/generate_mcore_mixtral_8x22b.log
