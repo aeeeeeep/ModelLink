@@ -797,6 +797,31 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
+      <td rowspan="2">GPT4</td>
+      <td> 4x13B </td>
+      <td> 128K </td>
+      <th> Mcore </th>
+      <td> 8x8 </td>
+      <td> BF16 </td>
+      <td> 424 </td>
+      <td> 1066 </td>
+      <td> -- </td>
+      <td><center>【NAIE】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td> 4x16B </td>
+      <td> 128K </td>
+      <th>Mcore</th>
+      <td> 8x8 </td>
+      <td> BF16 </td>
+      <td> 351 </td>
+      <td> 918 </td>
+      <td> -- </td>
+      <td><center>【昇腾】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
       <td rowspan="1"><a href="https://github.com/xai-org/grok-1">Grok1</a></td>
       <td><a href="https://github.com/xai-org/grok-1">8x5B</a></td>
       <td> 8K </td>
