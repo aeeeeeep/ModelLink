@@ -423,6 +423,13 @@ def _add_training_args(parser):
                             'e.g., "qwen"')
     group.add_argument('--pad-to-multiple-of', type=int, default=8,
                        help='Used for Padding multiple in finetune. The default is 8.')
+    group.add_argument('--scale-emb', type=float, default=None,
+                       help='scale embed tokens')
+
+    group.add_argument('--dim-model-base', type=float, default=None,
+                       help='dim-model-base')
+    group.add_argument('--scale-depth', type=float, default=None,
+                       help='scale-depth')
 
     return parser
 

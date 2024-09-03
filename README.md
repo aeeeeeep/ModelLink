@@ -834,6 +834,31 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
+    <tr>
+      <td rowspan="2"><a href="https://github.com/OpenBMB/MiniCPM">MiniCPM</a></td>
+      <td> 2B </td>
+      <td> 4K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 7314 </td>
+      <td> -- </td>
+      <td> 7953 </td>
+      <td><center>【NAIE】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td> 8x2B </td>
+      <td> 4K </td>
+      <th>Mcore</th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 2981 </td>
+      <td> -- </td>
+      <td> 3172 </td>
+      <td><center>【昇腾】</td>
+      <td>【Test】</td>
+    </tr>
   </tbody>
 </table>
 

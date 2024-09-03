@@ -222,7 +222,14 @@ def patch_core_transformers(args):
 
         if args.moe_token_dispatcher_type == 'alltoall':
             from ..core.transformer.moe.token_dispatcher import MoEAlltoAllTokenDispatcher
-            PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAlltoAllTokenDispatcher', MoEAlltoAllTokenDispatcher)
+            PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAlltoAllTokenDispatcher',
+                                        MoEAlltoAllTokenDispatcher)
+
+    from mindspeed.core.transformer.moe.grouped_gemm_util import Ops, grouped_gemm_is_available, get_device_capability
+    PatchManager.register_patch('megatron.core.transformer.moe.grouped_gemm_util.ops', Ops)
+    PatchManager.register_patch('megatron.core.transformer.moe.grouped_gemm_util.grouped_gemm_is_available',
+                                grouped_gemm_is_available)
+    PatchManager.register_patch('torch.cuda.get_device_capability', get_device_capability)
 
 
 def patch_pipeline_parallel():

@@ -71,6 +71,8 @@ def gpt_model_forward(self, input_ids: Tensor,
         pass
     elif self.pre_process:
         decoder_input = self.embedding(input_ids=input_ids, position_ids=position_ids)
+        if args.scale_emb is not None:
+            decoder_input = decoder_input * args.scale_emb
     else:
         # intermediate stage of pipeline
         # decoder will get hidden_states from encoder.input_tensor
@@ -101,6 +103,9 @@ def gpt_model_forward(self, input_ids: Tensor,
     output_weight = None
     if self.share_embeddings_and_output_weights:
         output_weight = self.shared_embedding_or_output_weight()
+
+    if args.dim_model_base is not None:
+        hidden_states = hidden_states / (args.hidden_size / args.dim_model_base)
     logits, _ = self.output_layer(hidden_states, weight=output_weight)
     # new add to scale logits
     if args.output_multiplier_scale:
