@@ -35,6 +35,30 @@ from mindspeed.core.parallel_state import (get_context_parallel_for_hybrid_ulyss
 WRITE_FILE_DEFAULT_FLAGS = os.O_WRONLY | os.O_CREAT
 WRITE_FILE_DEFAULT_MODES = stat.S_IWUSR | stat.S_IRUSR
 
+_ACTUAL_SEQ_LEN = None
+
+
+def get_actual_seq_len():
+    return _ACTUAL_SEQ_LEN
+
+
+def set_actual_seq_len(actual_seq_len):
+    global _ACTUAL_SEQ_LEN
+    _ACTUAL_SEQ_LEN = actual_seq_len
+
+
+def compute_actual_seq_len(seq):
+    zero_pos = (seq == 0).nonzero()[1:].squeeze(dim=1)
+    res = zero_pos.tolist()
+    res.append(len(seq))
+    return res
+
+
+def generate_actual_seq_len(batch):
+    position_ids = batch['position_ids'].view(-1)
+    actual_seq_len = compute_actual_seq_len(position_ids)
+    set_actual_seq_len(actual_seq_len)
+
 
 def parse_args():
     return megatron.training.arguments.parse_args()
@@ -189,6 +213,113 @@ def get_finetune_data_on_this_tp_rank(data_iterator):
         attention_mask = get_tune_attention_mask(attention_mask_1d)
 
     return tokens, attention_mask
+
+
+def get_batch_on_this_tp_rank(data_iterator):
+    args = get_args()
+
+    def _broadcast(item):
+        if item is not None:
+            torch.distributed.broadcast(item, mpu.get_tensor_model_parallel_src_rank(),
+                                        group=mpu.get_tensor_model_parallel_group())
+
+    if mpu.get_tensor_model_parallel_rank() == 0:
+        if data_iterator is not None:
+            data = next(data_iterator)
+        else:
+            data = None
+
+        batch = {
+            'tokens': data["tokens"].cuda(non_blocking=True),
+            'labels': data["labels"].cuda(non_blocking=True),
+            'loss_mask': data["loss_mask"].cuda(non_blocking=True),
+            'attention_mask': None if "attention_mask" not in data else data["attention_mask"].cuda(non_blocking=True),
+            'position_ids': data["position_ids"].cuda(non_blocking=True)
+        }
+        if args.pipeline_model_parallel_size == 1:
+            _broadcast(batch['tokens'])
+            _broadcast(batch['labels'])
+            _broadcast(batch['loss_mask'])
+            _broadcast(batch['attention_mask'])
+            _broadcast(batch['position_ids'])
+
+        elif mpu.is_pipeline_first_stage():
+            _broadcast(batch['tokens'])
+            _broadcast(batch['attention_mask'])
+            _broadcast(batch['position_ids'])
+
+        elif mpu.is_pipeline_last_stage():
+            _broadcast(batch['labels'])
+            _broadcast(batch['loss_mask'])
+            _broadcast(batch['attention_mask'])
+            if args.reset_position_ids:
+                _broadcast(batch['position_ids'])
+        else:
+            _broadcast(batch['attention_mask'])
+            if args.reset_position_ids:
+                _broadcast(batch['position_ids'])
+
+    else:
+
+        tokens = torch.empty((args.micro_batch_size, args.seq_length), dtype=torch.int64,
+                             device=torch.cuda.current_device())
+        labels = torch.empty((args.micro_batch_size, args.seq_length), dtype=torch.int64,
+                             device=torch.cuda.current_device())
+        loss_mask = torch.empty((args.micro_batch_size, args.seq_length), dtype=torch.float32,
+                                device=torch.cuda.current_device())
+        if args.create_attention_mask_in_dataloader:
+            attention_mask = torch.empty(
+                (args.micro_batch_size, 1, args.seq_length, args.seq_length), dtype=torch.bool,
+                device=torch.cuda.current_device()
+            )
+        else:
+            attention_mask = None
+        position_ids = torch.empty((args.micro_batch_size, args.seq_length), dtype=torch.int64,
+                                   device=torch.cuda.current_device())
+
+        if args.pipeline_model_parallel_size == 1:
+            _broadcast(tokens)
+            _broadcast(labels)
+            _broadcast(loss_mask)
+            _broadcast(attention_mask)
+            _broadcast(position_ids)
+
+        elif mpu.is_pipeline_first_stage():
+            labels = None
+            loss_mask = None
+            _broadcast(tokens)
+            _broadcast(attention_mask)
+            _broadcast(position_ids)
+
+        elif mpu.is_pipeline_last_stage():
+            tokens = None
+            _broadcast(labels)
+            _broadcast(loss_mask)
+            _broadcast(attention_mask)
+            if args.reset_position_ids:
+                _broadcast(position_ids)
+            else:
+                position_ids = None
+
+        else:
+            tokens = None
+            labels = None
+            loss_mask = None
+            _broadcast(attention_mask)
+            if args.reset_position_ids:
+                _broadcast(position_ids)
+            else:
+                position_ids = None
+
+        batch = {
+            'tokens': tokens,
+            'labels': labels,
+            'loss_mask': loss_mask,
+            'attention_mask': attention_mask,
+            'position_ids': position_ids
+        }
+
+    return batch
 
 
 def get_batch_on_this_cp_rank(batch):

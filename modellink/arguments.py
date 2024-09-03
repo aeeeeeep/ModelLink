@@ -488,7 +488,7 @@ def _add_dataset_args(parser):
 
 def _validate_create_attention_mask_in_dataloader(args):
     args.create_attention_mask_in_dataloader = False
-    reset_data = args.reset_attention_mask or args.reset_position_ids
+    reset_data = args.reset_attention_mask
     alibi_without_flash_attn = args.position_embedding_type == 'alibi' and not args.use_flash_attn
     if reset_data or alibi_without_flash_attn or args.tokenizer_padding_side == "left":
         args.create_attention_mask_in_dataloader = True

@@ -16,6 +16,7 @@ from mindspeed.core.parallel_state import (get_context_parallel_group_for_hybrid
                                            get_context_parallel_for_hybrid_ring_global_ranks)
 from modellink.model.transformer import get_attention_mask
 from modellink.core.models.common.embeddings.rotary_pos_embedding import yarn_get_mscale
+from modellink.utils import get_actual_seq_len
 
 try:
     from einops import rearrange
@@ -59,7 +60,7 @@ def dot_product_attention_init_wrapper(fn):
         config.context_parallel_size = 1
         fn(self, *args, **kwargs)
         config.context_parallel_size = cp_size
-        
+
         args = get_args()
         self.attn_logit_softcapping = args.attn_logit_softcapping
         if args.query_pre_attn_scalar:
@@ -72,15 +73,15 @@ def dot_product_attention_init_wrapper(fn):
             self.hidden_size_per_partition = args.num_attention_heads * args.v_head_dim
             self.q_head_dim = args.qk_nope_head_dim + args.qk_rope_head_dim
             self.softmax_scale = self.q_head_dim ** (-0.5)
-            
+
             if args.rope_scaling_type is not None:
                 mscale_all_dim = args.rope_scaling_mscale_all_dim if args.rope_scaling_mscale_all_dim else 0
                 scaling_factor = args.rope_scaling_factor
-                
+
                 if mscale_all_dim:
                     mscale = yarn_get_mscale(scaling_factor, mscale_all_dim)
                     self.softmax_scale = self.softmax_scale * mscale * mscale
-            
+
             self.norm_factor = 1.0 / self.softmax_scale
 
     return wrapper
@@ -224,15 +225,20 @@ def dot_product_attention_forward(
     args = get_args()
 
     seq_length, _, n_head, head_dim = query.shape[0], query.shape[1], query.shape[2], query.shape[3]
-
-    query, key, value = [rearrange(x, 's b h d -> s b (h d)') for x in [query, key, value]]
+    actual_seq_len = None
+    if args.reset_attention_mask or args.reset_position_ids:
+        query, key, value = [rearrange(x, 's b h d -> (s b) h d') for x in [query, key, value]]
+        args.shape_order = "TND"
+        actual_seq_len = get_actual_seq_len()
+    else:
+        query, key, value = [rearrange(x, 's b h d -> s b (h d)') for x in [query, key, value]]
+        args.shape_order = "SBH"
 
     if self.hidden_size_per_attention_head == 0:
         raise AssertionError("self.hidden_size_per_attention_head should not be ZERO.")
     scale = 1.0 / math.sqrt(self.hidden_size_per_attention_head) \
         if self.scale_mask_softmax.scale is None else self.softmax_scale
-
-    if attention_mask is None:
+    if attention_mask is None or args.reset_attention_mask or args.reset_position_ids:
         attention_mask = get_attention_mask()
 
     if args.context_parallel_size > 1 and args.context_parallel_algo in ['megatron_cp_algo', 'hybrid_cp_algo']:
@@ -244,11 +250,13 @@ def dot_product_attention_forward(
         if use_sliding_windows:
             args.pre_tockens = args.sliding_window
 
-        return torch_npu.npu_fusion_attention(
-            query, key, value, n_head, 'SBH',
+        output = torch_npu.npu_fusion_attention(
+            query, key, value, n_head, args.shape_order,
             pse=None,
             padding_mask=None,
             atten_mask=attention_mask,
+            actual_seq_qlen=actual_seq_len,
+            actual_seq_kvlen=actual_seq_len,
             scale=scale,
             pre_tockens=args.pre_tockens,
             next_tockens=args.next_tockens,
@@ -256,3 +264,8 @@ def dot_product_attention_forward(
             inner_precise=0,
             sparse_mode=args.sparse_mode
         )[0]
+
+        if args.reset_attention_mask or args.reset_position_ids:
+            output = rearrange(output, '(s b) h d -> s b (h d)', s=seq_length)
+
+        return output
