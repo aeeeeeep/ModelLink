@@ -57,6 +57,8 @@ def add_arguments(parser):
                        help='Use the implementation from megatron core')
     group.add_argument('--post-norm', action='store_true',
                        help='post norm after attention or mlp.')
+    group.add_argument('--moe-grouped-gemm', action='store_true',
+                       help='Usr moe grouped gemm.')
 
 
 def verify_transformers_version():
@@ -92,6 +94,22 @@ def build_metadata(args, margs):
     md.consumed_valid_samples = 0
     md.embed_layernorm = margs.embed_layernorm
     md.disable_bias_linear = margs.disable_bias_linear
+    md.moe_grouped_gemm = margs.moe_grouped_gemm
+    md.num_experts = getattr(margs, "num_experts", None)
+    md.n_shared_experts = getattr(margs, "n_shared_experts", None)
+    md.qk_layernorm = getattr(margs, "qk_layernorm", False)
+    md.moe_intermediate_size = getattr(margs, "moe_intermediate_size", None)
+    md.first_k_dense_replace = getattr(margs, "first_k_dense_replace", None)
+    md.moe_layer_freq = getattr(margs, "moe_layer_freq", None)
+    md.multi_head_latent_attention = getattr(margs, "multi_head_latent_attention", False)
+    
+    if md.multi_head_latent_attention:
+        md.qk_rope_head_dim = getattr(margs, "qk_rope_head_dim", None)
+        md.qk_nope_head_dim = getattr(margs, "qk_nope_head_dim", None)
+        md.q_lora_rank = getattr(margs, "q_lora_rank", None)
+        md.kv_lora_rank = getattr(margs, "kv_lora_rank", None)
+        md.v_head_dim = getattr(margs, "v_head_dim", None)
+    
     if hasattr(margs, 'normalization'):
         md.norm_has_bias = margs.normalization == "LayerNorm"
 
@@ -144,6 +162,13 @@ def get_message_layer_attn(message, model, layer_idx, md=None, args=None):
     qkv_weight.append(model.get_layers_self_attention_linear_qkv_weight(layer_idx=layer_idx))
     dense_weight.append(model.get_layers_self_attention_linear_proj_weight(layer_idx=layer_idx))
 
+    if getattr(model.get_args(), "qk_layernorm", False):
+        message["q layernorm"] = model.get_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx)
+        message["k layernorm"] = model.get_layers_self_attention_k_layernorm_weight(layer_idx=layer_idx)
+    if getattr(model.get_args(), "multi_head_latent_attention", False):
+        message["linear qb weight"] = model.get_layers_self_attention_linear_qb_weight(layer_idx=layer_idx)
+        message["linear kvb weight"] = model.get_layers_self_attention_linear_kvb_weight(layer_idx=layer_idx)
+
     if args.add_qkv_bias:
         message["qkv bias"] = model.get_layers_self_attention_linear_qkv_bias(layer_idx=layer_idx)
     if args.add_dense_bias:
@@ -160,13 +185,24 @@ def get_message_layer_attn(message, model, layer_idx, md=None, args=None):
     return message
 
 
-def _get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1, **kwargs):
+def _get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1, is_moe_mlp=False, **kwargs):
     # Grab all parallel tensors for this layer.
     mlp_l0_weight = []
     mlp_l0_bias = []
     mlp_l1_weight = []
-    mlp_l0_weight.append(model.get_layers_mlp_linear_fc1_weight(layer_idx=layer_idx, **kwargs))
-    mlp_l1_weight.append(model.get_layers_mlp_linear_fc2_weight(layer_idx=layer_idx, **kwargs))
+ 
+    if is_moe_mlp:
+        mlp_l0_weight.append(model.get_layers_mlp_experts_linear_fc1_weight(layer_idx=layer_idx, **kwargs))
+        mlp_l1_weight.append(model.get_layers_mlp_experts_linear_fc2_weight(layer_idx=layer_idx, **kwargs))
+    else:
+        mlp_l0_weight.append(model.get_layers_mlp_linear_fc1_weight(layer_idx=layer_idx, **kwargs))
+        mlp_l1_weight.append(model.get_layers_mlp_linear_fc2_weight(layer_idx=layer_idx, **kwargs))
+    if md.linear_bias:
+        if is_moe_mlp:
+            mlp_l0_bias.append(model.get_layers_mlp_experts_linear_fc1_bias(layer_idx=layer_idx, **kwargs))
+        else:
+            mlp_l0_bias.append(model.get_layers_mlp_linear_fc1_bias(layer_idx=layer_idx, **kwargs))
+
     if md.linear_bias:
         mlp_l0_bias.append(model.get_layers_mlp_linear_fc1_bias(layer_idx=layer_idx, **kwargs))
     # Handle gated linear units.
@@ -182,7 +218,10 @@ def _get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1, **kwar
     # Simple concat of the rest.
     message["mlp l1 weight"] = torch.cat(mlp_l1_weight, dim=1)
     if md.linear_bias:
-        message["mlp l1 bias"] = model.get_layers_mlp_linear_fc2_bias(layer_idx=layer_idx, **kwargs)
+        if is_moe_mlp:
+            message["mlp l1 bias"] = model.get_layers_mlp_experts_linear_fc2_bias(layer_idx=layer_idx, **kwargs)
+        else:
+            message["mlp l1 bias"] = model.get_layers_mlp_linear_fc2_bias(layer_idx=layer_idx, **kwargs)
         if md.swiglu:
             for tp_rank in range(tp_size):
                 mlp_l0_bias[tp_rank] = torch.chunk(mlp_l0_bias[tp_rank], 2, dim=0)
@@ -196,7 +235,36 @@ def _get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1, **kwar
 
 def get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1):
     margs = model.get_args()
-    if margs.num_experts:
+    first_k_dense_replace = getattr(margs, 'first_k_dense_replace', None)
+    moe_layer_freq = getattr(margs, 'moe_layer_freq', None)
+    if (
+            margs.num_experts
+            and first_k_dense_replace is not None
+            and moe_layer_freq is not None
+    ):
+        if layer_idx >= first_k_dense_replace and layer_idx % moe_layer_freq == 0:
+            message["mlp_moe"] = {}
+            mlp_router_weight = model.get_layers_mlp_router_weight(layer_idx=layer_idx)
+            message["mlp_moe"]["mlp router weight"] = mlp_router_weight
+            if getattr(margs, "n_shared_experts", None) is not None:
+                fc1_weight = model.get_layers_mlp_shared_experts_linear_fc1_weight(layer_idx=layer_idx)
+                fc2_weight = model.get_layers_mlp_shared_experts_linear_fc2_weight(layer_idx=layer_idx)
+                message["mlp_moe"]["mlp shared experts linear fc1 weight"] = fc1_weight
+                message["mlp_moe"]["mlp shared experts linear fc2 weight"] = fc2_weight
+            if margs.moe_grouped_gemm:
+                weight1 = model.get_layers_mlp_experts_weight1_module(layer_idx=layer_idx)
+                weight2 = model.get_layers_mlp_experts_weight2_module(layer_idx=layer_idx)
+                message["mlp_moe"]["mlp experts weight1 module"] = weight1
+                message["mlp_moe"]["mlp experts weight2 module"] = weight2
+            else:
+                for expert_idx in range(margs.num_experts):
+                    kwargs = {'expert_idx': expert_idx}
+                    expert = _get_message_layer_mlp({}, model, layer_idx, md=md, tp_size=tp_size, is_moe_mlp=True, **kwargs)
+                    message["mlp_moe"][f"expert {expert_idx}"] = expert
+            return message
+        else:
+            return _get_message_layer_mlp(message, model, layer_idx, md=md, tp_size=tp_size)
+    elif margs.num_experts:
         # return _get_message_layer_mlp(message, model, layer_idx, md=md, tp_size=tp_size)
         message["mlp_moe"] = {}
         mlp_router_weight = model.get_layers_mlp_router_weight(layer_idx=layer_idx)
@@ -246,6 +314,7 @@ def _load_checkpoint(queue, args):
 
     model_hf = get_huggingface_model(args)
     args_hf = model_hf.get_args()
+    args_hf.moe_grouped_gemm = args.moe_grouped_gemm
 
     model_mg = get_megatron_model(args_cmd=args)
     model_mg.initialize_megatron_args(args_hf, queue)
