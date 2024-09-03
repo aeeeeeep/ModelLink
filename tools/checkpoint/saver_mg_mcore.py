@@ -164,10 +164,6 @@ def set_model_layer_norm(model_mg, msg, md, **kwargs):
 
     margs = model_mg.get_args()
 
-    post_norm = margs.post_norm
-    if post_norm:
-        pre_mlp_norm_weight = msg.pop("pre mlp norm weight")
-        post_mlp_norm_weight = msg.pop("post mlp norm weight")
     # Save them to the model
     for ep_rank in range(margs.expert_model_parallel_size):
         kwargs["ep_rank"] = ep_rank
@@ -178,10 +174,6 @@ def set_model_layer_norm(model_mg, msg, md, **kwargs):
             if input_norm_bias is not None:
                 model_mg.set_layers_input_layernorm_bias(**kwargs, data=input_norm_bias)
             model_mg.set_layers_self_attention_pre_mlp_layernorm_weight(**kwargs, data=post_norm_weight)
-            if post_norm:
-                model_mg.set_layers_self_attention_pre_mlp_layernorm_weight(**kwargs, data=pre_mlp_norm_weight)
-                model_mg.set_layers_self_attention_post_attention_layernorm_weight(**kwargs, data=post_norm_weight)
-                model_mg.set_layers_self_attention_post_mlp_layernorm_weight(**kwargs, data=post_mlp_norm_weight)
             if post_norm_bias is not None:
                 model_mg.set_layers_self_attention_pre_mlp_layernorm_bias(**kwargs, data=post_norm_bias)
 

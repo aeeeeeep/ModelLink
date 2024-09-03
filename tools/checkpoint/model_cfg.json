@@ -94,24 +94,9 @@
     "gemma": {
       "__base__": "base",
       "config_set_value": {
-        "seq_length": 8192,
+        "seq_length": 4096,
         "tie_word_embeddings": true,
         "kv_channels": 256
-      }
-    },
-    "gemma2": {
-      "__base__": "base",
-      "config_set_value": {
-        "seq_length": 8192,
-        "tie_word_embeddings": true
-	  },
-      "config_hf_key_mapping": {
-        "kv_channels": "head_dim"
-      },
-      "model_hf_key_mapping": {
-        "layers_self_attention_post_attention_layernorm": "model.layers[layer_idx].post_attention_layernorm",
-        "layers_self_attention_pre_mlp_layernorm": "model.layers[layer_idx].pre_feedforward_layernorm",
-        "layers_self_attention_post_mlp_layernorm": "model.layers[layer_idx].post_feedforward_layernorm"
       }
     },
     "bloom": {
@@ -171,6 +156,28 @@
         "layers_mlp_up_proj": "transformer.h[layer_idx].mlp.w1",
         "layers_mlp_linear_fc2": "transformer.h[layer_idx].mlp.c_proj",
         "final_layernorm": "transformer.ln_f"
+      }
+    },
+    "internlm2": {
+      "__base__": "base",
+      "config_set_value": {
+        "seq_length": 32768,
+        "group_query_attention": true,
+        "qkv_type": "pack_self"
+      },
+      "model_hf_key_mapping": {
+        "model": "module[tp_rank]",
+        "embedding_word_embeddings": "model.tok_embeddings",
+        "layers": "model.layers",
+        "layers_self_attention_linear_qkv_pack": "model.layers[layer_idx].attention.wqkv",
+        "layers_self_attention_linear_proj": "model.layers[layer_idx].attention.wo",
+        "layers_mlp_gate_proj": "model.layers[layer_idx].feed_forward.w1",
+        "layers_mlp_up_proj": "model.layers[layer_idx].feed_forward.w3",
+        "layers_mlp_linear_fc2": "model.layers[layer_idx].feed_forward.w2",
+        "layers_input_layernorm": "model.layers[layer_idx].attention_norm",
+        "layers_self_attention_pre_mlp_layernorm": "model.layers[layer_idx].ffn_norm",
+        "final_layernorm": "model.norm",
+        "output_layer": "output"
       }
     }
   }

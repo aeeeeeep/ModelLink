@@ -160,16 +160,10 @@ class ModelBase(abc.ABC):
         self.set_attn_state(layer_idx, src_model)
         self.set_mlp_state(layer_idx, src_model)
         input_layernorm_weight = src_model.get_layers_input_layernorm_weight(layer_idx=layer_idx)
+        pre_mlp_layernorm_weight = src_model.get_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx)
         self.set_layers_input_layernorm_weight(layer_idx=layer_idx, data=input_layernorm_weight)
-        if self.args.post_norm:
-            post_attn_layernorm_weight = src_model.get_layers_self_attention_post_attention_layernorm_weight(
-                layer_idx=layer_idx)
-            self.set_layers_self_attention_post_attention_layernorm_weight(layer_idx=layer_idx,
-                                                                           data=post_attn_layernorm_weight)
-        else:
-            pre_mlp_layernorm_weight = src_model.get_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx)
-            self.set_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx, data=pre_mlp_layernorm_weight)
-
+        self.set_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx, data=pre_mlp_layernorm_weight)
+        
         if self.has_layers_input_layernorm_bias(layer_idx=layer_idx):
             input_layernorm_bias = src_model.get_layers_input_layernorm_bias(layer_idx=layer_idx)
             self.set_layers_input_layernorm_bias(layer_idx=layer_idx, data=input_layernorm_bias)
@@ -203,12 +197,6 @@ class ModelBase(abc.ABC):
         if src_model.has_layers_mlp_linear_fc2_bias(**kwargs):
             fc2_bias = src_model.get_layers_mlp_linear_fc2_bias(**kwargs)
             self.set_layers_mlp_linear_fc2_bias(data=fc2_bias, **kwargs)
-
-        if self.args.post_norm:
-            pre_mlp_layernorm_weight = src_model.get_layers_self_attention_pre_mlp_layernorm_weight(**kwargs)
-            post_mlp_layernorm_weight = src_model.get_layers_self_attention_post_mlp_layernorm_weight(**kwargs)
-            self.set_layers_self_attention_pre_mlp_layernorm_weight(data=pre_mlp_layernorm_weight, **kwargs)
-            self.set_layers_self_attention_post_mlp_layernorm_weight(data=post_mlp_layernorm_weight, **kwargs)
 
     def set_mlp_state(self, layer_idx, src_model):
         args = src_model.get_args()
@@ -313,7 +301,6 @@ class HuggingfaceModel(ModelBase):
         self.args = SimpleNamespace(**self.args)
         self.args.add_qkv_bias = self.args_cmd.add_qkv_bias
         self.args.add_dense_bias = self.args_cmd.add_dense_bias
-        self.args.post_norm = self.args_cmd.post_norm
 
     def get_modules_from_pretrained(self, device_map="cpu", trust_remote_code=True):
         # Load Huggingface model.
@@ -378,6 +365,19 @@ class HuggingfaceModel(ModelBase):
                 q_bias = qkv_pack_bias[:full_q]
                 k_bias = qkv_pack_bias[full_q:end_k]
                 v_bias = qkv_pack_bias[end_k:]
+                query_key_value_bias = [q_bias, k_bias, v_bias]
+                self.layers_self_attention_linear_qkv_caches["bias"] = (qkv_concatenate_bias(query_key_value_bias))
+        elif qkv_type == "pack_self":
+            qkv_pack = self.get_layers_self_attention_linear_qkv_pack_module(layer_idx=layer_idx)
+            qkv_pack_weight = qkv_pack.weight
+            self.layers_self_attention_linear_qkv_caches["weight"] = qkv_pack_weight
+            if self.args_cmd.add_qkv_bias:
+                qkv_pack_bias = qkv_pack.bias
+                full_q = dim * nh
+                end_k = full_q + ng * dim
+                q_bias = qkv_pack_bias[:full_q, :]
+                k_bias = qkv_pack_bias[full_q:end_k, :]
+                v_bias = qkv_pack_bias[end_k:, :]
                 query_key_value_bias = [q_bias, k_bias, v_bias]
                 self.layers_self_attention_linear_qkv_caches["bias"] = (qkv_concatenate_bias(query_key_value_bias))
         else:
@@ -588,7 +588,6 @@ class MegatronModel(ModelBase):
         self.args.w_pack = self.args_cmd.w_pack
         self.args.add_qkv_bias = self.args_cmd.add_qkv_bias
         self.args.add_dense_bias = self.args_cmd.add_dense_bias
-        self.args.post_norm = self.args_cmd.post_norm
         self.args.tokenizer_model = getattr(self.args_cmd, 'tokenizer_model', None)
         self.args.make_vocab_size_divisible_by = getattr(self.args_cmd, 'make_vocab_size_divisible_by', None)
         if self.args_cmd.params_dtype == 'bf16':
@@ -884,7 +883,7 @@ class MegatronMCoreModel(MegatronModel):
             "layers_self_attention_linear_qkv": module_layer + "self_attention.linear_qkv",
             "layers_self_attention_q_layernorm": module_layer + "self_attention.q_layernorm",
             "layers_self_attention_k_layernorm": module_layer + "self_attention.k_layernorm",
-            "layers_self_attention_post_attention_layernorm": module_layer + "post_attn_norm",
+            "layers_self_attention_post_attention_layernorm": module_layer + "pre_mlp_layernorm",
             "layers_self_attention_pre_mlp_layernorm": module_layer + "pre_mlp_layernorm",
             "layers_mlp_linear_fc1": module_layer + "mlp.linear_fc1",
             "layers_mlp_linear_fc2": module_layer + "mlp.linear_fc2",
