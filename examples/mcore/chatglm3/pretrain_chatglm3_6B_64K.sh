@@ -1,16 +1,17 @@
 #!/bin/bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
-NPUS_PER_NODE=8
-
+# Please enter ip of your server.
 IPs=('IP1' 'IP2')
 LOCAL_HOST=`hostname -I|awk -F " " '{print$1}'`
-echo $LOCAL_HOST
+echo LOCAL_HOST $LOCAL_HOST
+
 NPUS_PER_NODE=8
 MASTER_ADDR=${IPs[0]}
 MASTER_PORT=6010
 NNODES=${#IPs[@]}
 NODE_RANK=""
+WORLD_SIZE=$((NPUS_PER_NODE*$NNODES))
 
 for i in "${!IPs[@]}";
 do
@@ -21,8 +22,6 @@ do
         break
     fi
 done
-
-WORLD_SIZE=$((NPUS_PER_NODE*$NNODES))
 
 
 CKPT_SAVE_DIR="your model save ckpt path"
@@ -116,9 +115,11 @@ DATA_ARGS="
 "
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 1000 \
-    --eval-interval 1000 \
+    --save-interval 2000 \
+    --eval-interval 2000 \
     --eval-iters 10 \
+    --save $CKPT_SAVE_DIR \
+    --load $CKPT_LOAD_DIR \
 "
 
 
@@ -127,5 +128,4 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --save $CKPT_SAVE_DIR \
     | tee logs/train_mcore_chatglm3_6B_64K.log

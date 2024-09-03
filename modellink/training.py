@@ -336,11 +336,12 @@ def pretrain(train_valid_test_dataset_provider,
         if args.do_train and args.train_iters > 0:
             if args.enable_high_availability:
                 try:
-                    from mindio_ttp.adaptor import ttp_init_controller_processor, ttp_train
+                    from mindio_ttp.adaptor import tft_init_controller_processor, tft_register_processor, tft_train
                 except ModuleNotFoundError:
                     sys.exit("The mindio_ttp package is not installed. Exiting.")
-                ttp_init_controller_processor(train_valid_test_dataset_provider, model_provider, model_type)
-                iteration, num_floating_point_operations_so_far = ttp_train(train_args, test_data_iterator_list)
+                tft_init_controller_processor(enable_tls=False, tls_option_top_path='')
+                tft_register_processor(train_valid_test_dataset_provider, model_provider, model_type)
+                iteration, num_floating_point_operations_so_far = tft_train(train_args, test_data_iterator_list)
             else:
                 iteration, num_floating_point_operations_so_far = train(*train_args)
 
@@ -501,11 +502,11 @@ def train(forward_step_func, model, optimizer, opt_param_scheduler,
 
         if args.enable_high_availability:
             try:
-                from mindio_ttp.framework_ttp import ttp_set_ckpt_args
+                from mindio_ttp.framework_ttp import tft_set_step_args
             except ModuleNotFoundError:
                 sys.exit("The mindio_ttp package is not installed. Exiting.")
             args.num_floating_point_operations_so_far = num_floating_point_operations_so_far
-            ttp_set_ckpt_args(
+            tft_set_step_args(
                 [iteration, model, optimizer, opt_param_scheduler, args.num_floating_point_operations_so_far])
             args.iteration = iteration
 

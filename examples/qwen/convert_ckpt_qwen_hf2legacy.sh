@@ -1,4 +1,4 @@
-# 修改modelling_qwen.py文件第39行，将：
+# 修改modellink_qwen.py文件第39行，将：
 # SUPPORT_FP16 = SUPPORT_CUDA and torch.cuda.get_device_capability(0)[0] >= 7
 # 修改为：
 # SUPPORT_FP16 = True
@@ -8,10 +8,11 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
-    --loader qwen_hf \
-    --saver megatron \
+    --loader hf_mcore \
+    --saver mg_mcore \
     --target-tensor-parallel-size 8 \
-    --load-dir ./model_from_hf/Qwen-hf/ \
-    --save-dir ./model_weights/Qwen-legacy/ \
-    --tokenizer-model ./model_from_hf/Qwen-hf/qwen.tiktoken \
-    --add-qkv-bias
+    --load-dir ./model_from_hf/qwen-7b/ \
+    --save-dir ./model_weights/qwen-7b-legacy/ \
+    --tokenizer-model ./model_from_hf/qwen-7b/tokenizer.model \
+	--model-type-hf qwen \
+	--add-qkv-bias

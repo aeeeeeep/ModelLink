@@ -27,7 +27,7 @@ from mindspeed.initialize import _compile_dependencies
 
 from ..model import (
     GPTModel, parallel_transformer_init, transformer_language_model_forward_wrapper,
-    norm_wrapper, SwitchMLP, state_dict_for_save_checkpoint_wrapper,
+    norm_wrapper, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
     ParallelAttention_wrapper, transformer_language_model_init,
     ParallelAttentionForward, parallel_transformer_forward, parallel_mlp_init_wrapper,
@@ -129,12 +129,13 @@ def patch_core_models(args):
     from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec
     from mindspeed.core.models.common.embeddings.rotary_pos_embedding import get_pos_emb_on_this_cp_rank
     from mindspeed.core.fusions.rotary_pos_embedding import rotary_embedding_init_wrapper
-    from ..utils import get_batch_on_this_cp_rank, get_device_wrapper
+    from ..utils import get_batch_on_this_cp_rank, get_batch_on_this_tp_rank, get_device_wrapper
     from ..core import rotary_embedding_forward, apply_rotary_pos_emb_bshd
     from ..core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper
     from ..core.transformer.dot_product_attention import dot_product_attention_init_wrapper, \
         dot_product_attention_forward_wrapper
     from ..core.transformer.attention import attention_init_wrapper, attention_forward
+    from ..core.models.gpt.gpt_model import gpt_model_init_wrapper
 
     # Embedding
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.get_pos_emb_on_this_cp_rank', get_pos_emb_on_this_cp_rank)
@@ -157,8 +158,10 @@ def patch_core_models(args):
     PatchManager.register_patch('megatron.core.models.gpt.gpt_layer_specs.get_gpt_layer_local_spec', get_gpt_layer_local_spec_wrapper)
 
     PatchManager.register_patch('megatron.training.utils.get_batch_on_this_cp_rank', get_batch_on_this_cp_rank)
+    PatchManager.register_patch('megatron.training.utils.get_batch_on_this_tp_rank', get_batch_on_this_tp_rank)
     PatchManager.register_patch('megatron.training.dist_signal_handler.get_device', get_device_wrapper)
     PatchManager.register_patch('megatron.core.models.gpt.gpt_model.GPTModel.forward', gpt_model_forward)
+    PatchManager.register_patch('megatron.core.models.gpt.gpt_model.GPTModel.__init__', gpt_model_init_wrapper)
 
     # For recomputation
     from ..core.transformer.transformer_block import transformer_block_checkpointed_forward_wrapper
@@ -167,8 +170,9 @@ def patch_core_models(args):
 
 def patch_core_transformers(args):
     from mindspeed.core.transformer.moe.router import aux_loss_load_balancing
-    from ..core import (PTNorm, topk_router_forward, topk_router_routing, z_loss_func, \
-                        allgather_token_permutation, allgather_token_unpermutation, rotary_embedding_init_wrapper)
+    from ..core import (PTNorm, topk_router_forward, topk_router_routing, z_loss_func, rotary_embedding_init_wrapper)
+    from mindspeed.core.transformer.moe.token_dispatcher import allgather_token_permutation, allgather_token_unpermutation
+
     from ..core.transformer.moe.moe_layer import moe_layer_init_wrapper, moe_layer_forward
     from ..core.transformer.transformer_block import _transformer_block_build_layers
     from ..core.transformer.mlp import core_mlp_forward_wrapper
@@ -218,7 +222,14 @@ def patch_core_transformers(args):
 
         if args.moe_token_dispatcher_type == 'alltoall':
             from ..core.transformer.moe.token_dispatcher import MoEAlltoAllTokenDispatcher
-            PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAlltoAllTokenDispatcher', MoEAlltoAllTokenDispatcher)
+            PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAlltoAllTokenDispatcher',
+                                        MoEAlltoAllTokenDispatcher)
+
+    from mindspeed.core.transformer.moe.grouped_gemm_util import Ops, grouped_gemm_is_available, get_device_capability
+    PatchManager.register_patch('megatron.core.transformer.moe.grouped_gemm_util.ops', Ops)
+    PatchManager.register_patch('megatron.core.transformer.moe.grouped_gemm_util.grouped_gemm_is_available',
+                                grouped_gemm_is_available)
+    PatchManager.register_patch('torch.cuda.get_device_capability', get_device_capability)
 
 
 def patch_pipeline_parallel():
@@ -279,7 +290,6 @@ def patch_model():
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelMLP.__init__', parallel_mlp_init_wrapper)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelMLP.forward', parallel_mlp_forward_wrapper)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformerLayer.__init__', parallel_transformer_layer_init_wrapper)
-    PatchManager.register_patch('megatron.legacy.model.transformer.SwitchMLP', SwitchMLP)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.__init__', parallel_transformer_init)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.forward', parallel_transformer_forward)
     PatchManager.register_patch('megatron.legacy.model.transformer.ParallelTransformer.state_dict_for_save_checkpoint',

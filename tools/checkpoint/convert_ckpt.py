@@ -63,7 +63,7 @@ def main():
                         help='Do not perform checking on the name and ordering of weights',
                         dest='checking')
     parser.add_argument('--model-type-hf', type=str, default="llama2",
-                        choices=['llama2', 'mixtral', 'chatglm3', 'gemma'], help='model-type')
+                        choices=['llama2', 'mixtral', 'chatglm3', 'gemma', 'gemma2', 'bloom', 'qwen', 'minicpm', 'minicpm-moe'], help='model-type')
     known_args, _ = parser.parse_known_args()
     loader = load_plugin('loader', known_args.loader)
     saver = load_plugin('saver', known_args.saver)

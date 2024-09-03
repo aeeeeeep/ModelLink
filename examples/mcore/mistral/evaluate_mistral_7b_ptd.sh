@@ -67,4 +67,4 @@ GPT_ARGS="
 torchrun $DISTRIBUTED_ARGS evaluation.py \
     $GPT_ARGS \
     --distributed-backend nccl 
-    | tee logs/evaluation_mixtral_${TASK}.log
+    | tee logs/evaluation_mcore_mistral_${TASK}.log

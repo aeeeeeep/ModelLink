@@ -55,6 +55,8 @@ def add_arguments(parser):
                             'This is added for computational efficiency reasons.')
     group.add_argument('--use-mcore-models', action='store_true',
                        help='Use the implementation from megatron core')
+    group.add_argument('--post-norm', action='store_true',
+                       help='post norm after attention or mlp.')
 
 
 def verify_transformers_version():
@@ -90,6 +92,8 @@ def build_metadata(args, margs):
     md.consumed_valid_samples = 0
     md.embed_layernorm = margs.embed_layernorm
     md.disable_bias_linear = margs.disable_bias_linear
+    if hasattr(margs, 'normalization'):
+        md.norm_has_bias = margs.normalization == "LayerNorm"
 
     return md
 
@@ -114,10 +118,16 @@ def get_message_preprocess(model, md):
     return message
 
 
-def get_message_layer_norm(message, model, layer_idx, md):
+def get_message_layer_norm(message, model, layer_idx, md, args=None):
     # Get non-parallel tensors from tp_rank 0.
     message["input norm weight"] = model.get_layers_input_layernorm_weight(layer_idx=layer_idx)
     message["post norm weight"] = model.get_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx)
+
+    if args.post_norm:
+        message["post norm weight"] = model.get_layers_self_attention_post_attention_layernorm_weight(
+            layer_idx=layer_idx)
+        message["pre mlp norm weight"] = model.get_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx)
+        message["post mlp norm weight"] = model.get_layers_self_attention_post_mlp_layernorm_weight(layer_idx=layer_idx)
 
     if md.norm_has_bias:
         message["input norm bias"] = model.get_layers_input_layernorm_bias(layer_idx=layer_idx)
@@ -129,7 +139,6 @@ def get_message_layer_norm(message, model, layer_idx, md):
 def get_message_layer_attn(message, model, layer_idx, md=None, args=None):
     # Grab all parallel tensors for this layer.
     qkv_weight = []
-    qkv_bias = []
     dense_weight = []
 
     qkv_weight.append(model.get_layers_self_attention_linear_qkv_weight(layer_idx=layer_idx))
@@ -141,9 +150,8 @@ def get_message_layer_attn(message, model, layer_idx, md=None, args=None):
         message["dense bias"] = model.get_layers_self_attention_linear_proj_bias(layer_idx=layer_idx)
 
     if md.linear_bias:
-        qkv_bias.append(model.get_layers_self_attention_linear_proj_bias(layer_idx=layer_idx))
+        message["qkv bias"] = model.get_layers_self_attention_linear_qkv_bias(layer_idx=layer_idx)
         message["dense bias"] = model.get_layers_self_attention_linear_proj_bias(layer_idx=layer_idx)
-        message["qkv bias"] = torch.cat(qkv_bias, dim=0)
 
     # Simple concat of the rest.
     message["qkv weight"] = torch.cat(qkv_weight, dim=0)
@@ -272,7 +280,7 @@ def _load_checkpoint(queue, args):
     for layer_idx in range(margs.num_layers):
         # Grab all parallel tensors for this layer.
         message = {}
-        message = get_message_layer_norm(message, model_mg, layer_idx, md)
+        message = get_message_layer_norm(message, model_mg, layer_idx, md, args)
         message = get_message_layer_attn(message, model_mg, layer_idx, md, args)
         message = get_message_layer_mlp(message, model_mg, layer_idx, md)
 

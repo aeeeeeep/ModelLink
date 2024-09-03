@@ -13,7 +13,7 @@
         <th>Memory</th>
     </tr>
     <tr>
-        <td rowspan="8">ST</td>
+        <td rowspan="10">ST</td>
         <td rowspan="6">Pretrain</td>
         <td>Mcore</td>
         <td>TP，PP，VPP，重计算，enable_recompute_layers_per_pp_rank</td>
@@ -33,7 +33,7 @@
     <tr>
         <td>Mcore</td>
         <td>partial_rope</td>
-        <td><a href="st/shell_scripts//shell_scripts/chatglm3_tp1_pp2_rope.sh">chatglm3_tp1_pp2_rope.sh</a></td>
+        <td><a href="st/shell_scripts/shell_scripts/chatglm3_tp1_pp2_rope.sh">chatglm3_tp1_pp2_rope.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
@@ -47,6 +47,14 @@
         <td>Y</td>
     </tr>
     <tr>
+        <td>Mcore</td>
+        <td>moe_expert_capacity_factor，moe_alltoall，pad_to_capacity, topk_softmax_with_capacity</td>
+        <td><a href="st/shell_scripts/gpt4_mcore_tp4_cp2_32k_moe_drop.sh">gpt4_mcore_tp4_cp2_32k_moe_drop.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
         <td>Legacy</td>
         <td>TP，PP，VPP，SP，全重计算，fused_rmsnorm，fused_swiglu，fused_rope，overlap_grad_reduce</td>
         <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_legacy.sh">llama2_tp2_pp4_vpp2_legacy.sh</a></td>
@@ -55,27 +63,34 @@
         <td>Y</td>
     </tr>
     <tr>
-        <td>Legacy</td>
-        <td>TP，PP，EP，MoeAllGather，FusedRMSNorm，Topk，AuxLoss</td>
-        <td><a href="st/shell_scripts/mixtral_legacy_tp2_ep4_ptd.sh">mixtral_legacy_tp2_ep4_ptd.sh</a></td>
+        <td rowspan="2">LoRA</td>
+        <td rowspan="2">Legacy</td>
+        <td>CCLoRA, TP, PP, 全重计算</td>
+        <td><a href="st/shell_scripts/tune_llama2_tp2_pp4_lora_ptd.sh">tune_llama2_tp2_pp4_lora_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
     </tr>
     <tr>
-        <td rowspan="1">LoRA</td>
-        <td>Legacy</td>
-        <td>CCLoRA, lora_fusion, 全重计算</td>
-        <td><a href="st/shell_scripts/tune_llama2_tp8_pp1_lora_ptd.sh">tune_llama2_tp8_pp1_lora_ptd.sh</a></td>
+        <td>CCLoRA单卡</td>
+        <td><a href="st/shell_scripts/tune_llama2_tp1_pp1_lora_ptd.sh">tune_llama2_tp1_pp1_lora_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
     </tr>
     <tr>
-        <td rowspan="1">FullSFT</td>
+        <td rowspan="2">FullSFT</td>
         <td>Legacy</td>
-        <td>prompt_type</td>
+        <td>prompt_type, variable_seq_lengths</td>
         <td><a href="st/shell_scripts/tune_qwen7b_tp8_pp1_full_ptd.sh">tune_qwen7b_tp8_pp1_full_ptd.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>Mcore</td>
+        <td>prompt_type, variable_seq_lengths, VPP</td>
+        <td><a href="st/shell_scripts/tune_llama2_tp2_pp4_vpp2_mcore_full.sh">tune_llama2_tp2_pp4_vpp2_mcore_full.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
@@ -84,7 +99,7 @@
         <td rowspan="9">UT</td>
         <td>Inference</td>
         <td>Legacy</td>
-        <td>greedy_search,  deterministic_computation</td>
+        <td>greedy_search, lora_inference, deterministic_computation</td>
         <td><a href="ut/inference/test_inference.py">test_inference.py</td>
         <td>Y</td>
         <td></td>
@@ -94,7 +109,7 @@
         <td>Evaluation</td>
         <td>Legacy</td>
         <td>mmlu, prompt_mmlu,      
-        prompt_boolq, prompt_ceval</td>
+        prompt_boolq, prompt_ceval, qwen2_mmlu, lora_mmlu</td>
         <td><a href="ut/evaluation/test_evaluate.py">test_evaluate.py</td>
         <td>Y</td>
         <td></td>
@@ -129,7 +144,7 @@
     <tr>
         <td>Checkpoint</td>
         <td>Mcore, Legacy</td>
-        <td>mcore_dynamic, mcore_vpp, mcore_pack_gqa, legacy_dynamic</td>
+        <td>mcore_dynamic, mcore_vpp, mcore_pack_gqa, legacy_dynamic, mcore_qwen2</td>
         <td><a href="ut/checkpoint">checkpoint</a></td>
         <td>Y</td>
         <td></td>

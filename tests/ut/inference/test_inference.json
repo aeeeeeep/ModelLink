@@ -35,5 +35,47 @@
                 "prompt-type": "llama2"
             }
         }
+    ],
+    "test_lora_inference": [
+        {
+            "param": {
+            "tensor-model-parallel-size": 8,
+            "pipeline-model-parallel-size": 1,
+            "sequence-parallel": null,
+            "num-layers": 32,
+            "hidden-size": 4096,
+            "ffn-hidden-size": 11008,
+            "position-embedding-type": "rope",
+            "seq-length": 4096,
+            "max-new-tokens": 256,
+            "micro-batch-size": 4,
+            "global-batch-size": 16,
+            "num-attention-heads": 32,
+            "max-position-embeddings": 4096 ,
+            "swiglu": null,
+            "load": "/data/llama2-7B-tp8-pp1",
+            "tokenizer-type": "PretrainedFromHF",
+            "tokenizer-name-or-path": "/data/llama-2-7b-hf",
+            "tokenizer-model": "/data/llama-2-7b-hf/tokenizer.model",
+            "tokenizer-not-use-fast": null,
+            "bf16": null,
+            "normalization": "RMSNorm" ,
+            "untie-embeddings-and-output-weights": null,
+            "disable-bias-linear": null,
+            "attention-softmax-in-fp32": null,
+            "no-load-optim": null,
+            "no-load-rng": null,
+            "no-masked-softmax-fusion": null,
+            "no-gradient-accumulation-fusion": null,
+            "exit-on-missing-checkpoint": null,
+            "lora-load": "/data/llama-2-7b-lora-tp8-pp1",
+            "lora-r": 16,
+            "lora-alpha": 32,
+            "task greedy": null,
+            "lora-target-modules": ["query_key_value", "dense", "dense_h_to_4h","dense_4h_to_h"],
+            "make-vocab-size-divisible-by": 1,
+            "prompt-type": "llama2"
+            }
+        }
     ]
 }

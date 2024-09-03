@@ -142,7 +142,8 @@ def transformer_block_forward(
     #   already creates viewless tensors. That said, make_viewless_tensor()
     #   is called here to be future-proof and corner-case-proof.
     if self.input_embeds_norm and self.pre_process:
-        hidden_states = hidden_states * (self.hidden_size ** 0.5)
+        normalizer = torch.tensor(self.hidden_size ** 0.5, dtype=hidden_states.dtype)
+        hidden_states = hidden_states * normalizer
 
     hidden_states = make_viewless_tensor(
         inp=hidden_states, requires_grad=True, keep_graph=True,

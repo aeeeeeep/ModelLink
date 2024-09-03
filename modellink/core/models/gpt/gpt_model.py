@@ -12,12 +12,39 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import torch
 from torch import Tensor
+from functools import wraps
 
 from megatron.core import InferenceParams
 from megatron.core.packed_seq_params import PackedSeqParams
 from megatron.training import get_args
+
+
+from modellink.core.tensor_parallel.layers import SegmentedColumnParallelLinear
+
+
+def gpt_model_init_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        fn(self, *args, **kwargs)
+        config = args[1] if len(args) > 1 else kwargs['config']
+        if get_args().output_layer_slice_num > 1:
+            self.output_layer = SegmentedColumnParallelLinear(
+                config.hidden_size,
+                self.vocab_size,
+                config=config,
+                init_method=config.init_method,
+                bias=False,
+                skip_bias_add=False,
+                gather_output=not self.parallel_output,
+                skip_weight_param_allocation=self.pre_process
+                and self.share_embeddings_and_output_weights,
+                embedding_activation_buffer=self.embedding_activation_buffer,
+                grad_output_buffer=self.grad_output_buffer,
+            )
+
+    return wrapper
 
 
 def gpt_model_forward(self, input_ids: Tensor,
@@ -44,6 +71,8 @@ def gpt_model_forward(self, input_ids: Tensor,
         pass
     elif self.pre_process:
         decoder_input = self.embedding(input_ids=input_ids, position_ids=position_ids)
+        if args.scale_emb is not None:
+            decoder_input = decoder_input * args.scale_emb
     else:
         # intermediate stage of pipeline
         # decoder will get hidden_states from encoder.input_tensor
@@ -74,15 +103,26 @@ def gpt_model_forward(self, input_ids: Tensor,
     output_weight = None
     if self.share_embeddings_and_output_weights:
         output_weight = self.shared_embedding_or_output_weight()
+
+    if args.dim_model_base is not None:
+        hidden_states = hidden_states / (args.hidden_size / args.dim_model_base)
     logits, _ = self.output_layer(hidden_states, weight=output_weight)
     # new add to scale logits
     if args.output_multiplier_scale:
         logits = logits * args.output_multiplier_scale
 
+    if args.output_logit_softcapping:
+        logits = logits / args.output_logit_softcapping
+        logits = torch.tanh(logits)
+        logits = logits * args.output_logit_softcapping
 
     if labels is None:
         # [s b h] => [b s h]
         return logits.transpose(0, 1).contiguous()
+
+    if args.is_instruction_dataset:
+        labels = labels[:, 1:].contiguous()
+        logits = logits[:-1, :, :].contiguous()
 
     loss = self.compute_language_model_loss(labels, logits)
 
