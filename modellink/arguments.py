@@ -606,7 +606,7 @@ def _validate_transformer_block_build_layers(args):
         raise AssertionError('Moe Grouped Gemm is not supported with mc2 in MOE model.')
 
     if args.num_layer_list:
-        if len(args.num_layer_list) != args.pipeline_model_parallel_size:
+        if len(args.num_layer_list.split(',')) != args.pipeline_model_parallel_size:
             raise ValueError("len(args.num_layer_list) != args.pipeline_model_parallel_size")
         if not args.pipeline_model_parallel_size > 1:
             raise ValueError("Dynamic pipeline model should work with pipeline parallel.")
