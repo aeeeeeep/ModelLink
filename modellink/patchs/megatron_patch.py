@@ -214,6 +214,10 @@ def patch_core_transformers(args):
             from ..core.transformer.moe.token_dispatcher import MoEAlltoAllTokenDispatcher
             PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAlltoAllTokenDispatcher', MoEAlltoAllTokenDispatcher)
 
+    # For groupMLP especially deepseek
+    from ..core.transformer.moe.experts import groupedmlp_init_wrapper
+    PatchManager.register_patch('megatron.core.transformer.moe.experts.GroupedMLP.__init__', groupedmlp_init_wrapper)
+
 
 def patch_pipeline_parallel():
     # solve send recv bug
