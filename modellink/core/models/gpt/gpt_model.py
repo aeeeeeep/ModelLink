@@ -29,7 +29,7 @@ def gpt_model_init_wrapper(fn):
     def wrapper(self, *args, **kwargs):
         fn(self, *args, **kwargs)
         config = args[1] if len(args) > 1 else kwargs['config']
-        if get_args().output_layer_slice_num > 1:
+        if self.post_process and get_args().output_layer_slice_num > 1:
             self.output_layer = SegmentedColumnParallelLinear(
                 config.hidden_size,
                 self.vocab_size,

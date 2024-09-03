@@ -103,6 +103,11 @@ class ModelBase(abc.ABC):
                 return _get_obj(self, value, **kwargs).weight.data.copy_(kwargs.get('data'))
             return func
 
+        def _func_generator_set_module(value):
+            def func(self, **kwargs):
+                return _get_obj(self, value, **kwargs).data.copy_(kwargs.get('data'))
+            return func
+
         def _func_generator_set_bias(value):
             def func(self, **kwargs):
                 return _get_obj(self, value, **kwargs).bias.data.copy_(kwargs.get('data'))
@@ -123,6 +128,7 @@ class ModelBase(abc.ABC):
         if self.module_mapping:
             for key, value in self.module_mapping.items():
                 setattr(self, "get_" + key + "_module", _func_generator_get_module(value).__get__(self, ModelBase))
+                setattr(self, "set_" + key + "_module", _func_generator_set_module(value).__get__(self, ModelBase))
                 setattr(self, "get_" + key + "_weight", _func_generator_get_weight(value).__get__(self, ModelBase))
                 setattr(self, "get_" + key + "_bias", _func_generator_get_bias(value).__get__(self, ModelBase))
                 setattr(self, "set_" + key + "_weight", _func_generator_set_weight(value).__get__(self, ModelBase))
@@ -180,6 +186,18 @@ class ModelBase(abc.ABC):
     def set_attn_state(self, layer_idx, src_model):
         '''Set self-attention params.'''
         # Get attention layer & state.
+        if getattr(src_model.get_args(), "qk_layernorm", False):
+            q_layernorm = src_model.get_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx)
+            k_layernorm = src_model.get_layers_self_attention_k_layernorm_weight(layer_idx=layer_idx)
+            self.set_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx, data=q_layernorm)
+            self.set_layers_self_attention_k_layernorm_weight(layer_idx=layer_idx, data=k_layernorm)
+        
+        if getattr(src_model.get_args(), "multi_head_latent_attention", False):
+            linear_qb = src_model.get_layers_self_attention_linear_qb_weight(layer_idx=layer_idx)
+            linear_kvb = src_model.get_layers_self_attention_linear_kvb_weight(layer_idx=layer_idx)
+            self.set_layers_self_attention_linear_qb_weight(layer_idx=layer_idx, data=linear_qb)
+            self.set_layers_self_attention_linear_kvb_weight(layer_idx=layer_idx, data=linear_kvb)
+        
         qkv_weight = src_model.get_layers_self_attention_linear_qkv_weight(layer_idx=layer_idx)
         proj_weight = src_model.get_layers_self_attention_linear_proj_weight(layer_idx=layer_idx)
         self.set_layers_self_attention_linear_qkv_weight(layer_idx=layer_idx, data=qkv_weight)
@@ -203,6 +221,27 @@ class ModelBase(abc.ABC):
         if src_model.has_layers_mlp_linear_fc2_bias(**kwargs):
             fc2_bias = src_model.get_layers_mlp_linear_fc2_bias(**kwargs)
             self.set_layers_mlp_linear_fc2_bias(data=fc2_bias, **kwargs)
+    
+    def _set_mlp_experts_state(self, src_model, **kwargs):
+        '''Set MLP experts params.'''
+        fc1_weight = src_model.get_layers_mlp_experts_linear_fc1_weight(**kwargs)
+        fc2_weight = src_model.get_layers_mlp_experts_linear_fc2_weight(**kwargs)
+        self.set_layers_mlp_experts_linear_fc1_weight(data=fc1_weight, **kwargs)
+        self.set_layers_mlp_experts_linear_fc2_weight(data=fc2_weight, **kwargs)
+
+    def _set_mlp_shared_experts_state(self, src_model, **kwargs):
+        '''Set MLP shared experts params.'''
+        fc1_weight = src_model.get_layers_mlp_shared_experts_linear_fc1_weight(**kwargs)
+        fc2_weight = src_model.get_layers_mlp_shared_experts_linear_fc2_weight(**kwargs)
+        self.set_layers_mlp_shared_experts_linear_fc1_weight(data=fc1_weight, **kwargs)
+        self.set_layers_mlp_shared_experts_linear_fc2_weight(data=fc2_weight, **kwargs)
+
+    def _set_moe_grouped_gemm_state(self, src_model, **kwargs):
+        '''Set MOE grouped gemm params.'''
+        weight1 = src_model.get_layers_mlp_experts_weight1_module(**kwargs)
+        weight2 = src_model.get_layers_mlp_experts_weight2_module(**kwargs)
+        self.set_layers_mlp_experts_weight1_module(data=weight1, **kwargs)
+        self.set_layers_mlp_experts_weight2_module(data=weight2, **kwargs)
 
         if self.args.post_norm:
             pre_mlp_layernorm_weight = src_model.get_layers_self_attention_pre_mlp_layernorm_weight(**kwargs)
@@ -214,7 +253,27 @@ class ModelBase(abc.ABC):
         args = src_model.get_args()
         kwargs = {'layer_idx': layer_idx}
         num_experts = getattr(args, 'num_experts', None) or getattr(args, 'num_local_experts', None)
-        if num_experts:
+        first_k_dense_replace = getattr(args, 'first_k_dense_replace', None)
+        moe_layer_freq = getattr(args, 'moe_layer_freq', None)
+        if (num_experts
+                and first_k_dense_replace is not None
+                and moe_layer_freq is not None
+        ):
+            if layer_idx >= first_k_dense_replace and layer_idx % moe_layer_freq == 0:
+                router_weight = src_model.get_layers_mlp_router_weight(**kwargs)
+                self.set_layers_mlp_router_weight(**kwargs, data=router_weight)
+                if getattr(self.args, "n_shared_experts", None) is not None:
+                    self._set_mlp_shared_experts_state(src_model, **kwargs)
+                if args.moe_grouped_gemm:
+                    self._set_moe_grouped_gemm_state(src_model, **kwargs)
+                else:
+                    for expert_idx in range(num_experts):
+                        kwargs['expert_idx'] = expert_idx
+                        self._set_mlp_experts_state(src_model, **kwargs)
+            else:
+                self._set_mlp_state(src_model, **kwargs)
+
+        elif num_experts:
             router_weight = src_model.get_layers_mlp_router_weight(**kwargs)
             self.set_layers_mlp_router_weight(**kwargs, data=router_weight)
             for expert_idx in range(num_experts):
@@ -363,6 +422,15 @@ class HuggingfaceModel(ModelBase):
             self.layers_self_attention_linear_qkv_caches["weight"] = (qkv_concatenate_weight(query_key_value_weight))
             if self.args_cmd.add_qkv_bias:
                 self.layers_self_attention_linear_qkv_caches["bias"] = (qkv_concatenate_bias(query_key_value_bias))
+        elif qkv_type == "pack_mla":
+            q_proj = self.get_layers_self_attention_linear_q_proj_module(layer_idx=layer_idx)
+            kv_proj = self.get_layers_self_attention_linear_kv_proj_module(layer_idx=layer_idx)
+            query_key_value_weight = [q_proj.weight.reshape((-1, self.args.hidden_size)),
+                                      kv_proj.weight.reshape((-1, self.args.hidden_size))]
+            self.layers_self_attention_linear_qkv_caches["weight"] = (torch.cat(query_key_value_weight, dim=0))
+            if self.args_cmd.add_qkv_bias:
+                query_key_value_bias = [q_proj.bias, kv_proj.bias]
+                self.layers_self_attention_linear_qkv_caches["bias"] = (qkv_concatenate_bias(query_key_value_bias))
         elif qkv_type == "pack_gqa":
             qkv_pack = self.get_layers_self_attention_linear_qkv_pack_module(layer_idx=layer_idx)
             qkv_pack_weight = qkv_pack.weight
@@ -410,6 +478,76 @@ class HuggingfaceModel(ModelBase):
         self.set_layers_mlp_gate_proj_weight(data=gate_proj, **kwargs)
         self.set_layers_mlp_up_proj_weight(data=up_proj, **kwargs)
 
+    def set_layers_mlp_experts_linear_fc1_weight(self, data=None, **kwargs):
+        gate_proj, up_proj = torch.chunk(data, 2, dim=0)
+        self.set_layers_mlp_experts_gate_proj_weight(data=gate_proj, **kwargs)
+        self.set_layers_mlp_experts_up_proj_weight(data=up_proj, **kwargs)
+
+    def set_layers_mlp_shared_experts_linear_fc1_weight(self, data=None, **kwargs):
+        gate_proj, up_proj = torch.chunk(data, 2, dim=0)
+        self.set_layers_mlp_shared_experts_gate_proj_weight(data=gate_proj, **kwargs)
+        self.set_layers_mlp_shared_experts_up_proj_weight(data=up_proj, **kwargs)
+
+    def set_layers_mlp_experts_weight1_module(self, data=None, **kwargs):
+        args = self.get_args()
+        num_experts = getattr(args, 'num_experts', None) or getattr(args, 'num_local_experts', None)
+        experts_linear_fc1_list = torch.chunk(data.view(-1), num_experts)
+        for expert_idx in range(num_experts):
+            kwargs['expert_idx'] = expert_idx
+            fc1_weight = experts_linear_fc1_list[expert_idx].view(args.hidden_size, -1).t()
+            self.set_layers_mlp_experts_linear_fc1_weight(data=fc1_weight, **kwargs)
+
+    def set_layers_mlp_experts_weight2_module(self, data=None, **kwargs):
+        args = self.get_args()
+        num_experts = getattr(args, 'num_experts', None) or getattr(args, 'num_local_experts', None)
+        experts_linear_fc2_list = torch.chunk(data.view(-1), num_experts)
+        for expert_idx in range(num_experts):
+            kwargs['expert_idx'] = expert_idx
+            fc2_weight = experts_linear_fc2_list[expert_idx].view(-1, args.hidden_size).t()
+            self.set_layers_mlp_experts_linear_fc2_weight(data=fc2_weight, **kwargs)
+
+    def get_layers_mlp_experts_linear_fc1_weight(self, **kwargs):
+        fc_type = self.args.fc_type
+        if fc_type == "h_to_4h":
+            return self.get_layers_mlp_experts_linear_fc1_module(**kwargs).weight
+        elif fc_type == "gate_up_down":
+            gate_proj = self.get_layers_mlp_experts_gate_proj_weight(**kwargs)
+            up_proj = self.get_layers_mlp_experts_up_proj_weight(**kwargs)
+            return torch.cat([gate_proj, up_proj], dim=0)
+        else:
+            raise ValueError(f"Unsupported fc_type {fc_type}")
+
+    def get_layers_mlp_shared_experts_linear_fc1_weight(self, **kwargs):
+        fc_type = self.args.fc_type
+        if fc_type == "h_to_4h":
+            return self.get_layers_mlp_experts_linear_fc1_module(**kwargs).weight
+        elif fc_type == "gate_up_down":
+            gate_proj = self.get_layers_mlp_shared_experts_gate_proj_weight(**kwargs)
+            up_proj = self.get_layers_mlp_shared_experts_up_proj_weight(**kwargs)
+            return torch.cat([gate_proj, up_proj], dim=0)
+        else:
+            raise ValueError(f"Unsupported fc_type {fc_type}")
+
+    def get_layers_mlp_experts_weight1_module(self, **kwargs):
+        args = self.get_args()
+        num_experts = getattr(args, 'num_experts', None) or getattr(args, 'num_local_experts', None)
+        experts_linear_fc1_list = []
+        for expert_idx in range(num_experts):
+            kwargs['expert_idx'] = expert_idx
+            fc1_weight = self.get_layers_mlp_experts_linear_fc1_weight(**kwargs)
+            experts_linear_fc1_list.append(fc1_weight.t().view(-1))
+        return torch.cat(experts_linear_fc1_list).view(args.hidden_size, -1)
+
+    def get_layers_mlp_experts_weight2_module(self, **kwargs):
+        args = self.get_args()
+        num_experts = getattr(args, 'num_experts', None) or getattr(args, 'num_local_experts', None)
+        experts_linear_fc2_list = []
+        for expert_idx in range(num_experts):
+            kwargs['expert_idx'] = expert_idx
+            fc2_weight = self.get_layers_mlp_experts_linear_fc2_weight(**kwargs)
+            experts_linear_fc2_list.append(fc2_weight.t().view(-1))
+        return torch.cat(experts_linear_fc2_list).view(-1, args.hidden_size)
+
     def set_layers_self_attention_linear_qkv_weight(self, layer_idx=0, data=None):
         def qkv_split_weight(query_key_value):
             qkv_weight = query_key_value.reshape(
@@ -440,6 +578,15 @@ class HuggingfaceModel(ModelBase):
             qw, k_weight, v_weight = qkv_split_weight(data)
             qkv = torch.cat((qw, k_weight, v_weight), dim=0)
             self.set_layers_self_attention_linear_qkv_pack_weight(layer_idx=layer_idx, data=qkv)
+        elif qkv_type == "pack_mla":
+            if self.args.q_lora_rank is None:
+                q_proj = data[:self.args.num_attention_heads * self.args.q_head_dim, :]
+                kv_proj = data[self.args.num_attention_heads * self.args.q_head_dim:, :]
+            else:
+                q_proj = data[:self.args.q_lora_rank, :]
+                kv_proj = data[self.args.q_lora_rank:, :]
+            self.set_layers_self_attention_linear_q_proj_weight(layer_idx=layer_idx, data=q_proj)
+            self.set_layers_self_attention_linear_kv_proj_weight(layer_idx=layer_idx, data=kv_proj)
         else:
             raise ValueError(f"Unsupported types. {qkv_type}")
 
@@ -564,6 +711,21 @@ class MegatronModel(ModelBase):
         self.args.ffn_hidden_size = hf_args.intermediate_size
         self.args.gradient_accumulation_fusion = hf_args.gradient_accumulation_fusion
         self.args.kv_channels = hf_args.kv_channels if hasattr(hf_args, "kv_channels") else None
+        self.args.moe_grouped_gemm = hf_args.moe_grouped_gemm
+        self.args.num_experts = getattr(hf_args, "num_experts", None)
+        self.args.n_shared_experts = getattr(hf_args, "n_shared_experts", None)
+        self.args.qk_layernorm = getattr(hf_args, "qk_layernorm", False)
+        self.args.moe_intermediate_size = getattr(hf_args, "moe_intermediate_size", None)
+        self.args.first_k_dense_replace = getattr(hf_args, "first_k_dense_replace", None)
+        self.args.moe_layer_freq = getattr(hf_args, "moe_layer_freq", None)
+        self.args.multi_head_latent_attention = getattr(hf_args, "multi_head_latent_attention", False)
+        if self.args.multi_head_latent_attention:
+            self.args.qk_rope_head_dim = getattr(hf_args, "qk_rope_head_dim", None)
+            self.args.qk_nope_head_dim = getattr(hf_args, "qk_nope_head_dim", None)
+            self.args.q_lora_rank = getattr(hf_args, "q_lora_rank", None)
+            self.args.kv_lora_rank = getattr(hf_args, "kv_lora_rank", None)
+            self.args.v_head_dim = getattr(hf_args, "v_head_dim", None)
+
         if self.args.add_dense_bias:
             self.args.skip_bias_add = False
 
@@ -898,6 +1060,29 @@ class MegatronMCoreModel(MegatronModel):
             self.module_mapping["layers_mlp_router"] = module_layer + "mlp.router"
             self.module_mapping["layers_mlp_linear_fc1"] = module_layer + "mlp.experts.local_experts[expert_idx].linear_fc1"
             self.module_mapping["layers_mlp_linear_fc2"] = module_layer + "mlp.experts.local_experts[expert_idx].linear_fc2"
+
+        if config_value.get('mlp_experts_flag', False):
+            self.module_mapping["layers_mlp_router"] = module_layer + "mlp.router"
+            self.module_mapping[
+                "layers_mlp_experts_linear_fc1"] = module_layer + "mlp.experts.local_experts[expert_idx].linear_fc1"
+            self.module_mapping[
+                "layers_mlp_experts_linear_fc2"] = module_layer + "mlp.experts.local_experts[expert_idx].linear_fc2"
+        
+        # MLP
+        self.module_mapping["layers_self_attention_linear_qb"] = module_layer + "self_attention.linear_qb"
+        self.module_mapping["layers_self_attention_linear_kvb"] = module_layer + "self_attention.linear_kvb"
+        
+        # shared experts
+        self.module_mapping[
+            "layers_mlp_shared_experts_linear_fc1"] = module_layer + "mlp.shared_experts.linear_fc1"
+        self.module_mapping[
+            "layers_mlp_shared_experts_linear_fc2"] = module_layer + "mlp.shared_experts.linear_fc2"
+        
+        # moe grouped gemm
+        self.module_mapping[
+            "layers_mlp_experts_weight1"] = module_layer + "mlp.experts.weight1"
+        self.module_mapping[
+            "layers_mlp_experts_weight2"] = module_layer + "mlp.experts.weight2"
 
 
 def get_megatron_model(args_cmd, md=None):
