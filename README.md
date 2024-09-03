@@ -633,6 +633,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16 </td>
       <td> 4034 </td>
+      <td> -- </td>
       <td>4241 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -642,6 +643,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2040 </td>
+      <td> -- </td>
       <td>2045 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -752,6 +754,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16 </td>
       <td> 1713 </td>
+      <td> -- </td>
       <td> 1595 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -763,6 +766,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2x8</td>
       <td>BF16 </td>
       <td> 827 </td>
+      <td> -- </td>
       <td> 800 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
