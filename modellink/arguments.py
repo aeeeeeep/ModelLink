@@ -534,6 +534,8 @@ def _validate_recompute_args(args):
 def _validate_high_availability(args):
     if args.enable_optimizer_state_local_copy and not args.enable_high_availability:
         raise AssertionError('switch of the high availability feature is unsupported')
+    if args.enable_high_availability and args.use_dist_ckpt:
+        raise AssertionError('switch of the high availability feature is unsupported')
 
 
 def _validate_instruction_finetune(args):
