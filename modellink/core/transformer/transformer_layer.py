@@ -17,6 +17,7 @@ from functools import wraps
 from dataclasses import dataclass, field
 from typing import Dict, Union
 
+import torch
 from megatron.core.transformer.identity_op import IdentityFuncOp, IdentityOp
 from megatron.core.transformer.spec_utils import ModuleSpec, build_module
 from megatron.core.transformer.moe.moe_layer import MoELayer
@@ -77,6 +78,9 @@ def transformer_layer_init_wrapper(fn):
                     expert.layer_number = self.layer_number
         else:
             self.mlp.layer_number = self.layer_number
+
+        self.is_sliding = not bool((self.layer_number - 1) % 2)
+        self.interleave_sliding_window = args_pos_norm.interleave_sliding_window
     return wrapper
 
 
@@ -88,6 +92,15 @@ def transformer_layer_forward(self, hidden_states, attention_mask, context=None,
 
     # hidden_states: [s, b, h]
     args_pos_norm = get_args()
+    if self.interleave_sliding_window is not None and self.is_sliding and attention_mask is not None:
+        min_dtype = torch.finfo(hidden_states.dtype).min
+        sliding_window_mask = torch.tril(
+            torch.ones_like(attention_mask, dtype=torch.bool), diagonal=-self.interleave_sliding_window
+        )
+        attention_mask = torch.where(sliding_window_mask, min_dtype, attention_mask).bool()
+        # when decoding
+        if attention_mask.shape[-1] <= 1:
+            attention_mask = attention_mask[:, :, :, -self.interleave_sliding_window:]
     # Residual connection.
     residual = hidden_states
 

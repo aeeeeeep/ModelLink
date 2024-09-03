@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import math
 from functools import wraps
 import torch
 import torch.nn.functional as F
@@ -83,6 +83,14 @@ def core_mlp_init(self, config, submodules, is_expert=False, input_size=None):
     if _args.geglu:
         self.config.gated_linear_unit = True
         self.config.activation_func = F.gelu
+        self.config.bias_gelu_fusion = False
+
+    if _args.gelu_tanh:
+        def gelu_tanh_approximation(x):
+            return 0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
+
+        self.config.gated_linear_unit = True
+        self.config.activation_func = gelu_tanh_approximation
         self.config.bias_gelu_fusion = False
 
     ffn_hidden_size = self.config.ffn_hidden_size
