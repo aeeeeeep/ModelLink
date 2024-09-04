@@ -83,6 +83,17 @@ def load_args_from_checkpoint_wrapper(fn):
         _set_arg('post_norm', force=True)
         _set_arg('num_experts')
         _set_arg('sequence_parallel', force=True)
+        _set_arg('n_shared_experts', force=True)
+        _set_arg('qk_layernorm', force=True)
+        _set_arg('moe_intermediate_size', force=True)
+        _set_arg('first_k_dense_replace', force=True)
+        _set_arg('moe_layer_freq', force=True)
+        _set_arg('multi_head_latent_attention', force=True)
+        _set_arg('qk_rope_head_dim', force=True)
+        _set_arg('qk_nope_head_dim', force=True)
+        _set_arg('q_lora_rank', force=True)
+        _set_arg('kv_lora_rank', force=True)
+        _set_arg('v_head_dim', force=True)
         
         state_dict, checkpoint_name, release = _load_base_checkpoint(
             getattr(args, kwargs.get('load_arg', 'load')),

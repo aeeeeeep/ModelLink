@@ -1,5 +1,6 @@
 # Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 
+import copy
 import json
 import os
 import sys
@@ -42,6 +43,8 @@ def add_arguments(parser):
                        help='Lora r.')
     group.add_argument('--lora-alpha', type=int, default=32,
                        help='Lora alpha.')
+    group.add_argument('--moe-grouped-gemm', action='store_true',
+                       help='Usr moe grouped gemm.')
 
 
 def build_metadata(args, margs):
@@ -76,6 +79,20 @@ def build_metadata(args, margs):
     md.checkpoint_args = margs
     md.make_vocab_size_divisible_by = margs.make_vocab_size_divisible_by
     md.embed_layernorm = margs.embed_layernorm
+    md.moe_grouped_gemm = margs.moe_grouped_gemm
+    md.num_experts = getattr(margs, "num_experts", None)
+    md.n_shared_experts = getattr(margs, "n_shared_experts", None)
+    md.qk_layernorm = getattr(margs, "qk_layernorm", False)
+    md.moe_intermediate_size = getattr(margs, "moe_intermediate_size", None)
+    md.first_k_dense_replace = getattr(margs, "first_k_dense_replace", None)
+    md.moe_layer_freq = getattr(margs, "moe_layer_freq", None)
+    md.multi_head_latent_attention = getattr(margs, "multi_head_latent_attention", False)
+    if md.multi_head_latent_attention:
+        md.qk_rope_head_dim = getattr(margs, "qk_rope_head_dim", None)
+        md.qk_nope_head_dim = getattr(margs, "qk_nope_head_dim", None)
+        md.q_lora_rank = getattr(margs, "q_lora_rank", None)
+        md.kv_lora_rank = getattr(margs, "kv_lora_rank", None)
+        md.v_head_dim = getattr(margs, "v_head_dim", None)
 
     md.consumed_train_samples = 0
     md.consumed_valid_samples = 0
@@ -116,6 +133,8 @@ def get_message_layer_norm(message, model, md, **kwargs):
 def get_message_layer_attn(message, model, md=None, **kwargs):
     # Grab all parallel tensors for this layer
     qkv_weight = []
+    qb_weight = []
+    kvb_weight = []
     qkv_bias = []
     dense_weight = []
     margs = model.get_args()
@@ -127,9 +146,18 @@ def get_message_layer_attn(message, model, md=None, **kwargs):
 
         if md.linear_bias or margs.add_qkv_bias:
             qkv_bias.append(model.get_layers_self_attention_linear_qkv_bias(**kwargs))
+        if getattr(model.get_args(), "multi_head_latent_attention", False):
+            qb_weight.append(model.get_layers_self_attention_linear_qb_weight(**kwargs))
+            kvb_weight.append(model.get_layers_self_attention_linear_kvb_weight(**kwargs))
 
     # Handle gated linear units
     # simple concat of the rest
+    if getattr(model.get_args(), "qk_layernorm", False):
+        message["q layernorm"] = model.get_layers_self_attention_q_layernorm_weight(**kwargs)
+        message["k layernorm"] = model.get_layers_self_attention_k_layernorm_weight(**kwargs)
+    if getattr(model.get_args(), "multi_head_latent_attention", False):
+        message["linear qb weight"] = torch.cat(qb_weight, dim=0)
+        message["linear kvb weight"] = torch.cat(kvb_weight, dim=0)
     message["qkv weight"] = torch.cat(qkv_weight, dim=0)
     message["dense weight"] = torch.cat(dense_weight, dim=1)
     if md.linear_bias or margs.add_qkv_bias:
@@ -141,17 +169,23 @@ def get_message_layer_attn(message, model, md=None, **kwargs):
     return message
 
 
-def _get_message_layer_mlp(message, model, md=None, **kwargs):
+def _get_message_layer_mlp(message, model, md=None, is_moe_mlp=False, **kwargs):
     margs = model.get_args()
     mlp_l0_weight = []
     mlp_l1_weight = []
     mlp_l0_bias = []
     for tp_rank in range(margs.tensor_model_parallel_size):
-        kwargs["tp_rank"] = tp_rank
-        mlp_l0_weight.append(model.get_layers_mlp_linear_fc1_weight(**kwargs))
-        mlp_l1_weight.append(model.get_layers_mlp_linear_fc2_weight(**kwargs))
+        if is_moe_mlp:
+            mlp_l0_weight.append(model.get_layers_mlp_experts_linear_fc1_weight(**kwargs))
+            mlp_l1_weight.append(model.get_layers_mlp_experts_linear_fc2_weight(**kwargs))
+        else:
+            mlp_l0_weight.append(model.get_layers_mlp_linear_fc1_weight(**kwargs))
+            mlp_l1_weight.append(model.get_layers_mlp_linear_fc2_weight(**kwargs))
         if md.linear_bias:
-            mlp_l0_bias.append(model.get_layers_mlp_linear_fc1_bias(**kwargs))
+            if is_moe_mlp:
+                mlp_l0_bias.append(model.get_layers_mlp_experts_linear_fc1_bias(**kwargs))
+            else:
+                mlp_l0_bias.append(model.get_layers_mlp_linear_fc1_bias(**kwargs))
 
     # Handle gated linear units
     if md.swiglu:
@@ -179,7 +213,46 @@ def _get_message_layer_mlp(message, model, md=None, **kwargs):
 def get_message_layer_mlp(message, model, md=None, **kwargs):
     # Grab all parallel tensors for this layer
     margs = model.get_args()
-    if margs.num_experts:
+    layer_idx = kwargs["layer_idx"] * kwargs["pp_rank"] * len(model.get_layers_module(**kwargs))
+    first_k_dense_replace = getattr(margs, 'first_k_dense_replace', None)
+    moe_layer_freq = getattr(margs, 'moe_layer_freq', None)
+    if (
+            margs.num_experts
+            and first_k_dense_replace is not None
+            and moe_layer_freq is not None
+    ):
+        if layer_idx >= first_k_dense_replace and layer_idx % moe_layer_freq == 0:
+            message["mlp_moe"] = {}
+            mlp_router_weight = model.get_layers_mlp_router_weight(layer_idx=layer_idx)
+            num_experts_local = margs.num_experts // margs.expert_model_parallel_size
+            message["mlp_moe"]["mlp router weight"] = mlp_router_weight
+            weight1 = []
+            weight2 = []
+            for ep_rank in range(margs.expert_model_parallel_size):
+                kwargs["ep_rank"] = ep_rank
+                for tp_rank in range(margs.tensor_model_parallel_size):
+                    kwargs['tp_rank'] = tp_rank
+                    if getattr(margs, "n_shared_experts", None) is not None:
+                        fc1_weight = model.get_layers_mlp_shared_experts_linear_fc1_weight(**kwargs)
+                        fc2_weight = model.get_layers_mlp_shared_experts_linear_fc2_weight(**kwargs)
+                        message["mlp_moe"]["mlp shared experts linear fc1 weight"] = fc1_weight
+                        message["mlp_moe"]["mlp shared experts linear fc2 weight"] = fc2_weight
+                if margs.moe_grouped_gemm:
+                    weight1.append(model.get_layers_mlp_experts_weight1_module(**kwargs))
+                    weight2.append(model.get_layers_mlp_experts_weight2_module(**kwargs))
+                else:
+                    for expert_idx in range(num_experts_local):
+                        kwargs["expert_idx"] = expert_idx
+                        global_expert_idx = expert_idx + ep_rank * num_experts_local
+                        message["mlp_moe"][f"expert {global_expert_idx}"] = {}
+                        expert = message["mlp_moe"][f"expert {global_expert_idx}"]
+                        _get_message_layer_mlp(expert, model, md, is_moe_mlp=True, **kwargs)
+            if margs.moe_grouped_gemm:
+                message["mlp_moe"]["mlp experts weight1 module"] = torch.cat(weight1)
+                message["mlp_moe"]["mlp experts weight2 module"] = torch.cat(weight2)
+        else:
+            _get_message_layer_mlp(message, model, md, **kwargs)
+    elif margs.num_experts:
         message["mlp_moe"] = {}
         num_experts_local = margs.num_experts // margs.expert_model_parallel_size
         mlp_router_weight = model.get_layers_mlp_router_weight(**kwargs)
@@ -225,6 +298,14 @@ def get_message_output_layer(model, md, **kwargs):
     return message
 
 
+def to_detach(message):
+    for key, value in message.items():
+        if isinstance(message[key], dict):
+            to_detach(value)
+        else:
+            message[key] = value.detach()
+
+
 def _load_checkpoint(queue, args):
 
     # Search in directory above this
@@ -247,6 +328,7 @@ def _load_checkpoint(queue, args):
     model_mg.set_pipeline_model_parallel_rank(0)
 
     margs = model_mg.get_args()
+    margs.moe_grouped_gemm = args.moe_grouped_gemm
 
     md = build_metadata(args, margs)
     queue.put(md)
@@ -278,6 +360,7 @@ def _load_checkpoint(queue, args):
                 message = get_message_layer_norm(message, model_mg, md, **kwargs)
                 message = get_message_layer_attn(message, model_mg, md, **kwargs)
                 message = get_message_layer_mlp(message, model_mg, md, **kwargs)
+                to_detach(message)
                 queue_put(f"transformer layer {total_layer_num}", message)
                 total_layer_num = total_layer_num + 1
 
