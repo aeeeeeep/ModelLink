@@ -849,11 +849,11 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td><a href="https://github.com/xai-org/grok-1">8x5B</a></td>
       <td> 8K </td>
       <th>Mcore</th>
-      <td> 2x8 </td>
+      <td> 4x8 </td>
       <td> BF16 </td>
-      <td> 1646 </td>
+      <td> 1082 </td>
       <td> -- </td>
-      <td> 2057 </td>
+      <td> 993.8 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
