@@ -60,7 +60,7 @@ GPT_ARGS="
     --untie-embeddings-and-output-weights \
     --group-query-attention \
     --num-query-groups 8 \
-    --no-position-embedding \
+    --make-vocab-size-divisible-by 1 \
     --vocab-size 32000 \
     --rotary-base 1e6 \
     --no-masked-softmax-fusion \
