@@ -13,8 +13,8 @@
         <th>Memory</th>
     </tr>
     <tr>
-        <td rowspan="10">ST</td>
-        <td rowspan="6">Pretrain</td>
+        <td rowspan="11">ST</td>
+        <td rowspan="7">Pretrain</td>
         <td>Mcore</td>
         <td>TP，PP，VPP，重计算，enable_recompute_layers_per_pp_rank</td>
         <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_ptd.sh">llama2_tp2_pp4_vpp2.sh</a></td>
@@ -50,6 +50,14 @@
         <td>Mcore</td>
         <td>moe_expert_capacity_factor，moe_alltoall，pad_to_capacity, topk_softmax_with_capacity</td>
         <td><a href="st/shell_scripts/gpt4_mcore_tp4_cp2_32k_moe_drop.sh">gpt4_mcore_tp4_cp2_32k_moe_drop.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>Mcore</td>
+        <td>enable_high_availability</td>
+        <td><a href="st/shell_scripts/llama2_tp2_pp1_ha_save_ptd.sh">llama2_tp2_pp1_ha_save_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
