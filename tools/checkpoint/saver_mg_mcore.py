@@ -51,6 +51,8 @@ def add_arguments(parser):
                        type=str, help='a list of number of layers, seperated by comma; e.g., 4,4,4,4')
     group.add_argument('--use-mcore-models', action='store_true',
                        help='Use the implementation from megatron core')
+    group.add_argument('--moe-grouped-gemm', action='store_true',
+                       help='Usr moe grouped gemm.')
 
 
 def update_padded_vocab_size(md, model_mg, orig_tensor, orig_word_embed):
@@ -197,6 +199,14 @@ def set_model_layer_attn(model_mg, msg, md, **kwargs):
     qkv_org = msg.pop("qkv weight")
     qkv_weight = torch.chunk(qkv_org, margs.tensor_model_parallel_size, dim=0)
 
+    if getattr(md, "qk_layernorm", False):
+        q_layernorm = msg.pop("q layernorm")
+        k_layernorm = msg.pop("k layernorm")
+
+    if getattr(md, "multi_head_latent_attention", False):
+        linear_qb = msg.pop("linear qb weight")
+        linear_kvb = msg.pop("linear kvb weight")
+
     # Split up the parallel tensors
     dense_weight = torch.chunk(msg.pop("dense weight"), margs.tensor_model_parallel_size, dim=1)
 
@@ -207,6 +217,14 @@ def set_model_layer_attn(model_mg, msg, md, **kwargs):
             kwargs["tp_rank"] = tp_rank
             model_mg.set_layers_self_attention_linear_qkv_weight(**kwargs, data=qkv_weight[tp_rank])
             model_mg.set_layers_self_attention_linear_proj_weight(**kwargs, data=dense_weight[tp_rank])
+            
+            if getattr(md, "qk_layernorm", False):
+                model_mg.set_layers_self_attention_q_layernorm_weight(**kwargs, data=q_layernorm)
+                model_mg.set_layers_self_attention_k_layernorm_weight(**kwargs, data=k_layernorm)
+
+            if getattr(md, "multi_head_latent_attention", False):
+                model_mg.set_layers_self_attention_linear_qb_weight(**kwargs, data=linear_qb)
+                model_mg.set_layers_self_attention_linear_kvb_weight(**kwargs, data=linear_kvb)
 
             if md.linear_bias:
                 model_mg.set_layers_self_attention_linear_qkv_bias(**kwargs, data=qkv_bias[tp_rank])
@@ -218,47 +236,103 @@ def set_model_layer_attn(model_mg, msg, md, **kwargs):
                 model_mg.set_layers_self_attention_linear_proj_bias(**kwargs, data=dense_bias)
 
 
-def _set_set_model_layer_mlp(model_mg, msg, md, **kwargs):
+def _set_set_model_layer_mlp(model_mg, msg, md, pop_flag=True, is_moe_mlp=False, **kwargs):
     margs = model_mg.get_args()
+    func = msg.pop if pop_flag else msg.get
     num_experts_local = 1
     if margs.num_experts:
         num_experts_local = margs.num_experts // margs.expert_model_parallel_size
     # Save them to the model
 
     if md.linear_bias:
-        mlp_l1_bias = msg.pop(f"mlp l1 bias")
+        mlp_l1_bias = func(f"mlp l1 bias")
     # Split up the parallel tensors
-    mlp_l1_weight = torch.chunk(msg.pop(f"mlp l1 weight"), margs.tensor_model_parallel_size, dim=1)
+    mlp_l1_weight = torch.chunk(func(f"mlp l1 weight"), margs.tensor_model_parallel_size, dim=1)
 
     # Special handling for swiglu
     if md.swiglu:
-        mlp_l0_weight_W = torch.chunk(msg.pop(f"mlp l0 weight W"), margs.tensor_model_parallel_size, dim=0)
-        mlp_l0_weight_V = torch.chunk(msg.pop(f"mlp l0 weight V"), margs.tensor_model_parallel_size, dim=0)
+        mlp_l0_weight_W = torch.chunk(func(f"mlp l0 weight W"), margs.tensor_model_parallel_size, dim=0)
+        mlp_l0_weight_V = torch.chunk(func(f"mlp l0 weight V"), margs.tensor_model_parallel_size, dim=0)
         mlp_l0_weight = [torch.cat(weights, dim=0) for weights in zip(mlp_l0_weight_W, mlp_l0_weight_V)]
     else:
-        mlp_l0_weight = torch.chunk(msg.pop(f"mlp l0 weight"), margs.tensor_model_parallel_size, dim=0)
+        mlp_l0_weight = torch.chunk(func(f"mlp l0 weight"), margs.tensor_model_parallel_size, dim=0)
     if md.linear_bias:
         if md.swiglu:
-            mlp_l0_bias_W = torch.chunk(msg.pop(f"mlp l0 bias W"), margs.tensor_model_parallel_size, dim=0)
-            mlp_l0_bias_V = torch.chunk(msg.pop(f"mlp l0 bias V"), margs.tensor_model_parallel_size, dim=0)
+            mlp_l0_bias_W = torch.chunk(func(f"mlp l0 bias W"), margs.tensor_model_parallel_size, dim=0)
+            mlp_l0_bias_V = torch.chunk(func(f"mlp l0 bias V"), margs.tensor_model_parallel_size, dim=0)
             mlp_l0_bias = [torch.cat(bias, dim=0) for bias in zip(mlp_l0_bias_W, mlp_l0_bias_V)]
         else:
-            mlp_l0_bias = torch.chunk(msg.pop(f"mlp l0 bias"), margs.tensor_model_parallel_size, dim=0)
+            mlp_l0_bias = torch.chunk(func(f"mlp l0 bias"), margs.tensor_model_parallel_size, dim=0)
 
     # duplicated tensors
     for tp_rank in range(margs.tensor_model_parallel_size):
         kwargs["tp_rank"] = tp_rank
-        model_mg.set_layers_mlp_linear_fc1_weight(**kwargs, data=mlp_l0_weight[tp_rank])
-        model_mg.set_layers_mlp_linear_fc2_weight(**kwargs, data=mlp_l1_weight[tp_rank])
+        if is_moe_mlp:
+            model_mg.set_layers_mlp_experts_linear_fc1_weight(**kwargs, data=mlp_l0_weight[tp_rank])
+            model_mg.set_layers_mlp_experts_linear_fc2_weight(**kwargs, data=mlp_l1_weight[tp_rank])
+        else:
+            model_mg.set_layers_mlp_linear_fc1_weight(**kwargs, data=mlp_l0_weight[tp_rank])
+            model_mg.set_layers_mlp_linear_fc2_weight(**kwargs, data=mlp_l1_weight[tp_rank])
 
         if md.linear_bias:
-            model_mg.set_layers_mlp_linear_fc1_bias(**kwargs, data=mlp_l0_bias[tp_rank])
-            model_mg.set_layers_mlp_linear_fc2_bias(**kwargs, data=mlp_l1_bias)
+            if is_moe_mlp:
+                model_mg.set_layers_mlp_experts_linear_fc1_bias(**kwargs, data=mlp_l0_bias[tp_rank])
+                model_mg.set_layers_mlp_experts_linear_fc2_bias(**kwargs, data=mlp_l1_bias)
+            else:
+                model_mg.set_layers_mlp_linear_fc1_bias(**kwargs, data=mlp_l0_bias[tp_rank])
+                model_mg.set_layers_mlp_linear_fc2_bias(**kwargs, data=mlp_l1_bias)
 
 
-def set_model_layer_mlp(model_mg, msg, md, **kwargs):
+def set_model_layer_mlp(model_mg, msg, md, total_layer_num, **kwargs):
     margs = model_mg.get_args()
-    if margs.num_experts:
+    first_k_dense_replace = getattr(margs, 'first_k_dense_replace', None)
+    moe_layer_freq = getattr(margs, 'moe_layer_freq', None)
+    if (
+            margs.num_experts
+            and first_k_dense_replace is not None
+            and moe_layer_freq is not None
+    ):
+        if total_layer_num >= first_k_dense_replace and total_layer_num % moe_layer_freq == 0:
+            num_experts_local = margs.num_experts // margs.expert_model_parallel_size
+            mlp_moe = msg.pop("mlp_moe")
+            mlp_router_weight = mlp_moe.pop("mlp router weight")
+            if getattr(margs, "n_shared_experts", None) is not None:
+                shared_experts_linear_fc1_weight = mlp_moe.pop("mlp shared experts linear fc1 weight")
+                shared_experts_linear_fc2_weight = mlp_moe.pop("mlp shared experts linear fc2 weight")
+            if margs.moe_grouped_gemm:
+                # TODO: check TP
+                weight1 = torch.chunk(mlp_moe.pop("mlp experts weight1 module").view(margs.hidden_size, -1),
+                                      margs.expert_model_parallel_size, dim=0)
+                weight2 = torch.chunk(mlp_moe.pop("mlp experts weight2 module").view(-1, margs.hidden_size),
+                                      margs.expert_model_parallel_size, dim=0)
+            for ep_rank in range(margs.expert_model_parallel_size):
+                kwargs["ep_rank"] = ep_rank
+                for tp_rank in range(margs.tensor_model_parallel_size):
+                    kwargs['tp_rank'] = tp_rank
+                    model_mg.set_layers_mlp_router_weight(**kwargs, data=mlp_router_weight)
+                    if getattr(margs, "n_shared_experts", None) is not None:
+                        model_mg.set_layers_mlp_shared_experts_linear_fc1_weight(**kwargs,
+                                                                                 data=shared_experts_linear_fc1_weight)
+                        model_mg.set_layers_mlp_shared_experts_linear_fc2_weight(**kwargs,
+                                                                                 data=shared_experts_linear_fc2_weight)
+                if margs.moe_grouped_gemm:
+                    # TODO: check TP
+                    model_mg.set_layers_mlp_experts_weight1_module(**kwargs,
+                                                                   data=weight1[ep_rank].view(margs.hidden_size, -1))
+                    model_mg.set_layers_mlp_experts_weight2_module(**kwargs,
+                                                                   data=weight2[ep_rank].view(-1, margs.hidden_size))
+                else:
+                    for expert_idx in range(num_experts_local):
+                        kwargs["expert_idx"] = expert_idx
+                        global_expert_idx = expert_idx + ep_rank * num_experts_local
+                        expert = mlp_moe.pop(f"expert {global_expert_idx}")
+                        _set_set_model_layer_mlp(model_mg, expert, md, is_moe_mlp=True, **kwargs)
+        else:
+            for ep_rank in range(margs.expert_model_parallel_size):
+                kwargs["ep_rank"] = ep_rank
+                pop_flag = ep_rank == margs.expert_model_parallel_size - 1
+                _set_set_model_layer_mlp(model_mg, msg, md, pop_flag=pop_flag, **kwargs)
+    elif margs.num_experts:
         num_experts_local = margs.num_experts // margs.expert_model_parallel_size
         mlp_moe = msg.pop("mlp_moe")
         mlp_router_weight = mlp_moe.pop("mlp router weight")
@@ -431,7 +505,7 @@ def save_model_checkpoint(queue, args):
                 msg = queue_get(f"transformer layer {total_layer_num}")
                 set_model_layer_norm(model_mg, msg, md, **kwargs)
                 set_model_layer_attn(model_mg, msg, md, **kwargs)
-                set_model_layer_mlp(model_mg, msg, md, **kwargs)
+                set_model_layer_mlp(model_mg, msg, md, total_layer_num, **kwargs)
 
                 total_layer_num = total_layer_num + 1
                 check_message(msg)
