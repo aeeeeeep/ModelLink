@@ -164,6 +164,10 @@ def set_model_layer_norm(model_mg, msg, md, **kwargs):
 
     margs = model_mg.get_args()
 
+    post_norm = margs.post_norm
+    if post_norm:
+        pre_mlp_norm_weight = msg.pop("pre mlp norm weight")
+        post_mlp_norm_weight = msg.pop("post mlp norm weight")
     # Save them to the model
     for ep_rank in range(margs.expert_model_parallel_size):
         kwargs["ep_rank"] = ep_rank
@@ -171,10 +175,14 @@ def set_model_layer_norm(model_mg, msg, md, **kwargs):
             kwargs["tp_rank"] = tp_rank
 
             model_mg.set_layers_input_layernorm_weight(**kwargs, data=input_norm_weight)
-            if input_norm_bias:
+            if input_norm_bias is not None:
                 model_mg.set_layers_input_layernorm_bias(**kwargs, data=input_norm_bias)
             model_mg.set_layers_self_attention_pre_mlp_layernorm_weight(**kwargs, data=post_norm_weight)
-            if post_norm_bias:
+            if post_norm:
+                model_mg.set_layers_self_attention_pre_mlp_layernorm_weight(**kwargs, data=pre_mlp_norm_weight)
+                model_mg.set_layers_self_attention_post_attention_layernorm_weight(**kwargs, data=post_norm_weight)
+                model_mg.set_layers_self_attention_post_mlp_layernorm_weight(**kwargs, data=post_mlp_norm_weight)
+            if post_norm_bias is not None:
                 model_mg.set_layers_self_attention_pre_mlp_layernorm_bias(**kwargs, data=post_norm_bias)
 
 
@@ -281,13 +289,13 @@ def set_model_postprocess(model_mg, msg, md, out_word_embed_list, **kwargs):
         for tp_rank in range(tp_size):
             kwargs["tp_rank"] = tp_rank
             model_mg.set_final_layernorm_weight(**kwargs, data=final_norm_weight)
-            if final_norm_bias:
+            if final_norm_bias is not None:
                 model_mg.set_final_layernorm_bias(**kwargs, data=final_norm_bias)
-            if kwargs.get("pp_rank", 0) and not md.output_layer:
+            if kwargs.get("pp_rank", 0) != 0 and not md.output_layer:
                 # Copy word embeddings to final pipeline rank
-                model_mg.set_output_layer_weight(**kwargs, data=out_word_embed_list[ep_rank][tp_rank])
+                model_mg.set_word_embeddings_weight(**kwargs, data=out_word_embed_list[ep_rank][tp_rank])
     del final_norm_weight
-    if final_norm_bias:
+    if final_norm_bias is not None:
         del final_norm_bias
 
 

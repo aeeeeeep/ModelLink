@@ -100,6 +100,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <th>集群</th>
       <th>模式</th>
       <th>性能</th>
+      <th>性能2</th>
       <th>参考</th>
       <th>贡献方</th>
       <th>认证</th>
@@ -114,6 +115,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 2849 </td>
+      <td> -- </td>
       <td> 2874 </td>
       <td><center>【GTS】</center></td>
       <td>【Pass】</td>
@@ -126,6 +128,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 3323 </td>
+      <td> -- </td>
       <td> 2673 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -137,6 +140,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2x8</td>
       <td> BF16 </td>
       <td> 854 </td>
+      <td> -- </td>
       <td> 732 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -149,6 +153,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 2685 </td>
+      <td> -- </td>
       <td> 2036 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
@@ -160,6 +165,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 1213 </td>
+      <td> -- </td>
       <td> 862 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
@@ -172,6 +178,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 2664 </td>
+      <td> -- </td>
       <td> 3969 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
@@ -183,6 +190,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8</td>
       <td> BF16 </td>
       <td> 1668 </td>
+      <td> -- </td>
       <td> 2062 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
@@ -195,6 +203,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8</td>
       <td> FP16 </td>
       <td> 2034 </td>
+      <td> -- </td>
       <td> 2525 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
@@ -206,6 +215,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td >12x8</td>
       <td> BF16 </td>
       <td> 100 </td>
+      <td> -- </td>
       <td> 107 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
@@ -218,6 +228,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td >1x8</td>
       <td> FP16 </td>
       <td> 4611 </td>
+      <td> -- </td>
       <td> 4543 </td>
       <td>【昇腾】</td>
       <td>【Test】</td>
@@ -229,6 +240,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td >1x8</td>
       <td> FP16 </td>
       <td> 2650 </td>
+      <td> -- </td>
       <td> 2887 </td>
       <td>【昇腾】</td>
       <td>【Test】</td>
@@ -240,6 +252,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td >2x8</td>
       <td> FP16 </td>
       <td> 1724 </td>
+      <td> -- </td>
       <td> 2097 </td>
       <td>【昇腾】</td>
       <td>【Test】</td>
@@ -252,6 +265,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2x8</td>
       <td> BF16 </td>
       <td> 837 </td>
+      <td> -- </td>
       <td> 762 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -264,6 +278,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16</td>
       <td> 2776 </td>
+      <td> -- </td>
       <td> 2854 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
@@ -275,9 +290,33 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td >4x8</td>
       <td> BF16 </td>
       <td> 341 </td>
+      <td> -- </td>
       <td> 414 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
+    </tr>
+    <tr>
+      <td rowspan="2"> <a href="https://huggingface.co/internlm">InternLM2</a> </td>
+      <td rowspan="2"> <a href="https://huggingface.co/Internlm/Internlm2-chat-20b/tree/main">20B</a> </td>
+      <td> 4K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 1141 </td>
+      <td> -- </td>
+      <td> 1348 </td>
+      <td><center>【GTS】</td>
+      <td><center>【Test】</td>
+      <tr>
+      <td> 32K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 4982 </td>
+      <td> -- </td>
+      <td><center> 5476 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
       <td rowspan="4"><a href="https://huggingface.co/meta-llama">LLaMA</td>
@@ -287,6 +326,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>FP16</td>
       <td> 3600 </td>
+      <td> -- </td>
       <td> 3804 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
@@ -298,6 +338,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>FP16</td>
       <td> 1895 </td>
+      <td> -- </td>
       <td> 2012 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
@@ -309,6 +350,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
         <td>4x8</td>
         <td>FP16</td>
         <td>621</td>
+        <td> -- </td>
         <td>776</td>
         <td><center>【昇腾】</td>
       <td>【Pass】</td>
@@ -320,6 +362,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4x8</td>
       <td>BF16 </td>
       <td> 348 </td>
+      <td> -- </td>
       <td> 426 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
@@ -332,6 +375,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16 </td>
       <td> 4672 </td>
+      <td> -- </td>
       <td> 3850 </td>
       <td><center>【NAIE】</td>
       <td>【Pass】</td>
@@ -343,6 +387,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2016 </td>
+      <td> -- </td>
       <td> 1920 </td>
       <td><center>【NAIE】</td>
       <td>【Pass】</td>
@@ -354,6 +399,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2x8</td>
       <td>BF16 </td>
       <td> 749 </td>
+      <td> -- </td>
       <td> 796 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
@@ -365,6 +411,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4x8</td>
       <td>BF16 </td>
       <td> 420 </td>
+      <td> -- </td>
       <td> 430 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
@@ -377,6 +424,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2483 </td>
+      <td> -- </td>
       <td> 2674 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
@@ -388,6 +436,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>8x8</td>
       <td>BF16 </td>
       <td> 283 </td>
+      <td> -- </td>
       <td> 355 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
@@ -400,6 +449,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2280 </td>
+      <td> -- </td>
       <td> 2520 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -412,6 +462,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>BF16 </td>
       <td> 1297 </td>
       <td> -- </td>
+      <td> -- </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
     </tr>
@@ -422,6 +473,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4x8</td>
       <td>BF16 </td>
       <td> 399 </td>
+      <td> -- </td>
       <td> -- </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -434,6 +486,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2499 </td>
+      <td> -- </td>
       <td> 2867 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
@@ -445,6 +498,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16 </td>
       <td> 1560 </td>
+      <td> -- </td>
       <td> 1578 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
@@ -456,6 +510,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>16x8</td>
       <td>BF16 </td>
       <td> 285 </td>
+      <td> -- </td>
       <td> 345 </td>
       <td><center>【GTS】</td>
       <td>【Pass】</td>
@@ -469,6 +524,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 22834 </td>
+      <td> -- </td>
       <td> 25306 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -479,6 +535,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 13029 </td>
+      <td> -- </td>
       <td> 12181 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -489,6 +546,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 5033 </td>
+      <td> -- </td>
       <td> 5328 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -499,6 +557,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 2862 </td>
+      <td> -- </td>
       <td> 2621 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -509,6 +568,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8 </td>
       <td> BF16 </td>
       <td> 1717 </td>
+      <td> -- </td>
       <td> 1702 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -519,6 +579,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 4x8 </td>
       <td> BF16 </td>
       <td> 751 </td>
+      <td> -- </td>
       <td> 708 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -529,6 +590,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 8x8 </td>
       <td> BF16 </td>
       <td> 301 </td>
+      <td> -- </td>
       <td> 317 </td>
       <td><center>【GTS】</td>    
       <td>【Pass】</td>
@@ -540,17 +602,82 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> BF16 </td>
       <td> 223 </td>
       <td> -- </td>
+      <td> -- </td>
       <td><center>【GTS】</td>    
       <td>【Test】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="https://huggingface.co/Qwen">Qwen2</a></td>
+      <td rowspan="7"><a href="https://huggingface.co/Qwen">Qwen2</a></td>
+      <td rowspan="2"> <a href="https://huggingface.co/Qwen/Qwen2-0.5B/tree/main">0.5B</a> </td>
+      <td> 4K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 28618 </td>
+      <td> -- </td>
+      <td> 34859 </td>
+      <td><center>【GTS】</td>
+      <td><center>【Test】</td>
+      <tr>
+      <td> 32K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 11338 </td>
+      <td> -- </td>
+      <td><center> -- </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+      <tr>
+      <td rowspan="2"> <a href="https://huggingface.co/Qwen/Qwen2-1.5B/tree/main">1.5B</a> </td>
+      <td> 4K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 15456 </td>
+      <td> -- </td>
+      <td> 15603 </td>
+      <td><center>【GTS】</td>
+      <td><center>【Test】</td>
+      <tr>
+      <td> 32K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 7281 </td>
+      <td> -- </td>
+      <td><center> 8538 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+      <tr>
+      <td rowspan="2"><a href="https://huggingface.co/Qwen/Qwen2-7B/tree/main">7B</a></td>
+      <td> 4K</td>
+      <th>Mcore</th>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 4034 </td>
+      <td> -- </td>
+      <td>4241 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+      <tr>
+      <td> 32K</td>
+      <th>Mcore</th>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 2040 </td>
+      <td> -- </td>
+      <td>2045 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+      <tr>
       <td><a href="https://huggingface.co/Qwen/Qwen2-72B/tree/main">72B</a></td>
       <td> 4K</td>
       <th>Mcore</th>
       <td>4x8</td>
       <td>BF16 </td>
       <td> 368 </td>
+      <td> -- </td>
       <td><center>-- </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -563,21 +690,46 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2x8</td>
       <td>BF16 </td>
       <td> 768 </td>
+      <td> -- </td>
       <td> 730 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
-      <td rowspan="1"><a href="https://huggingface.co/mistralai">Mixtral</a></td>
+      <td rowspan="3"><a href="https://huggingface.co/mistralai">Mixtral</a></td>
       <td><a href="https://huggingface.co/mistralai/Mixtral-8x7B-v0.1/tree/main">8x7B</a></td>
       <td> 32K</td>
       <th>Mcore</th>
       <td>8x8</td>
       <td>BF16 </td>
       <td> 706 </td>
+      <td> -- </td>
       <td> 837 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="https://huggingface.co/mistralai/Mixtral-8x22B-v0.1/tree/main">8x22B</a></td>
+      <td> 32K</td>
+      <th>Mcore</th>
+      <td>8x8</td>
+      <td>BF16 </td>
+      <td> 239 </td>
+      <td> 254 </td>
+      <td> -- </td>
+      <td><center>【NAIE】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td> 64K</td>
+      <th>Mcore</th>
+      <td>8x8</td>
+      <td>BF16 </td>
+      <td> -- </td>
+      <td> 215 </td>
+      <td> -- </td>
+      <td><center>【NAIE】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
       <td rowspan="1"><a href="https://huggingface.co/mistralai">Mistral</a></td>
@@ -587,6 +739,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2900 </td>
+      <td> -- </td>
       <td> 2734 </td>
       <td><center>【NAIE】</td>
       <td>【Pass】</td>
@@ -599,6 +752,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16 </td>
       <td> 7067 </td>
+      <td> -- </td>
       <td> 7602 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
@@ -610,7 +764,33 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>1x8</td>
       <td>BF16 </td>
       <td> 2939 </td>
+      <td> -- </td>
       <td> 2607 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><a href="https://huggingface.co/google">Gemma2</a></td>
+      <td><a href="https://huggingface.co/google/gemma-2-9b/tree/main">9B</a></td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td>1x8</td>
+      <td>BF16 </td>
+      <td> 1713 </td>
+      <td> -- </td>
+      <td> 1595 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td><a href="https://huggingface.co/google/gemma-2-27b/tree/main">27B</a></td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td>2x8</td>
+      <td>BF16 </td>
+      <td> 827 </td>
+      <td> -- </td>
+      <td> 800 </td>
       <td><center>【GTS】</td>
       <td>【Test】</td>
     </tr>
@@ -623,6 +803,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> FP16 </td>
       <td> 153 </td>
       <td> -- </td>
+      <td> -- </td>
       <td><center>【昇腾】</td>
       <td>【Test】</td>
     </tr>
@@ -633,7 +814,33 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1x8 </td>
       <td> FP16 </td>
       <td> 1890 </td>
+      <td> -- </td>
       <td> 1840 </td>
+      <td><center>【昇腾】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td rowspan="2">GPT4</td>
+      <td> 4x13B </td>
+      <td> 128K </td>
+      <th> Mcore </th>
+      <td> 8x8 </td>
+      <td> BF16 </td>
+      <td> 424 </td>
+      <td> 1066 </td>
+      <td> -- </td>
+      <td><center>【NAIE】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td> 4x16B </td>
+      <td> 128K </td>
+      <th>Mcore</th>
+      <td> 8x8 </td>
+      <td> BF16 </td>
+      <td> 351 </td>
+      <td> 918 </td>
+      <td> -- </td>
       <td><center>【昇腾】</td>
       <td>【Test】</td>
     </tr>
@@ -645,6 +852,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2x8 </td>
       <td> BF16 </td>
       <td> 1646 </td>
+      <td> -- </td>
       <td> 2057 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>

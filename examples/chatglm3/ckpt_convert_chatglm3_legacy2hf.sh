@@ -3,8 +3,10 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
-    --loader megatron \
-    --saver megatron \
+    --loader mg_mcore \
+    --saver mg_mcore \
+    --model-type-hf chatglm3 \
+    --save-model-type huggingface \
     --save-model-type save_huggingface_chatglm3 \
     --load-dir ./model_weights/Chatglm3-legacy/ \
     --target-tensor-parallel-size 1 \

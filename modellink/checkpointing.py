@@ -62,7 +62,7 @@ def load_args_from_checkpoint_wrapper(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         res = fn(*args, **kwargs)
-        if len(res) == 1:
+        if not isinstance(res, tuple):
             return res
         args, checkpoint_args = res
         

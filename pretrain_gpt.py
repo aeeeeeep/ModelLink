@@ -32,7 +32,7 @@ from megatron.core.models.gpt.gpt_layer_specs import (
     get_gpt_layer_with_transformer_engine_spec,
 )
 from modellink.data.decoder_packed_mtf_dataset import build_train_valid_test_datasets as build_instruction_dataset
-from modellink.utils import get_tune_attention_mask, get_finetune_data_on_this_tp_rank
+from modellink.utils import get_tune_attention_mask, get_finetune_data_on_this_tp_rank, generate_actual_seq_len
 
 
 def model_provider(pre_process=True, post_process=True) -> Union[GPTModel, megatron.legacy.model.GPTModel]:
@@ -126,11 +126,10 @@ def get_batch(data_iterator):
 
         return tokens, labels, loss_mask, attention_mask, None
 
-    if (not mpu.is_pipeline_first_stage()) and (not mpu.is_pipeline_last_stage()):
-        return None, None, None, None, None
-
     # get batches based on the TP rank you are on
     batch = get_batch_on_this_tp_rank(data_iterator)
+    if args.reset_position_ids:
+        generate_actual_seq_len(batch)
     # slice batch along sequence dimension for context parallelism
     batch = get_batch_on_this_cp_rank(batch)
 
@@ -194,7 +193,7 @@ def forward_step(data_iterator, model: GPTModel):
 
 
 def is_dataset_built_on_rank():
-    return (mpu.is_pipeline_first_stage() or mpu.is_pipeline_last_stage()) and mpu.get_tensor_model_parallel_rank() == 0
+    return mpu.get_tensor_model_parallel_rank() == 0
 
 
 def core_gpt_dataset_config_from_args(args):

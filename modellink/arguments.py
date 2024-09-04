@@ -177,22 +177,16 @@ def _validate_cp_args(args):
 
     if args.context_parallel_algo == 'ulysses_cp_algo':
         assert args.seq_length % args.context_parallel_size == 0, f"sequence length must be divisible by context_parallel_size"
-        head, remainder = divmod(args.num_attention_heads,
-                                 args.context_parallel_size * args.tensor_model_parallel_size)
-        assert head >= 1 and remainder == 0, f"num_attention_heads must be divisible by context_parallel_size * tensor_model_parallel_size"
+        _check_attention_head(args, args.context_parallel_size)
+
     if args.context_parallel_algo == 'megatron_cp_algo':
         assert args.seq_length % (
                     2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size"
-        _check_attention_head(args, args.context_parallel_size)
 
     if args.context_parallel_algo == 'hybrid_cp_algo':
         assert args.ulysses_degree_in_cp is not None, "--ulysses-degree-in-cp must be specified in hybrid_cp_algo"
         ring_degree, remainder = divmod(args.context_parallel_size, args.ulysses_degree_in_cp)
-        assert ring_degree > 1 and remainder == 0, "--ulysses-degree-in-cp must be devisible by --context-parallel-size"
-
-        head, remainder = divmod(args.num_attention_heads,
-                                 args.ulysses_degree_in_cp * args.tensor_model_parallel_size)
-        assert head >= 1 and remainder == 0, f"num_attention_heads must be divisible by ulysse-degree-in-cp * tensor_model_parallel_size in hybrid cp"
+        assert ring_degree > 1 and remainder == 0, "--ulysses-degree-in-cp must be divisible by --context-parallel-size"
         assert args.seq_length % (
                     2 * args.context_parallel_size) == 0, f"sequence length must be divisible by 2 * context_parallel_size in hybrid cp"
         _check_attention_head(args, args.ulysses_degree_in_cp)
@@ -338,6 +332,8 @@ def _add_network_size_args(parser):
                        help="Use mc2 for compute-comm overlap in tp.")
     group.add_argument('--sliding-window', type=int, default=None,
                        help='Window size when use sliding window attention.')
+    group.add_argument('--output-layer-slice-num', type=int, default=1,
+                       help='Set the number of slices for the weight of the output_layer')
     return parser
 
 
@@ -379,6 +375,13 @@ def _add_network_args(parser):
                        help='Geglu activate function.')
     group.add_argument('--input-embeds-norm', action='store_true', default=False,
                        help='input normalization.')
+    group.add_argument('--gelu-tanh', action='store_true', default=False,
+                       help='Tanh Geglu activate function.')
+    group.add_argument('--output-logit-softcapping', type=float, help='output logit softcapping.')
+    group.add_argument('--attn-logit-softcapping', type=float, help='attention logit softcapping.')
+    group.add_argument('--query-pre-attn-scalar', type=int, help='attention scalar.')
+    group.add_argument('--interleave-sliding-window', type=int,
+                       help='Window size when use interleave sliding window attention.')
     return parser
 
 
@@ -421,6 +424,9 @@ def _add_training_args(parser):
     group.add_argument('--pad-to-multiple-of', type=int, default=8,
                        help='Used for Padding multiple in finetune. The default is 8.')
 
+    group.add_argument('--swap-attention', action='store_true', default=False,
+                       help='switch to open swap-attention feature.'
+                            'The default is False.')
     return parser
 
 
@@ -485,7 +491,7 @@ def _add_dataset_args(parser):
 
 def _validate_create_attention_mask_in_dataloader(args):
     args.create_attention_mask_in_dataloader = False
-    reset_data = args.reset_attention_mask or args.reset_position_ids
+    reset_data = args.reset_attention_mask
     alibi_without_flash_attn = args.position_embedding_type == 'alibi' and not args.use_flash_attn
     if reset_data or alibi_without_flash_attn or args.tokenizer_padding_side == "left":
         args.create_attention_mask_in_dataloader = True
@@ -525,21 +531,14 @@ def _validate_recompute_args(args):
 def _validate_high_availability(args):
     if args.enable_optimizer_state_local_copy and not args.enable_high_availability:
         raise AssertionError('switch of the high availability feature is unsupported')
+    if args.enable_high_availability and args.use_dist_ckpt:
+        raise AssertionError('switch of the high availability feature is unsupported')
 
 
 def _validate_instruction_finetune(args):
     if args.variable_seq_lengths:
         if args.context_parallel_size > 1:
             raise AssertionError('Context parallelism is forbidden when use variable seq lengths.')
-
-
-def _valid_lora(args):
-    """
-    check for LoRA
-    """
-    if args.lora_fusion:
-        if not args.sequence_parallel:
-            raise AssertionError('lora_fusion for CCLoRA is forbidden without sequence_parallel.')
 
 
 def _validate_inference_args(args):
@@ -612,6 +611,18 @@ def _validate_group_limited_greedy(args):
             args.expert_model_parallel_size))
 
 
+def _validate_output_layer_slice_num(args):
+    if args.output_layer_slice_num < 1:
+        raise AssertionError('Output_layer_slice_num must be greater than 0.')
+    elif args.output_layer_slice_num > 1:
+        if args.tensor_model_parallel_size > 1:
+            raise AssertionError('When output_layer_slice_num is greater than 1, only support TP size is 1.')
+        if (args.padded_vocab_size is not None) and (args.padded_vocab_size % args.output_layer_slice_num != 0):
+            raise AssertionError('Output_layer_slice_num needs to be divisible by padded_vocab_size.')
+        elif (args.vocab_size is not None) and (args.vocab_size % args.output_layer_slice_num != 0):
+            raise AssertionError('Output_layer_slice_num needs to be divisible by vocab_size.')
+
+
 def core_transformer_config_from_args_wrapper(fn):
     @wraps(fn)
     def wrapper(args):
@@ -634,14 +645,48 @@ def _validate_optimizer(args):
         raise AssertionError('reuse-fp32-param and enable-high-availability do not support enabling together.')
 
 
+def _store_variables(args):
+    """
+    To bypass megatron validation, we store variables and restore them shortly afterward.
+    """
+    variable_dict = dict()
+    variable_dict["variable_seq_lengths"] = args.variable_seq_lengths
+    # Moe models require `--sequence-parallel` to be turned on before Megatron core_v0.7.0,
+    # which conflicted with the behavior of turning it off by default during inference and evaluation.
+    variable_dict["origin_sequence_parallel"] = args.sequence_parallel
+    if args.num_experts is not None and hasattr(args, "temperature") and args.temperature is not None:
+        args.sequence_parallel = True
+    return variable_dict
+
+
+def _restore_variables(args, variable_dict):
+    args.variable_seq_lengths = variable_dict["variable_seq_lengths"]
+    # Moe models require `--sequence-parallel` to be turned on before Megatron core_v0.7.0,
+    # which conflicted with the behavior of turning it off by default during inference and evaluation.
+    if args.num_experts is not None and hasattr(args, "temperature") and args.temperature is not None:
+        args.sequence_parallel = variable_dict["origin_sequence_parallel"]
+
+
+def _add_dummy_args(args):
+    """
+    For arguments in mindspeed-core which is currently unsupported in mindspeed-llm.
+    """
+    # reduce_recompute_for_last_chunk would be registered if recompute-in-advance is supported.
+    args.reduce_recompute_for_last_chunk = False
+    args.adaptive_recompute_device_swap = False
+    args.adaptive_recompute_device_size = -1
+    args.adaptive_recompute_profiling_step = 10
+
+
 def validate_args_decorator(megatron_validate_args):
     @wraps(megatron_validate_args)
     def wrapper(args, defaults=None):
         if defaults is None:
             defaults = {}
-        variable_seq_lengths = args.variable_seq_lengths
+
+        variable_dict = _store_variables(args)
         megatron_validate_args(args, defaults)
-        args.variable_seq_lengths = variable_seq_lengths
+        _restore_variables(args, variable_dict)
 
         args.use_mc2 = False
 
@@ -651,7 +696,6 @@ def validate_args_decorator(megatron_validate_args):
         _validate_instruction_finetune(args)
         _validate_position_embedding(args)
         _validate_high_availability(args)
-        _valid_lora(args)
         _validate_inference_args(args)
         _validate_moe_expert_capacity_factor(args)
         _validate_mla(args)
@@ -659,8 +703,12 @@ def validate_args_decorator(megatron_validate_args):
         _validate_transformer_block_build_layers(args)
         _validate_group_limited_greedy(args)
         _validate_evaluation_args(args)
+        _validate_output_layer_slice_num(args)
 
         _validate_optimizer(args)
+
+        _add_dummy_args(args)
+
         from modellink.utils import print_args
         print_args('ModelLink Arguments', args)
         return args

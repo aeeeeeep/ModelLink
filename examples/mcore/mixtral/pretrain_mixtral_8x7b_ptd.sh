@@ -35,7 +35,7 @@ MOE_ARGS="
     --expert-model-parallel-size ${EP} \
     --moe-router-topk 2 \
     --moe-router-load-balancing-type aux_loss \
-    --moe-aux-loss-coeff 0.01 \
+    --moe-aux-loss-coeff 0.02 \
     --moe-permutation-async-comm
 "
 
@@ -57,7 +57,6 @@ GPT_ARGS="
     --untie-embeddings-and-output-weights \
     --group-query-attention \
     --num-query-groups 8 \
-    --no-position-embedding \
     --vocab-size 32000 \
     --rotary-base 1e6 \
 
@@ -70,6 +69,7 @@ GPT_ARGS="
     --overlap-grad-reduce \
     --overlap-param-gather \
     --use-mc2 \
+    --make-vocab-size-divisible-by 1 \
    
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \

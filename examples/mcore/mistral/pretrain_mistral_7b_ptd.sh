@@ -101,4 +101,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
   $DATA_ARGS \
   $OUTPUT_ARGS \
   --distributed-backend nccl \
-  | tee logs/train_mistral.log
+  | tee logs/train_mcore_mistral.log

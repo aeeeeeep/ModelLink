@@ -59,7 +59,7 @@ class ModelBase(abc.ABC):
         for key in self.kwargs_idx:
             if key in kwargs:
                 self.kwargs_idx[key] = kwargs[key]
-            elif self.kwargs_idx[key] > 0:
+            else:
                 self.kwargs_idx[key] = 0
 
     def __register_functions(self):
@@ -113,19 +113,22 @@ class ModelBase(abc.ABC):
                 obj = _get_obj(self, value, **kwargs)
                 return True if obj else False
             return func
-
-        def _setattr(self, func_name, value):
-            if not hasattr(self, func_name):
-                setattr(self, func_name, value)
+        
+        def _func_generator_has_bias(value):
+            def func(self, **kwargs):
+                bias = getattr(_get_obj(self, value, **kwargs), 'bias', None)
+                return bias is not None
+            return func
 
         if self.module_mapping:
             for key, value in self.module_mapping.items():
-                _setattr(self, "get_" + key + "_module", _func_generator_get_module(value).__get__(self, ModelBase))
-                _setattr(self, "get_" + key + "_weight", _func_generator_get_weight(value).__get__(self, ModelBase))
-                _setattr(self, "get_" + key + "_bias", _func_generator_get_bias(value).__get__(self, ModelBase))
-                _setattr(self, "set_" + key + "_weight", _func_generator_set_weight(value).__get__(self, ModelBase))
-                _setattr(self, "set_" + key + "_bias", _func_generator_set_bias(value).__get__(self, ModelBase))
-                _setattr(self, "has_" + key + "_module", _func_generator_has_module(value).__get__(self, ModelBase))
+                setattr(self, "get_" + key + "_module", _func_generator_get_module(value).__get__(self, ModelBase))
+                setattr(self, "get_" + key + "_weight", _func_generator_get_weight(value).__get__(self, ModelBase))
+                setattr(self, "get_" + key + "_bias", _func_generator_get_bias(value).__get__(self, ModelBase))
+                setattr(self, "set_" + key + "_weight", _func_generator_set_weight(value).__get__(self, ModelBase))
+                setattr(self, "set_" + key + "_bias", _func_generator_set_bias(value).__get__(self, ModelBase))
+                setattr(self, "has_" + key + "_module", _func_generator_has_module(value).__get__(self, ModelBase))
+                setattr(self, "has_" + key + "_bias", _func_generator_has_bias(value).__get__(self, ModelBase))
 
     def update_module(self, src_model):
         self.set_preprocess_state(src_model)
@@ -137,21 +140,42 @@ class ModelBase(abc.ABC):
         '''Set embedding params.'''
         embeddings_weight = src_model.get_embedding_word_embeddings_weight()
         self.set_embedding_word_embeddings_weight(data=embeddings_weight)
+        if src_model.has_embedding_word_embeddings_norm_module():
+            embd_norm_weight = src_model.get_embedding_word_embeddings_norm_weight()
+            embd_norm_bias = src_model.get_embedding_word_embeddings_norm_bias()
+            self.set_embedding_word_embeddings_norm_weight(data=embd_norm_weight)
+            self.set_embedding_word_embeddings_norm_bias(data=embd_norm_bias)
 
     def set_postprocess_state(self, src_model):
         final_layernorm_weight = src_model.get_final_layernorm_weight()
-        output_layer_weight = src_model.get_output_layer_weight()
         self.set_final_layernorm_weight(data=final_layernorm_weight)
         if self.args.untie_embeddings_and_output_weights:
+            output_layer_weight = src_model.get_output_layer_weight()
             self.set_output_layer_weight(data=output_layer_weight)
+        if self.has_final_layernorm_bias():
+            final_layernorm_bias = src_model.get_final_layernorm_bias()
+            self.set_final_layernorm_bias(data=final_layernorm_bias)
 
     def set_layer_state(self, src_model, layer_idx):
         self.set_attn_state(layer_idx, src_model)
         self.set_mlp_state(layer_idx, src_model)
         input_layernorm_weight = src_model.get_layers_input_layernorm_weight(layer_idx=layer_idx)
-        pre_mlp_layernorm_weight = src_model.get_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx)
         self.set_layers_input_layernorm_weight(layer_idx=layer_idx, data=input_layernorm_weight)
-        self.set_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx, data=pre_mlp_layernorm_weight)
+        if self.args.post_norm:
+            post_attn_layernorm_weight = src_model.get_layers_self_attention_post_attention_layernorm_weight(
+                layer_idx=layer_idx)
+            self.set_layers_self_attention_post_attention_layernorm_weight(layer_idx=layer_idx,
+                                                                           data=post_attn_layernorm_weight)
+        else:
+            pre_mlp_layernorm_weight = src_model.get_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx)
+            self.set_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx, data=pre_mlp_layernorm_weight)
+
+        if self.has_layers_input_layernorm_bias(layer_idx=layer_idx):
+            input_layernorm_bias = src_model.get_layers_input_layernorm_bias(layer_idx=layer_idx)
+            self.set_layers_input_layernorm_bias(layer_idx=layer_idx, data=input_layernorm_bias)
+        if self.has_layers_self_attention_pre_mlp_layernorm_bias(layer_idx=layer_idx):
+            pre_mlp_layernorm_bias = src_model.get_layers_self_attention_pre_mlp_layernorm_bias(layer_idx=layer_idx)
+            self.set_layers_self_attention_pre_mlp_layernorm_bias(layer_idx=layer_idx, data=pre_mlp_layernorm_bias)
 
     def set_attn_state(self, layer_idx, src_model):
         '''Set self-attention params.'''
@@ -173,6 +197,18 @@ class ModelBase(abc.ABC):
         fc2_weight = src_model.get_layers_mlp_linear_fc2_weight(**kwargs)
         self.set_layers_mlp_linear_fc1_weight(data=fc1_weight, **kwargs)
         self.set_layers_mlp_linear_fc2_weight(data=fc2_weight, **kwargs)
+        if src_model.has_layers_mlp_linear_fc1_bias(**kwargs):
+            fc1_bias = src_model.get_layers_mlp_linear_fc1_bias(**kwargs)
+            self.set_layers_mlp_linear_fc1_bias(data=fc1_bias, **kwargs)
+        if src_model.has_layers_mlp_linear_fc2_bias(**kwargs):
+            fc2_bias = src_model.get_layers_mlp_linear_fc2_bias(**kwargs)
+            self.set_layers_mlp_linear_fc2_bias(data=fc2_bias, **kwargs)
+
+        if self.args.post_norm:
+            pre_mlp_layernorm_weight = src_model.get_layers_self_attention_pre_mlp_layernorm_weight(**kwargs)
+            post_mlp_layernorm_weight = src_model.get_layers_self_attention_post_mlp_layernorm_weight(**kwargs)
+            self.set_layers_self_attention_pre_mlp_layernorm_weight(data=pre_mlp_layernorm_weight, **kwargs)
+            self.set_layers_self_attention_post_mlp_layernorm_weight(data=post_mlp_layernorm_weight, **kwargs)
 
     def set_mlp_state(self, layer_idx, src_model):
         args = src_model.get_args()
@@ -258,9 +294,9 @@ class HuggingfaceModel(ModelBase):
         config_value = self.model_cfg.get(self.args_cmd.model_type_hf).get('config_set_value')
         for key_target in config_key_mapping:
             key_hf = config_key_mapping[key_target]
-            try:
+            if self.args.get(key_hf, None) is not None:
                 self.args[key_target] = self.args[key_hf]
-            except KeyError as e:
+            else:
                 logger.warning(f"{key_target} was not found in the config file.")
         for key_target in config_value:
             self.args[key_target] = config_value[key_target]
@@ -277,6 +313,7 @@ class HuggingfaceModel(ModelBase):
         self.args = SimpleNamespace(**self.args)
         self.args.add_qkv_bias = self.args_cmd.add_qkv_bias
         self.args.add_dense_bias = self.args_cmd.add_dense_bias
+        self.args.post_norm = self.args_cmd.post_norm
 
     def get_modules_from_pretrained(self, device_map="cpu", trust_remote_code=True):
         # Load Huggingface model.
@@ -343,8 +380,24 @@ class HuggingfaceModel(ModelBase):
                 v_bias = qkv_pack_bias[end_k:]
                 query_key_value_bias = [q_bias, k_bias, v_bias]
                 self.layers_self_attention_linear_qkv_caches["bias"] = (qkv_concatenate_bias(query_key_value_bias))
+        elif qkv_type == "pack_self":
+            qkv_pack = self.get_layers_self_attention_linear_qkv_pack_module(layer_idx=layer_idx)
+            qkv_pack_weight = qkv_pack.weight
+            self.layers_self_attention_linear_qkv_caches["weight"] = qkv_pack_weight
+            if self.args_cmd.add_qkv_bias:
+                qkv_pack_bias = qkv_pack.bias
+                full_q = dim * nh
+                end_k = full_q + ng * dim
+                q_bias = qkv_pack_bias[:full_q, :]
+                k_bias = qkv_pack_bias[full_q:end_k, :]
+                v_bias = qkv_pack_bias[end_k:, :]
+                query_key_value_bias = [q_bias, k_bias, v_bias]
+                self.layers_self_attention_linear_qkv_caches["bias"] = (qkv_concatenate_bias(query_key_value_bias))        
         else:
             raise ValueError(f"Unsupported types. {qkv_type}")
+            
+    def has_layers_mlp_linear_fc1_bias(self, **kwargs):
+        return False
 
     def get_layers_mlp_linear_fc1_weight(self, **kwargs):
         fc_type = self.args.fc_type
@@ -396,6 +449,10 @@ class HuggingfaceModel(ModelBase):
             self.set_layers_self_attention_linear_q_proj_weight(layer_idx=layer_idx, data=q_weight)
             self.set_layers_self_attention_linear_k_proj_weight(layer_idx=layer_idx, data=k_weight)
             self.set_layers_self_attention_linear_v_proj_weight(layer_idx=layer_idx, data=v_weight)
+        elif qkv_type == "pack_gqa":
+            qw, k_weight, v_weight = qkv_split_weight(data)
+            qkv = torch.cat((qw, k_weight, v_weight), dim=0)
+            self.set_layers_self_attention_linear_qkv_pack_weight(layer_idx=layer_idx, data=qkv)
         else:
             raise ValueError(f"Unsupported types. {qkv_type}")
 
@@ -422,6 +479,11 @@ class HuggingfaceModel(ModelBase):
                 self.set_layers_self_attention_linear_q_proj_bias(layer_idx=layer_idx, data=q_bias)
                 self.set_layers_self_attention_linear_k_proj_bias(layer_idx=layer_idx, data=k_bias)
                 self.set_layers_self_attention_linear_v_proj_bias(layer_idx=layer_idx, data=v_bias)
+        elif qkv_type == "pack_gqa":
+            if self.args_cmd.add_qkv_bias:
+                q_bias, k_bias, v_bias = qkv_split_bias(data)
+                qkv_bias = torch.cat((q_bias, k_bias, v_bias), dim=0)
+                self.set_layers_self_attention_linear_qkv_pack_bias(layer_idx=layer_idx, data=qkv_bias)
         else:
             raise ValueError(f"Unsupported types. {qkv_type}")
 
@@ -539,6 +601,7 @@ class MegatronModel(ModelBase):
         self.args.w_pack = self.args_cmd.w_pack
         self.args.add_qkv_bias = self.args_cmd.add_qkv_bias
         self.args.add_dense_bias = self.args_cmd.add_dense_bias
+        self.args.post_norm = self.args_cmd.post_norm
         self.args.tokenizer_model = getattr(self.args_cmd, 'tokenizer_model', None)
         self.args.make_vocab_size_divisible_by = getattr(self.args_cmd, 'make_vocab_size_divisible_by', None)
         if self.args_cmd.params_dtype == 'bf16':
@@ -690,8 +753,7 @@ class MegatronModel(ModelBase):
             '--save-interval', '1',
             '--mock-data',  # To pass the "blend data checks" in arguments.py
             '--load', self.args_cmd.load_dir,
-            '--finetune',
-            # '--disable-bias-linear'
+            '--finetune'
         ]
         
         if hasattr(self.args_cmd, 'add_bias_linear') and not self.args_cmd.add_bias_linear:
@@ -699,6 +761,9 @@ class MegatronModel(ModelBase):
 
         if self.args_cmd.use_mcore_models:
             sys_argv.append('--use-mcore-models')
+
+        if self.model_cfg.get(self.args_cmd.model_type_hf).get('config_set_value').get('embed_layernorm', False):
+            sys_argv.append('--embed-layernorm')
 
         if self.md is None:
             return sys_argv
@@ -791,6 +856,28 @@ class MegatronLegacyModel(MegatronModel):
     def __init__(self, args_cmd, md=None):
         super(MegatronLegacyModel, self).__init__(args_cmd, md)
 
+    def get_module_mapping(self):
+        module_layer = "language_model.encoder.layers[layer_idx]."
+        self.module_mapping = {
+            "embedding": "language_model.embedding",
+            "embedding_word_embeddings": "language_model.embedding.word_embeddings",
+            "embedding_word_embeddings_norm": "language_model.embedding.word_embeddings.norm",
+            "embedding_position_embeddings": "language_model.embedding.position_embeddings",
+            "model": "module",
+            "layers_input_layernorm": module_layer + "input_norm",
+            "layers": "language_model.encoder.layers",
+            "layers_self_attention_linear_proj": module_layer + "self_attention.dense",
+            "layers_self_attention_linear_qkv": module_layer + "self_attention.query_key_value",
+            "layers_self_attention_post_attention_layernorm": module_layer + "post_attention_norm",
+            "layers_self_attention_pre_mlp_layernorm": module_layer + "post_attention_norm",
+            "layers_mlp_linear_fc1": module_layer + "mlp.dense_h_to_4h",
+            "layers_mlp_linear_fc2": module_layer + "mlp.dense_4h_to_h",
+            "layers_self_attention_post_mlp_layernorm": module_layer + "post_mlp_layernorm",
+            "final_layernorm": "language_model.encoder.final_norm",
+            "output_layer": "language_model.output_layer",
+            "word_embeddings": "word_embeddings"
+        }
+
 
 class MegatronMCoreModel(MegatronModel):
     def __init__(self, args_cmd, md=None):
@@ -810,7 +897,7 @@ class MegatronMCoreModel(MegatronModel):
             "layers_self_attention_linear_qkv": module_layer + "self_attention.linear_qkv",
             "layers_self_attention_q_layernorm": module_layer + "self_attention.q_layernorm",
             "layers_self_attention_k_layernorm": module_layer + "self_attention.k_layernorm",
-            "layers_self_attention_post_attention_layernorm": module_layer + "pre_mlp_layernorm",
+            "layers_self_attention_post_attention_layernorm": module_layer + "post_attn_norm",
             "layers_self_attention_pre_mlp_layernorm": module_layer + "pre_mlp_layernorm",
             "layers_mlp_linear_fc1": module_layer + "mlp.linear_fc1",
             "layers_mlp_linear_fc2": module_layer + "mlp.linear_fc2",

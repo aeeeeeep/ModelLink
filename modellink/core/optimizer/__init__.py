@@ -117,11 +117,11 @@ def get_megatron_optimizer_based_on_param_groups(
             init_state_fn,
         ]
 
+        try:
+            from mindio_ttp.adaptor import TTPReplicaOptimizer, TTPFP16ReplicaOptimizer
+        except ModuleNotFoundError:
+            sys.exit("The mindio_ttp package is not installed. Exiting.")
         if config.use_distributed_optimizer:
-            try:
-                from mindio_ttp.adaptor import TTPReplicaOptimizer
-            except ModuleNotFoundError:
-                sys.exit("The mindio_ttp package is not installed. Exiting.")
             optimizer = TTPReplicaOptimizer(
                 *optimizer_args,
                 per_model_buffers=per_model_buffers,
@@ -131,12 +131,16 @@ def get_megatron_optimizer_based_on_param_groups(
                 ori_dp_group=ori_dp_group
             )
         else:
-            optimizer = Float16OptimizerWithFloat16Params(*optimizer_args)
+            optimizer = TTPFP16ReplicaOptimizer(*optimizer_args, ori_dp_group=ori_dp_group)
 
         return optimizer
 
     # FP32.
-    return FP32Optimizer(optimizer, config, init_state_fn,)
+    try:
+        from mindio_ttp.adaptor import TTPFP32ReplicaOptimizer
+    except ModuleNotFoundError:
+        sys.exit("The mindio_ttp package is not installed. Exiting.")
+    return TTPFP32ReplicaOptimizer(optimizer, config, init_state_fn, ori_dp_group=ori_dp_group)
 
 
 def get_megatron_optimizer(
