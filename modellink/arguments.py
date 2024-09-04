@@ -424,6 +424,9 @@ def _add_training_args(parser):
     group.add_argument('--pad-to-multiple-of', type=int, default=8,
                        help='Used for Padding multiple in finetune. The default is 8.')
 
+    group.add_argument('--swap-attention', action='store_true', default=False,
+                       help='switch to open swap-attention feature.'
+                            'The default is False.')
     return parser
 
 
@@ -643,6 +646,9 @@ def _validate_optimizer(args):
 
 
 def _store_variables(args):
+    """
+    To bypass megatron validation, we store variables and restore them shortly afterward.
+    """
     variable_dict = dict()
     variable_dict["variable_seq_lengths"] = args.variable_seq_lengths
     # Moe models require `--sequence-parallel` to be turned on before Megatron core_v0.7.0,
@@ -659,6 +665,17 @@ def _restore_variables(args, variable_dict):
     # which conflicted with the behavior of turning it off by default during inference and evaluation.
     if args.num_experts is not None and hasattr(args, "temperature") and args.temperature is not None:
         args.sequence_parallel = variable_dict["origin_sequence_parallel"]
+
+
+def _add_dummy_args(args):
+    """
+    For arguments in mindspeed-core which is currently unsupported in mindspeed-llm.
+    """
+    # reduce_recompute_for_last_chunk would be registered if recompute-in-advance is supported.
+    args.reduce_recompute_for_last_chunk = False
+    args.adaptive_recompute_device_swap = False
+    args.adaptive_recompute_device_size = -1
+    args.adaptive_recompute_profiling_step = 10
 
 
 def validate_args_decorator(megatron_validate_args):
@@ -689,6 +706,9 @@ def validate_args_decorator(megatron_validate_args):
         _validate_output_layer_slice_num(args)
 
         _validate_optimizer(args)
+
+        _add_dummy_args(args)
+
         from modellink.utils import print_args
         print_args('ModelLink Arguments', args)
         return args
