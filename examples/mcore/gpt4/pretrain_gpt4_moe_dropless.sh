@@ -1,9 +1,13 @@
 #!/bin/bash
 
+#
+# Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+#
+
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
 
-NPUS_PER_NODE=16
+NPUS_PER_NODE=8
 MASTER_ADDR=localhost
 MASTER_PORT=6000
 NNODES=8
@@ -17,15 +21,14 @@ CKPT_LOAD_DIR="your model ckpt path"
 CKPT_SAVE_DIR="your save ckpt path"
 
 TP=8
-PP=2
+PP=1
 EP=1
 CP=8
 CP_TYPE='megatron_cp_algo'
-NUM_LAYERS=10
+NUM_LAYERS=8
 SEQ_LEN=131072
 MBS=1
 GBS=16
-
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $NPUS_PER_NODE \
@@ -41,11 +44,7 @@ MOE_ARGS="
     --moe-router-topk 2 \
     --moe-router-load-balancing-type aux_loss \
     --moe-aux-loss-coeff 0.01 \
-    --moe-permutation-async-comm \
-    --disable-bias-linear \
-    --moe-expert-capacity-factor 1.1 \
-    --moe-token-dispatcher-type alltoall \
-    --moe-pad-expert-input-to-capacity
+    --moe-permutation-async-comm
 "
 
 GPT_ARGS="
@@ -70,7 +69,9 @@ GPT_ARGS="
     --overlap-grad-reduce \
     --overlap-param-gather \
     --use-distributed-optimizer \
-    --reuse-fp32-param \
+    --recompute-granularity full \
+    --recompute-method block \
+    --recompute-num-layers ${NUM_LAYERS} \
     --train-iters 2000 \
     --weight-decay 0.1 \
     --adam-beta1 0.9 \
@@ -125,5 +126,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $CKPT_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    | tee logs/pretrain_gpt4_mcore_moe_drop_tp${TP}_pp${PP}_ep${EP}_cp${CP}_layer${NUM_LAYERS}_C.log
-    
+    | tee logs/pretrain_gpt4_mcore_moe_dropless_tp${TP}_pp${PP}_ep${EP}_cp${CP}_layer${NUM_LAYERS}.log
