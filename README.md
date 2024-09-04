@@ -261,10 +261,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td rowspan="1"><a href="https://huggingface.co/codellama">CodeLlama</a></td>
       <td><a href="https://huggingface.co/codellama/CodeLlama-34b-hf/tree/main">34B</a></td>
       <td>4K</td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 2x8</td>
       <td> BF16 </td>
-      <td> 837 </td>
+      <td> 902 </td>
       <td> -- </td>
       <td> 762 </td>
       <td><center>【GTS】</td>
@@ -686,10 +686,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td rowspan="1"><a href="https://huggingface.co/01-ai">Yi</a></td>
       <td><a href="https://huggingface.co/01-ai/Yi-34B/tree/main">34B</a></td>
       <td> 4K</td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td>2x8</td>
       <td>BF16 </td>
-      <td> 768 </td>
+      <td> 855 </td>
       <td> -- </td>
       <td> 730 </td>
       <td><center>【GTS】</td>
