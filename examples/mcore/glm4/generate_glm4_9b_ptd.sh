@@ -31,6 +31,7 @@ torchrun ${DISTRIBUTED_ARGS} inference.py \
        --position-embedding-type rope \
        --use-rotary-position-embeddings \
        --use-partial-rope \
+       --rotary-percent 0.5 \
        --disable-bias-linear \
        --add-qkv-bias \
        --swiglu \

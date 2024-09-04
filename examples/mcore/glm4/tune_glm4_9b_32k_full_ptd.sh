@@ -40,8 +40,9 @@ GPT_ARGS="
     --disable-bias-linear \
     --add-qkv-bias \
     --position-embedding-type rope \
-    --overlap-grad-reduce
+    --overlap-grad-reduce \
     --use-partial-rope \
+    --rotary-percent 0.5 \
     --rotary-base 5000000 \
     --use-fused-rmsnorm \
     --normalization RMSNorm \

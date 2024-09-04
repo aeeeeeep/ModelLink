@@ -39,8 +39,9 @@ GPT_ARGS="
     --disable-bias-linear \
     --add-qkv-bias \
     --position-embedding-type rope \
-    --use-partial-rope
-    --overlap-grad-reduce
+    --use-partial-rope \
+    --rotary-percent 0.5 \
+    --overlap-grad-reduce \
     --use-fused-rmsnorm \
     --normalization RMSNorm \
     --swiglu \
@@ -95,4 +96,4 @@ torchrun ${DISTRIBUTED_ARGS} pretrain_gpt.py \
     ${DATA_ARGS} \
     ${OUTPUT_ARGS} \
     --distributed-backend nccl \
-    | tee logs/train_mcore_glm4_9b_8k_ptd.log
+    | tee logs/pretrain_mcore_glm4_9b_8k_ptd.log

@@ -40,6 +40,7 @@ torchrun ${DISTRIBUTED_ARGS} evaluation.py   \
        --position-embedding-type rope \
        --use-rotary-position-embeddings \
        --use-partial-rope \
+       --rotary-percent 0.5 \
        --load ${CHECKPOINT} \
        --normalization RMSNorm \
        --norm-epsilon 1.5625e-07 \

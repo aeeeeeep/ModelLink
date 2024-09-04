@@ -2,9 +2,9 @@
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 # 多机参数
 NPUS_PER_NODE=8
-MASTER_ADDR=localhost
+MASTER_ADDR="your master node IP"
 MASTER_PORT=6003
-NNODES=1
+NNODES=2
 NODE_RANK=0
 WORLD_SIZE=$((${NPUS_PER_NODE}*${NNODES}))
 
@@ -33,7 +33,7 @@ GPT_ARGS="
     --num-attention-heads 32 \
     --seq-length 32768 \
     --micro-batch-size 1 \
-    --global-batch-size 16 \
+    --global-batch-size 64 \
     --max-position-embeddings 32768 \
     --padded-vocab-size 151552 \
     --make-vocab-size-divisible-by 1 \
@@ -44,10 +44,12 @@ GPT_ARGS="
     --position-embedding-type rope \
     --overlap-grad-reduce
     --use-partial-rope \
+    --rotary-percent 0.5 \
     --rotary-base 5000000 \
     --use-fused-rmsnorm \
     --normalization RMSNorm \
     --swiglu \
+    --use-fused-swiglu \
     --use-distributed-optimizer \
     --use-flash-attn \
     --tokenizer-type PretrainedFromHF \
@@ -96,5 +98,4 @@ torchrun ${DISTRIBUTED_ARGS} pretrain_gpt.py \
     ${OUTPUT_ARGS} \
     --distributed-backend nccl \
     --save ${CKPT_SAVE_DIR} \
-    | tee logs/tune_mcore_glm4_9b_32k_npu.log
-
+    | tee logs/pretrain_mcore_glm4_9b_32k_ptd.log
