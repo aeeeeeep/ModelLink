@@ -105,6 +105,7 @@ LOGGING_ARGS="
     --eval-interval 2000 \
     --eval-iters 100 \
     --load ${LOAD_PATH} \
+    --save ${SAVE_PATH} \
     --no-load-optim \
     --no-load-rng
 "
