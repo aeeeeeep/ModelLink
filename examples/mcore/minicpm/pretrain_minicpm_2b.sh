@@ -10,10 +10,10 @@ NNODES=1
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
-CKPT_SAVE_DIR=./minicpm_2b_ckpt
-DATA_PATH=./dataset/enwiki_text_document
-TOKENIZER_MODEL=./model_from_hf/MiniCPM-2B-sft-bf16/tokenizer.model
-CKPT_LOAD_DIR=./minicpm_2b_ckpt
+CKPT_SAVE_DIR="your model save directory path"
+DATA_PATH="your data path"
+TOKENIZER_MODEL="your tokenizer model path"
+CKPT_LOAD_DIR="your model directory path"
 TP=1
 PP=1
 
@@ -84,9 +84,9 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 10 \
+    --save-interval 5000 \
     --eval-interval 1000 \
-    --eval-iters 10 \
+    --eval-iters 1000 \
 "
 
 torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \

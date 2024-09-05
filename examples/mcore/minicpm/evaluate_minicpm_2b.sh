@@ -3,12 +3,12 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1
 export HCCL_CONNECT_TIMEOUT=1200
 
 # modify script model path and tokenizer path
-TOKENIZER_PATH=./model_from_hf/MiniCPM-2B-sft-bf16/  #tokenizer path
-CHECKPOINT=./model_from_hf/MiniCPM-2B-sft-bf16-mcore/  #model path
+TOKENIZER_PATH="your tokenizer model path"
+CHECKPOINT="your model directory path"
 
 # configure task and data path
-DATA_PATH="./eval_data/boolq/"
-TASK="boolq"
+DATA_PATH="./mmlu/test/"
+TASK="mmlu"
 
 # distributed config
 MASTER_ADDR=localhost

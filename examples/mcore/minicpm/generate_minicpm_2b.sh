@@ -5,9 +5,8 @@ export HCCL_CONNECT_TIMEOUT=1200
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # please fill these path configurations
-CHECKPOINT=./model_from_hf/MiniCPM-2B-sft-mcore/
-TOKENIZER_PATH=./model_from_hf/MiniCPM-2B-sft-bf16
-TOKENIZER_MODEL=./model_from_hf/MiniCPM-2B-sft-bf16/tokenizer.model
+CHECKPOINT="your model directory path"
+TOKENIZER_PATH="your tokenizer model path"
 
 # Change for multinode config
 MASTER_ADDR=localhost
@@ -37,7 +36,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --load "${CHECKPOINT}"  \
        --tokenizer-type PretrainedFromHF  \
        --tokenizer-name-or-path "${TOKENIZER_PATH}" \
-       --tokenizer-model "${TOKENIZER_MODEL}"  \
        --tokenizer-not-use-fast \
        --bf16 \
        --normalization RMSNorm \
