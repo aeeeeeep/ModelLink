@@ -43,7 +43,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
        --tokenizer-type PretrainedFromHF  \
        --tokenizer-name-or-path $TOKENIZER_PATH \
        --tokenizer-not-use-fast \
-       --fp16  \
+       --bf16  \
        --micro-batch-size 1  \
        --use-fused-rmsnorm \
        --exit-on-missing-checkpoint \
