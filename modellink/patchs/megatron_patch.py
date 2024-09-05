@@ -172,12 +172,14 @@ def patch_core_transformers(args):
     from mindspeed.core.transformer.moe.router import aux_loss_load_balancing
     from ..core import (PTNorm, topk_router_forward, topk_router_routing, z_loss_func, rotary_embedding_init_wrapper)
     from mindspeed.core.transformer.moe.token_dispatcher import allgather_token_permutation, allgather_token_unpermutation
+    from mindspeed.core.transformer.moe.grouped_gemm_util import Ops, grouped_gemm_is_available, get_device_capability
 
     from ..core.transformer.moe.moe_layer import moe_layer_init_wrapper, moe_layer_forward
     from ..core.transformer.transformer_block import _transformer_block_build_layers
     from ..core.transformer.mlp import core_mlp_forward_wrapper
     from ..core.transformer.transformer_layer import transformer_layer_init_wrapper
 
+    PatchManager.register_patch('torch.cuda.get_device_capability', get_device_capability)
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__',
                                 rotary_embedding_init_wrapper)
     PatchManager.register_patch('megatron.core.transformer.transformer_block.TENorm', PTNorm)
@@ -189,6 +191,9 @@ def patch_core_transformers(args):
     PatchManager.register_patch('megatron.core.transformer.moe.router.z_loss_func', z_loss_func)
     PatchManager.register_patch('megatron.core.transformer.transformer_block.get_num_layers_to_build',
                                 get_num_layers_to_build_wrapper)
+    PatchManager.register_patch('megatron.core.transformer.moe.grouped_gemm_util.ops', Ops)
+    PatchManager.register_patch('megatron.core.transformer.moe.grouped_gemm_util.grouped_gemm_is_available',
+                                grouped_gemm_is_available)
 
     # Transformer block
     PatchManager.register_patch('megatron.core.transformer.transformer_block.TransformerBlock.__init__',

@@ -8,6 +8,7 @@ python tools/checkpoint/convert_ckpt.py \
     --model-type GPT \
     --loader hf_mcore \
     --saver mg_mcore \
+    --params-dtype bf16 \
     --target-tensor-parallel-size 8 \
     --target-pipeline-parallel-size 1 \
     --target-expert-parallel-size 1 \

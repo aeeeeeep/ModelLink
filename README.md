@@ -1134,7 +1134,7 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
     <td>No</td>
   </tr>
   <tr>
-    <td rowspan="2">MOE</td>
+    <td rowspan="3">MOE</td>
     <td>MOE专家并行</td>
     <td>--expert-model-parallel-size</td>
     <td>Yes</td>
@@ -1147,7 +1147,13 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
     <td>No</td>
   </tr>
   <tr>
-    <td rowspan="6">显存优化</td>
+    <td>GEMM</td>
+    <td>--moe-grouped-gemm</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td rowspan="7">显存优化</td>
     <td>参数副本复用</td>
     <td>--reuse-fp32-param</td>
     <td>Yes</td>
@@ -1156,6 +1162,12 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
   <tr>
     <td>激活函数重计算</td>
     <td>--recompute-activation-function</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+ <tr>
+    <td>Swap Attention</td>
+    <td>--swap-attention</td>
     <td>Yes</td>
     <td>Yes</td>
   </tr>
