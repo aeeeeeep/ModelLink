@@ -261,10 +261,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td rowspan="1"><a href="https://huggingface.co/codellama">CodeLlama</a></td>
       <td><a href="https://huggingface.co/codellama/CodeLlama-34b-hf/tree/main">34B</a></td>
       <td>4K</td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 2x8</td>
       <td> BF16 </td>
-      <td> 837 </td>
+      <td> 902 </td>
       <td> -- </td>
       <td> 762 </td>
       <td><center>【GTS】</td>
@@ -294,6 +294,29 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 414 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
+    </tr>
+    <tr>
+      <td rowspan="2"> <a href="https://huggingface.co/internlm">InternLM2</a> </td>
+      <td rowspan="2"> <a href="https://huggingface.co/Internlm/Internlm2-chat-20b/tree/main">20B</a> </td>
+      <td> 4K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 1141 </td>
+      <td> -- </td>
+      <td> 1348 </td>
+      <td><center>【GTS】</td>
+      <td><center>【Test】</td>
+      <tr>
+      <td> 32K </td>
+      <th> Mcore </th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 4982 </td>
+      <td> -- </td>
+      <td><center> 5476 </td>
+      <td><center>【GTS】</td>
+      <td>【Test】</td>
     </tr>
     <tr>
       <td rowspan="4"><a href="https://huggingface.co/meta-llama">LLaMA</td>
@@ -583,6 +606,19 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td><center>【GTS】</td>    
       <td>【Test】</td>
     </tr>
+    </tr>
+      <td rowspan="1"><a href="https://huggingface.co/Qwen">CodeQwen1.5</a></td>
+      <td> <a href="https://huggingface.co/Qwen/CodeQwen1.5-7B">7B</a> </td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 3146 </td>
+      <td> -- </td>
+      <td> 3866 </td>
+      <td><center>【GTS】</td>    
+      <td>【Test】</td>
+    </tr>
     <tr>
       <td rowspan="7"><a href="https://huggingface.co/Qwen">Qwen2</a></td>
       <td rowspan="2"> <a href="https://huggingface.co/Qwen/Qwen2-0.5B/tree/main">0.5B</a> </td>
@@ -663,10 +699,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td rowspan="1"><a href="https://huggingface.co/01-ai">Yi</a></td>
       <td><a href="https://huggingface.co/01-ai/Yi-34B/tree/main">34B</a></td>
       <td> 4K</td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td>2x8</td>
       <td>BF16 </td>
-      <td> 768 </td>
+      <td> 855 </td>
       <td> -- </td>
       <td> 730 </td>
       <td><center>【GTS】</td>
@@ -826,11 +862,11 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td><a href="https://github.com/xai-org/grok-1">8x5B</a></td>
       <td> 8K </td>
       <th>Mcore</th>
-      <td> 2x8 </td>
+      <td> 4x8 </td>
       <td> BF16 </td>
-      <td> 1646 </td>
+      <td> 1082 </td>
       <td> -- </td>
-      <td> 2057 </td>
+      <td> 993.8 </td>
       <td><center>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
@@ -1123,7 +1159,7 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
     <td>No</td>
   </tr>
   <tr>
-    <td rowspan="2">MOE</td>
+    <td rowspan="3">MOE</td>
     <td>MOE专家并行</td>
     <td>--expert-model-parallel-size</td>
     <td>Yes</td>
@@ -1136,7 +1172,13 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
     <td>No</td>
   </tr>
   <tr>
-    <td rowspan="6">显存优化</td>
+    <td>GEMM</td>
+    <td>--moe-grouped-gemm</td>
+    <td>Yes</td>
+    <td>No</td>
+  </tr>
+  <tr>
+    <td rowspan="7">显存优化</td>
     <td>参数副本复用</td>
     <td>--reuse-fp32-param</td>
     <td>Yes</td>
@@ -1145,6 +1187,12 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
   <tr>
     <td>激活函数重计算</td>
     <td>--recompute-activation-function</td>
+    <td>Yes</td>
+    <td>Yes</td>
+  </tr>
+ <tr>
+    <td>Swap Attention</td>
+    <td>--swap-attention</td>
     <td>Yes</td>
     <td>Yes</td>
   </tr>

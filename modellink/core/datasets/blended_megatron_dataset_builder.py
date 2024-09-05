@@ -8,6 +8,7 @@ import torch
 from megatron.training import get_args
 from megatron.core.datasets.blended_dataset import BlendedDataset
 from megatron.core.datasets.megatron_dataset import MegatronDataset, LowLevelDataset, MockDataset
+from megatron.core import mpu
 
 from ..parallel_state import get_pipeline_model_parallel_node_info
 
@@ -27,15 +28,12 @@ def need_to_build_dataset():
     share_save = not args.no_shared_storage
     rank = torch.distributed.get_rank()
     if share_save:
-        return rank == 0    
+        return rank == 0
     gpus_per_node = torch.cuda.device_count()
-    node_pp_group_info = get_pipeline_model_parallel_node_info()
-    flag = False
-    num_edge_ranks = sum([x != 1 for x in node_pp_group_info])
-    if num_edge_ranks >= 1:
-        first_idx = node_pp_group_info.index([x for x in node_pp_group_info if x != 1][0])
-        flag = (first_idx == rank % gpus_per_node)
-    return flag
+    current_rank = torch.cuda.current_device()
+    if args.tensor_model_parallel_size > gpus_per_node:
+        return mpu.get_tensor_model_parallel_rank() == 0
+    return mpu.get_tensor_model_parallel_rank() == 0 and current_rank % gpus_per_node == 0
 
 
 @staticmethod
