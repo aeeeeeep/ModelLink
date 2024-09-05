@@ -64,7 +64,7 @@ GPT_ARGS="
     --adam-eps 1.0e-5 \
     --no-load-optim \
     --no-load-rng \
-    --fp16
+    --bf16
 "
 
 DATA_ARGS="

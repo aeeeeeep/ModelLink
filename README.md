@@ -136,7 +136,7 @@ ModelLink已发布版本维护策略：
       <td>13B</td>
       <td>4K</td>
       <td> 1x8</td>
-      <td> FP16 </td>
+      <td> BF16 </td>
       <td> 1213 </td>
       <td> 862 </td>
       <td>【昇腾】</td>

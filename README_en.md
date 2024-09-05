@@ -136,7 +136,7 @@ The following is the measured performance after turning on the mc2 acceleration 
       <td>13B</td>
       <td> 4K </td>
       <td> 1x8</td>
-      <td> FP16 </td>
+      <td> BF16 </td>
       <td> 1213 </td>
       <td> 862 </td>
       <td>【Ascend】</td>

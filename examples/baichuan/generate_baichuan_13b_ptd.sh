@@ -38,7 +38,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --tokenizer-type PretrainedFromHF  \
        --tokenizer-name-or-path $TOKENIZER_PATH \
        --tokenizer-not-use-fast \
-       --fp16 \
+       --bf16 \
        --normalization RMSNorm \
        --untie-embeddings-and-output-weights \
        --disable-bias-linear \
