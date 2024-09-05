@@ -31,7 +31,7 @@ def group_limited_greedy_topKgating(self, logits: torch.Tensor):
     if self.config.moe_token_dispatcher_type == "alltoall":
         seq_length = args.seq_length
     else:
-        seq_length = args.seq_length // self.config.tensor_model_parallel_size
+        seq_length = args.seq_length // self.config.tensor_model_parallel_size // self.config.context_parallel_size
 
     scores = F.softmax(logits, dim=1)
     group_scores = (

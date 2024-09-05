@@ -1,11 +1,12 @@
 #!/bin/bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
+export HCCL_CONNECT_TIMEOUT=1200
 
 GPUS_PER_NODE=8
-MASTER_ADDR=localhost
-MASTER_PORT=6000
-NNODES=1
+MASTER_ADDR=localhost #主节点IP
+MASTER_PORT=8142
+NNODES=8
 NODE_RANK=0
 WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 
@@ -15,8 +16,11 @@ TOKENIZER_MODEL="your tokenizer path"
 CKPT_LOAD_DIR="your model ckpt path"
 
 TP=1
-PP=1
+PP=4
 EP=8
+CP=2
+CP_TYPE='ulysses_cp_algo'
+NUM_LAYERS=24
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -58,7 +62,7 @@ MOE_ARGS="
 ROPE_ARGS="
     --rope-scaling-beta-fast 32 \
     --rope-scaling-beta-slow 1 \
-    --rope-scaling-factor  40 \
+    --rope-scaling-factor 40 \
     --rope-scaling-mscale 0.707 \
     --rope-scaling-mscale-all-dim  0.707 \
     --rope-scaling-original-max-position-embeddings 4096 \
@@ -66,16 +70,20 @@ ROPE_ARGS="
 "
 
 GPT_ARGS="
-    --load $CKPT_LOAD_DIR \
+    --recompute-granularity full \
+    --recompute-method uniform \
+    --recompute-num-layers 1 \
+    --no-shared-storage \
     --use-distributed-optimizer \
     --use-flash-attn \
     --use-mcore-models \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --expert-model-parallel-size ${EP} \
+    --context-parallel-size ${CP} \
+    --context-parallel-algo  ${CP_TYPE} \
     --sequence-parallel \
-    --output-layer-slice-num 8 \
-    --num-layers 2 \
+    --num-layers ${NUM_LAYERS} \
     --hidden-size 5120 \
     --ffn-hidden-size 12288 \
     --num-attention-heads 128 \
@@ -84,7 +92,7 @@ GPT_ARGS="
     --seq-length 8192 \
     --max-position-embeddings 163840 \
     --micro-batch-size 1 \
-    --global-batch-size 64 \
+    --global-batch-size 256 \
     --make-vocab-size-divisible-by 1 \
     --lr 1.0e-5 \
     --train-iters 2000 \
@@ -143,4 +151,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS pretrain_gpt.py \
     $MOE_ARGS \
     --distributed-backend nccl \
     --save $CKPT_SAVE_DIR \
-    | tee logs/pretrain_deepseek2_ptd_8p.log
+    | tee logs/pretrain_deepseek2_100b_8k_ptd.log
+
