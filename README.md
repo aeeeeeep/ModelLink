@@ -258,6 +258,19 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="https://huggingface.co/THUDM">GLM4</a></td>
+      <td><a href="https://huggingface.co/THUDM/glm-4-9b">9B</a></td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td> 1x8 </td>
+      <td> BF16 </td>
+      <td> 2221 </td>
+      <td> -- </td>
+      <td> 2708 </td>
+      <td>【GTS】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
       <td rowspan="1"><a href="https://huggingface.co/codellama">CodeLlama</a></td>
       <td><a href="https://huggingface.co/codellama/CodeLlama-34b-hf/tree/main">34B</a></td>
       <td>4K</td>
