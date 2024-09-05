@@ -14,8 +14,8 @@ WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 basepath=$(cd `dirname $0`; cd ../../../; pwd)
 
 CKPT_SAVE_DIR=/data/ckpt
-CKPT_LOAD_DIR=/data/llama-2-7b-mg-tp2-pp4-mcore-vpp2-test
-DATA_PATH=/data/pretrain_dataset/alpaca_text_document
+CKPT_LOAD_DIR=/data/ci/llama-2-7b-mg-tp2-pp4-mcore-vpp2-test
+DATA_PATH=/data/ci/alpaca_llama2_eod/alpaca_llama2_text_document
 TOKENIZER_MODEL=/data/llama-2-7b-hf/tokenizer.model
 TP=2
 PP=4
@@ -71,6 +71,7 @@ TRAINING_ARGS=(
     --use-fused-rmsnorm
     --swiglu
     --use-flash-attn
+    --reset-position-ids
     --no-masked-softmax-fusion
     --attention-softmax-in-fp32
     --min-lr 1.25e-7
