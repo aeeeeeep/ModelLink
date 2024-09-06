@@ -56,7 +56,7 @@ def add_arguments(parser):
     group.add_argument('--use-mcore-models', action='store_true',
                        help='Use the implementation from megatron core')
     group.add_argument('--post-norm', action='store_true',
-                       help='post norm after attention or mlp.')
+                       help='post norm after attention or mlp.', default=False)
     group.add_argument('--moe-grouped-gemm', action='store_true',
                        help='Usr moe grouped gemm.')
 
