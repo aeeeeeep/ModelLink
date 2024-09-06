@@ -1274,10 +1274,8 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
 
 ```bash
 注意：
-如果需要开启 mc2，需保证:
-1. 配套环境版本如本仓首页所述;
-2. 将 modellink\arguments.py 文件下 validate_args_decorator 函数中的此处注释开启
-   #args.use_mc2 = False
+1、如果需要开启 mc2，需将 `modellink\arguments.py` 文件下，`validate_args_decorator`函数中的`args.use_mc2 = False`语句注释掉。
+2、Legacy结构模型不支持MOE和长序列特性，可以在Mcore结构模型上使能MOE和长序列特性。
 ```
 
 具体的预训练方法见[examples/README.md](./examples/README.md)
