@@ -11,23 +11,20 @@ MASTER_ADDR=localhost
 MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
-NPUS_PER_NODE=8
+NPUS_PER_NODE=1
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
 torchrun $DISTRIBUTED_ARGS inference.py \
-       --tensor-model-parallel-size 8  \
+       --tensor-model-parallel-size 1  \
        --pipeline-model-parallel-size 1  \
-       --use-mcore-models \
        --task chat \
        --hf-chat-template \
        --add-eos-token '<|eot_id|>' '<|eom_id|>'\
        --top-p 0.9 \
        --temperature 0.6 \
-       --use-fused-swiglu \
        --use-rotary-position-embeddings \
-       --use-fused-rotary-pos-emb \
        --load ${CHECKPOINT}  \
        --tokenizer-type PretrainedFromHF  \
        --tokenizer-name-or-path ${TOKENIZER_PATH} \
@@ -43,6 +40,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --group-query-attention \
        --num-query-groups 8 \
        --micro-batch-size 1 \
+       --global-batch-size 1 \
        --num-attention-heads 32  \
        --swiglu \
        --rope-scaling-type llama3 \
@@ -60,7 +58,13 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --exit-on-missing-checkpoint \
        --make-vocab-size-divisible-by 1 \
        --padded-vocab-size 128256 \
+       --use-fused-swiglu \
+       --use-fused-rmsnorm \
+       --use-fused-rotary-pos-emb \
+       --use-mcore-models \
+       --use-kv-cache \
+       --use-flash-attn \
        --bf16 \
        --seed 42 \
-       | tee logs/generate_llama31_8b.log
+       | tee logs/chat_llama31_8b.log
 

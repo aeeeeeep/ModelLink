@@ -1,5 +1,4 @@
 #!/bin/bash
-
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # please fill these path configurations
@@ -20,38 +19,47 @@ DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $
 python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --tensor-model-parallel-size 1  \
        --pipeline-model-parallel-size 1  \
-       --num-layers 32 \
+       --task chat \
+       --hf-chat-template \
+       --top-p 0.8 \
+       --temperature 0.8 \
+       --num-layers 28  \
        --hidden-size 4096  \
-       --ffn-hidden-size 11008 \
+       --ffn-hidden-size 13696 \
+       --seq-length 8192 \
+       --group-query-attention \
+       --num-query-groups 2 \
+       --num-attention-heads 32  \
+       --padded-vocab-size 65024 \
+       --make-vocab-size-divisible-by 1 \
+       --max-position-embeddings 8192 \
        --position-embedding-type rope \
-       --seq-length 4096 \
+       --use-glm-rope \
+       --rotary-percent 0.5 \
+       --disable-bias-linear \
+       --add-qkv-bias \
+       --swiglu \
+       --normalization RMSNorm \
        --max-new-tokens 256 \
        --micro-batch-size 1 \
        --global-batch-size 1 \
-       --num-attention-heads 32  \
-       --max-position-embeddings 4096 \
-       --swiglu \
        --load "${CHECKPOINT}"  \
        --tokenizer-type PretrainedFromHF  \
        --tokenizer-name-or-path "${TOKENIZER_PATH}" \
        --tokenizer-model "${TOKENIZER_MODEL}"  \
        --tokenizer-not-use-fast \
-       --fp16 \
-       --normalization RMSNorm \
        --untie-embeddings-and-output-weights \
-       --disable-bias-linear \
        --attention-softmax-in-fp32 \
        --no-load-optim \
        --no-load-rng \
        --no-masked-softmax-fusion \
        --no-gradient-accumulation-fusion \
        --exit-on-missing-checkpoint \
-       --make-vocab-size-divisible-by 1 \
        --use-fused-swiglu \
        --use-fused-rmsnorm \
-       --use-fused-rotary-pos-emb \
        --use-mcore-models \
        --use-kv-cache \
        --use-flash-attn \
-       | tee logs/generate_mcore_llama2_7b.log
-
+       --seed 42 \
+       --fp16 \
+       | tee logs/chat_mcore_chatglm3_6B.log

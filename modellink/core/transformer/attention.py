@@ -80,16 +80,6 @@ def attention_forward(
             key, k_pos_emb, config=self.config, cu_seqlens=cu_seqlens_kv,
         )
 
-    # Do repeat KV to support GQA+Ulysses
-    args = get_args()
-    should_kv_repeat_before_uly = args.context_parallel_size > 1 and \
-                           args.context_parallel_algo in ['ulysses_cp_algo', 'hybrid_cp_algo'] and \
-                           args.kv_head_repeat_before_uly_alltoall
-    heads_per_gqa_group = self.num_attention_heads_per_partition // self.num_query_groups_per_partition
-    if should_kv_repeat_before_uly and heads_per_gqa_group > 1:
-        key = key.repeat_interleave(heads_per_gqa_group, dim=2)
-        value = value.repeat_interleave(heads_per_gqa_group, dim=2)
-
     # ==================================
     # core attention computation
     # ==================================
