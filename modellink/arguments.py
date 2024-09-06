@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from functools import wraps
 import argparse
 from megatron.training import print_rank_0
@@ -281,6 +282,8 @@ def validate_args_decorator(validate_args):
         print_rank_0("create-attention-mask-in-dataloader is {}".format(args.create_attention_mask_in_dataloader))
 
         args.use_mc2 = False
+        if int(os.getenv('ENABLE_MC2', 0)):
+            args.use_mc2 = True
 
         validate_args(args, defaults)
         if args.position_embedding_type == 'alibi' and args.sliding_window is not None:
