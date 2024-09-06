@@ -2,10 +2,10 @@
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # distributed config
-NPUS_PER_NODE=8
+NPUS_PER_NODE=2
 MASTER_ADDR=localhost
 MASTER_PORT=6000
-NNODES=2
+NNODES=1
 NODE_RANK=0
 
 # modify script model path and tokenizer path

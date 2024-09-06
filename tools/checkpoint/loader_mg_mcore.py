@@ -35,6 +35,8 @@ def add_arguments(parser):
     parser.add_argument('--params-dtype', type=str,
                        help='Set weight dtype', default='fp16',
     )
+    group.add_argument('--post-norm', action='store_true',
+                       help='post norm after attention or mlp.', default=False)
     group.add_argument('--lora-target-modules', nargs='+', type=str, default=[],
                        help='Lora target modules.')
     group.add_argument('--lora-load', type=str, default=None,
