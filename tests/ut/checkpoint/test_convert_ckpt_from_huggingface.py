@@ -83,6 +83,20 @@ class CovertMCoreChatGLM3CkptFromHuggingfaceArgs:
     tokenizer_model = "/data/chatglm3-6b-base-hf/tokenizer.model"
 
 
+class CovertMCoreDeepseekV2CkptFromHuggingfaceArgs:
+    model_type = "GPT"
+    model_type_hf = "deepseek2"
+    loader = "hf_mcore"
+    saver = "mg_mcore"
+    target_tensor_parallel_size = "1"
+    target_pipeline_parallel_size = "4"
+    target_expert_parallel_size = "8"
+    load_dir = "/data/deepseek2-236b-hf/"
+    save_dir = "/data/deepseek2-236b-mg-tp1pp4ep8-mcore-test/"
+    base_dir = "/data/deepseek2-236b-mg-tp1pp4ep8-mcore-base/"
+    tokenizer_model = "/data/deepseek2-236b-hf/"
+
+
 class CovertMCoreQwen2CkptFromHuggingfaceArgs:
     model_type = "GPT"
     loader = "hf_mcore"
@@ -281,6 +295,33 @@ class TestConvertCkptFromHuggingface:
         judge_expression(weight_common_content['encoder']['layers.0.mlp.dense_4h_to_h.weight'].size() == torch.Size([4096, 5504]))
         judge_expression(weight_common_content['encoder']['layers.0.input_norm.weight'].size() == torch.Size([4096]))
         judge_expression(weight_common_content['encoder']['layers.0.post_attention_norm.weight'].size() == torch.Size([4096]))
+
+    def test_convert_mcore_deepseekV2_form_huggingface(self):
+        args = CovertMCoreDeepseekV2CkptFromHuggingfaceArgs()
+        """
+        Test whether the weight to be converted as we want in `--save-dir`. We will check the model layer name, 
+        including embedding, final_norm, output and encoder. In the encoder, there will be some different layers 
+        to compose the unique transformer layer and all these layer stack to compose the entity of the model.
+        """
+        base_dir = Path(__file__).absolute().parents[3]
+        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        arguments = [
+            "--model-type", args.model_type,
+            "--loader", args.loader,
+            "--saver", args.saver,
+            "--target-tensor-parallel-size", args.target_tensor_parallel_size,
+            "--target-pipeline-parallel-size", args.target_pipeline_parallel_size,
+            "--target-expert-parallel-size", args.target_expert_parallel_size,
+            "--load-dir", args.load_dir,
+            "--save-dir", args.save_dir,
+            "--use-mcore-models",
+            "--moe-grouped-gemm",
+            "--model-type-hf", args.model_type_hf,
+            "--tokenizer-model", args.tokenizer_model,
+            "--params-dtype", "bf16"
+        ]
+        exit_code = subprocess.run(["python", file_path] + arguments).returncode
+        judge_expression(exit_code == 0 and weight_compare(args.base_dir, args.save_dir))
 
     def test_convert_weights_qwen2_mcore_form_huggingface(self):
         args = CovertMCoreQwen2CkptFromHuggingfaceArgs()
