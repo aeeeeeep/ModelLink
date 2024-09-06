@@ -20,6 +20,9 @@ DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $
 python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --tensor-model-parallel-size 1  \
        --pipeline-model-parallel-size 1  \
+       --task chat \
+       --prompt-type llama2 \
+       --add-eos-token '<|eot_id|>' \
        --num-layers 32 \
        --hidden-size 4096  \
        --ffn-hidden-size 11008 \
@@ -53,5 +56,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --use-mcore-models \
        --use-kv-cache \
        --use-flash-attn \
-       | tee logs/generate_llama2_7b.log
+       | tee logs/chat_llama2_7b.log
 
