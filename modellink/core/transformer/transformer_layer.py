@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import math
 from functools import wraps
 from dataclasses import dataclass, field
 from typing import Dict, Union
@@ -91,7 +91,7 @@ def transformer_layer_forward(self, hidden_states, attention_mask, context=None,
                               packed_seq_params=None):
 
     # hidden_states: [s, b, h]
-    args_pos_norm = get_args()
+    args = get_args()
     if self.interleave_sliding_window is not None and self.is_sliding and attention_mask is not None:
         min_dtype = torch.finfo(hidden_states.dtype).min
         sliding_window_mask = torch.tril(
@@ -115,8 +115,14 @@ def transformer_layer_forward(self, hidden_states, attention_mask, context=None,
         rotary_pos_emb=rotary_pos_emb,
         packed_seq_params=packed_seq_params,
     )
+
+    if args.scale_depth is not None:
+        attention_output, attention_bias = attention_output_with_bias
+        attention_output = attention_output * (args.scale_depth / math.sqrt(args.num_layers))
+        attention_output_with_bias = (attention_output, attention_bias)
+
     # add args_pos_norm for attention post norm, different with megatron
-    if args_pos_norm.post_norm:
+    if args.post_norm:
         attention_output = self.post_attn_norm(attention_output_with_bias[0])
         attention_output_with_bias = (attention_output, attention_output_with_bias[1])
 
@@ -157,8 +163,14 @@ def transformer_layer_forward(self, hidden_states, attention_mask, context=None,
 
     # MLP.
     mlp_output_with_bias = self.mlp(pre_mlp_layernorm_output)
+
+    if args.scale_depth is not None:
+        mlp_output, mlp_bias = mlp_output_with_bias
+        mlp_output = mlp_output * (args.scale_depth / math.sqrt(args.num_layers))
+        mlp_output_with_bias = (mlp_output, mlp_bias)
+
     # add args_pos_norm for mlp post norm, different with megatron
-    if args_pos_norm.post_norm:
+    if args.post_norm:
         mlp_output = self.post_mlp_layernorm(mlp_output_with_bias[0])
         mlp_output_with_bias = (mlp_output, mlp_output_with_bias[1])
 
