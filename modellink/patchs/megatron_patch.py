@@ -227,7 +227,8 @@ def patch_core_transformers(args):
 
         if args.moe_token_dispatcher_type == 'alltoall':
             from ..core.transformer.moe.token_dispatcher import MoEAlltoAllTokenDispatcher
-            PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAlltoAllTokenDispatcher', MoEAlltoAllTokenDispatcher)
+            PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAlltoAllTokenDispatcher',
+                                        MoEAlltoAllTokenDispatcher)
 
     # For groupMLP especially deepseek
     from ..core.transformer.moe.experts import groupedmlp_init_wrapper

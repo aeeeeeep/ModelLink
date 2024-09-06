@@ -804,6 +804,7 @@ ModelLink已支持模型评估分数如下：
 | Qwen2-0.5B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                           | 44.6%     | [45.4%](https://qwenlm.github.io/zh/blog/qwen2/)                      | Qwen2-1.5B   | [MMLU](https://paperswithcode.com/dataset/mmlu)                         | 54.7%     | [56.5%](https://qwenlm.github.io/zh/blog/qwen2/)                    |
 | QWen2-7B      | [MMLU](https://paperswithcode.com/dataset/mmlu)                           | 70.3%     | [70.3%](https://qwenlm.github.io/zh/blog/qwen2/)                      | Qwen2-72B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                         | 83.6%     | [84.2%](https://qwenlm.github.io/zh/blog/qwen2/)                    |
 | CodeQwen1.5-7B | [Human Eval](https://huggingface.co/datasets/openai_humaneval)            | 54.8%     | [51.8%](https://qwenlm.github.io/zh/blog/codeqwen1.5/)                      |
+MiniCPM-2B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                           | 51.6%     | [53.4%](https://github.com/OpenBMB/MiniCPM?tab=readme-ov-file#3)                      | MiniCPM-MoE-8x2B | [BoolQ](https://github.com/google-research-datasets/boolean-questions)                      | 83.9%     | --                                                                  |
 
 
 
