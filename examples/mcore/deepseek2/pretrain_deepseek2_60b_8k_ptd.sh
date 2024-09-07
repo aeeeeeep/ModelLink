@@ -75,13 +75,14 @@ GPT_ARGS="
     --no-shared-storage \
     --use-distributed-optimizer \
     --use-flash-attn \
+    --shape-order BNSD \
     --use-mcore-models \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --num-layers-per-virtual-pipeline-stage 2 \
     --expert-model-parallel-size ${EP} \
     --sequence-parallel \
-    --output-layer-slice-num 8 \
+    --output-layer-slice-num 10 \
     --num-layers ${NUM_LAYERS} \
     --hidden-size 5120 \
     --ffn-hidden-size 12288 \

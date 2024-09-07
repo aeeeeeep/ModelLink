@@ -231,8 +231,11 @@ def dot_product_attention_forward(
         args.shape_order = "TND"
         actual_seq_len = get_actual_seq_len()
     else:
-        query, key, value = [rearrange(x, 's b h d -> s b (h d)') for x in [query, key, value]]
-        args.shape_order = "SBH"
+        if args.shape_order == "BNSD":
+            query, key, value = [rearrange(x, 's b h d -> b h s d') for x in [query, key, value]]
+        else:
+            query, key, value = [rearrange(x, 's b h d -> s b (h d)') for x in [query, key, value]]
+            args.shape_order = "SBH"
 
     if self.hidden_size_per_attention_head == 0:
         raise AssertionError("self.hidden_size_per_attention_head should not be ZERO.")
@@ -267,5 +270,7 @@ def dot_product_attention_forward(
 
         if args.reset_attention_mask or args.reset_position_ids:
             output = rearrange(output, '(s b) h d -> s b (h d)', s=seq_length)
+        elif args.shape_order == "BNSD":
+            output = rearrange(output, 'b h s d -> s b (h d)')
 
         return output
