@@ -95,7 +95,7 @@ GPT_ARGS="
     --lr-warmup-fraction 0.01 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
-    --initial-loss-scale 4096 \
+    --initial-loss-scale 512 \
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
     --no-load-optim \
