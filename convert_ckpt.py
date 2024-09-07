@@ -21,14 +21,17 @@ import sys
 from functools import wraps
 import torch.multiprocessing as mp
 import modellink
+from pretrain_gpt import model_provider
+
+MODULE_ROOT = "modellink.tasks.checkpoint"
 
 
 def load_plugin(plugin_type, name):
-    module_name = f"{plugin_type}_{name}"
+    module_name = f"{MODULE_ROOT}.{plugin_type}_{name}"
     try:
         plugin = importlib.import_module(module_name)
     except ModuleNotFoundError:
-        module_name = name
+        module_name = f"{MODULE_ROOT}.{name}"
         try:
             plugin = importlib.import_module(module_name)
         except ModuleNotFoundError:
@@ -76,11 +79,11 @@ def main():
     queue = mp.Queue(maxsize=args.max_queue_size)
 
     print("Starting saver...")
-    saver_proc = mp.Process(target=saver.save_model_checkpoint, args=(queue, args))
+    saver_proc = mp.Process(target=saver.save_model_checkpoint, args=(model_provider, queue, args))
     saver_proc.start()
 
     print("Starting loader...")
-    loader.load_checkpoint(queue, args)
+    loader.load_checkpoint(model_provider, queue, args)
 
     print("Waiting for saver to complete...")
     saver_proc.join()

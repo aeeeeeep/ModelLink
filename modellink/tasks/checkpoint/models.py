@@ -18,7 +18,6 @@ from megatron.training.checkpointing import load_args_from_checkpoint
 from megatron.training.global_vars import set_args
 from megatron.training.checkpointing import load_checkpoint
 from megatron.core import tensor_parallel
-from pretrain_gpt import model_provider
 from modellink.utils import parse_args
 from modellink.training import model_provider_func_wrapper
 from modellink.checkpointing import load_checkpoint_wrapper
@@ -26,7 +25,6 @@ from modellink.checkpointing import load_checkpoint_wrapper
 logger.basicConfig(format="")
 logger.getLogger().setLevel(logger.INFO)
 
-model_provider = model_provider_func_wrapper(model_provider)
 load_checkpoint = load_checkpoint_wrapper(load_checkpoint)
 
 
@@ -381,7 +379,7 @@ class HuggingfaceModel(ModelBase):
         else:
             load_dir = self.args_cmd.load_dir
         self.module = [AutoModelForCausalLM.from_pretrained(load_dir, device_map=device_map, trust_remote_code=trust_remote_code)]
-        if self.args.torch_dtype in ["float16", "bfloat16"]:
+        if hasattr(self.args, "torch_dtype") and self.args.torch_dtype in ["float16", "bfloat16"]:
             self.module[0] = self.module[0].to(eval(f'torch.{self.args.torch_dtype}'))
 
     def get_module_mapping(self):
@@ -639,8 +637,9 @@ class HuggingfaceModel(ModelBase):
 
 
 class MegatronModel(ModelBase):
-    def __init__(self, args_cmd, md=None):
+    def __init__(self, model_provider, args_cmd, md=None):
         super(MegatronModel, self).__init__(args_cmd)
+        self.model_provider = model_provider_func_wrapper(model_provider)
         self.md = md
         self.pp_stage_cache = []
 
@@ -846,7 +845,7 @@ class MegatronModel(ModelBase):
                         pre_process = mpu.is_pipeline_first_stage()
                         post_process = mpu.is_pipeline_last_stage()
                         expert_parallel_size = mpu.get_expert_model_parallel_world_size()
-                        this_model = model_provider(
+                        this_model = self.model_provider(
                             pre_process=pre_process,
                             post_process=post_process
                         ).to(self.args.params_dtype)
@@ -854,7 +853,7 @@ class MegatronModel(ModelBase):
                 else:
                     pre_process = mpu.is_pipeline_first_stage()
                     post_process = mpu.is_pipeline_last_stage()
-                    model_ = [model_provider(pre_process, post_process).to(self.args.params_dtype)]
+                    model_ = [self.model_provider(pre_process, post_process).to(self.args.params_dtype)]
                 self.args.consumed_train_samples = 0
                 self.args.consumed_valid_samples = 0
                 if from_pretrained:
@@ -1015,8 +1014,8 @@ class MegatronModel(ModelBase):
 
 
 class MegatronLegacyModel(MegatronModel):
-    def __init__(self, args_cmd, md=None):
-        super(MegatronLegacyModel, self).__init__(args_cmd, md)
+    def __init__(self, model_provider, args_cmd, md=None):
+        super(MegatronLegacyModel, self).__init__(model_provider, args_cmd, md)
 
     def get_module_mapping(self):
         module_layer = "language_model.encoder.layers[layer_idx]."
@@ -1042,8 +1041,8 @@ class MegatronLegacyModel(MegatronModel):
 
 
 class MegatronMCoreModel(MegatronModel):
-    def __init__(self, args_cmd, md=None):
-        super(MegatronMCoreModel, self).__init__(args_cmd, md)
+    def __init__(self, model_provider, args_cmd, md=None):
+        super(MegatronMCoreModel, self).__init__(model_provider, args_cmd, md)
 
     def get_module_mapping(self):
         module_layer = "decoder.layers[layer_idx]."
@@ -1098,11 +1097,11 @@ class MegatronMCoreModel(MegatronModel):
             "layers_mlp_experts_weight2"] = module_layer + "mlp.experts.weight2"
 
 
-def get_megatron_model(args_cmd, md=None):
+def get_megatron_model(model_provider, args_cmd, md=None):
     if args_cmd.use_mcore_models:
-        return MegatronMCoreModel(args_cmd=args_cmd, md=md)
+        return MegatronMCoreModel(model_provider, args_cmd=args_cmd, md=md)
     else:
-        return MegatronLegacyModel(args_cmd=args_cmd, md=md)
+        return MegatronLegacyModel(model_provider, args_cmd=args_cmd, md=md)
 
 
 def get_huggingface_model(args_cmd):

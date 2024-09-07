@@ -7,7 +7,7 @@ import sys
 import types
 import logging as logger
 import torch
-from models import get_megatron_model
+from .models import get_megatron_model
 
 logger.basicConfig(format="")
 logger.getLogger().setLevel(logger.INFO)
@@ -306,7 +306,7 @@ def to_detach(message):
             message[key] = value.detach()
 
 
-def _load_checkpoint(queue, args):
+def _load_checkpoint(model_provider, queue, args):
 
     # Search in directory above this
     sys.path.append(os.path.abspath(
@@ -315,7 +315,7 @@ def _load_checkpoint(queue, args):
     if args.megatron_path is not None:
         sys.path.insert(0, args.megatron_path)
 
-    model_mg = get_megatron_model(args_cmd=args)
+    model_mg = get_megatron_model(model_provider, args_cmd=args)
     model_mg.initialize_megatron_args(queue=queue, loader_megatron=True)
 
     model_mg.set_tensor_model_parallel_world_size(model_mg.args.tensor_model_parallel_size)
@@ -375,9 +375,9 @@ def _load_checkpoint(queue, args):
     queue.put("done")
 
 
-def load_checkpoint(queue, args):
+def load_checkpoint(model_provider, queue, args):
     try:
-        _load_checkpoint(queue, args)
+        _load_checkpoint(model_provider, queue, args)
     except:
         queue.put("exit")
         raise

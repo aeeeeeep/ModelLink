@@ -4,7 +4,7 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 设置需要的并行配置
-python tools/checkpoint/convert_ckpt.py \
+python convert_ckpt.py \
     --model-type GPT \
     --loader hf_mcore \
     --saver mg_mcore \

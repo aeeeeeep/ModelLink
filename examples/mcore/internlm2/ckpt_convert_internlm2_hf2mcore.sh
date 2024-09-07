@@ -2,7 +2,7 @@
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 权重格式转换
-python tools/checkpoint/convert_ckpt.py \
+python convert_ckpt.py \
    --use-mcore-models \
    --model-type-hf internlm2 \
    --model-type GPT \

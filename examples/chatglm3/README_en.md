@@ -101,7 +101,7 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
     # convert to ptd weights
-    python tools/checkpoint/convert_ckpt.py \
+    python convert_ckpt.py \
         --model-type GPT \
         --loader chatglm3_hf \
         --saver megatron \
@@ -120,7 +120,7 @@ Here's a hardware summary of pre-training  ChatGLM3-6B:
     ```shell
     # Modify the ascend-toolkit path
     source /usr/local/Ascend/ascend-toolkit/set_env.sh
-    python tools/checkpoint/convert_ckpt.py \
+    python convert_ckpt.py \
         --model-type GPT \
         --loader megatron \
         --saver megatron \

@@ -117,7 +117,7 @@ class TestConvertCkptFromHuggingface:
         to compose the unique transformer layer and all these layer stack to compose the entity of the model.
         """
         base_dir = Path(__file__).absolute().parents[3]
-        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
             "--loader", args.loader,
@@ -143,7 +143,7 @@ class TestConvertCkptFromHuggingface:
         to compose the unique transformer layer and all these layer stack to compose the entity of the model.
         """
         base_dir = Path(__file__).absolute().parents[3]
-        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
             "--loader", args.loader,
@@ -168,7 +168,7 @@ class TestConvertCkptFromHuggingface:
         to compose the unique transformer layer and all these layer stack to compose the entity of the model.
         """
         base_dir = Path(__file__).absolute().parents[3]
-        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
             "--loader", args.loader,
@@ -191,7 +191,7 @@ class TestConvertCkptFromHuggingface:
         to compose the unique transformer layer and all these layer stack to compose the entity of the model.
         """
         base_dir = Path(__file__).absolute().parents[3]
-        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
             "--loader", args.loader,
@@ -216,7 +216,7 @@ class TestConvertCkptFromHuggingface:
         to compose the unique transformer layer and all these layer stack to compose the entity of the model.
         """
         base_dir = Path(__file__).absolute().parent.parent.parent
-        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
             "--loader", args.loader,
@@ -255,7 +255,7 @@ class TestConvertCkptFromHuggingface:
         to compose the unique transformer layer and all these layer stack to compose the entity of the model.
         """
         base_dir = Path(__file__).absolute().parent.parent.parent
-        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
             "--loader", args.loader,
@@ -290,7 +290,7 @@ class TestConvertCkptFromHuggingface:
         to compose the unique transformer layer and all these layer stack to compose the entity of the model.
         """
         base_dir = Path(__file__).absolute().parents[3]
-        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
             "--loader", args.loader,
