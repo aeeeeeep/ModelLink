@@ -29,6 +29,7 @@ DISTRIBUTED_ARGS="
 "
 
 MLA_ARGS="
+    --spec modellink.tasks.models.spec.deepseek_spec layer_spec \
     --reuse-fp32-param \
     --multi-head-latent-attention \
     --qk-rope-head-dim 64 \

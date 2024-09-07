@@ -31,6 +31,7 @@ DISTRIBUTED_ARGS="
 "
 
 python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
+    --spec modellink.tasks.models.spec.deepseek_spec layer_spec \
     --load "${CHECKPOINT}" \
     --task chat \
     --max-new-tokens 256 \
