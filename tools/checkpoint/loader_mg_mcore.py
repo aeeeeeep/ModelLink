@@ -222,7 +222,7 @@ def _get_message_layer_mlp(message, model, md=None, is_moe_mlp=False, **kwargs):
 def get_message_layer_mlp(message, model, md=None, **kwargs):
     # Grab all parallel tensors for this layer
     margs = model.get_args()
-    layer_idx = kwargs["layer_idx"] * kwargs["pp_rank"] * len(model.get_layers_module(**kwargs))
+    layer_idx = kwargs["layer_idx"] + kwargs["pp_rank"] * len(model.get_layers_module(**kwargs))
     first_k_dense_replace = getattr(margs, 'first_k_dense_replace', None)
     moe_layer_freq = getattr(margs, 'moe_layer_freq', None)
     if (
@@ -232,7 +232,7 @@ def get_message_layer_mlp(message, model, md=None, **kwargs):
     ):
         if layer_idx >= first_k_dense_replace and layer_idx % moe_layer_freq == 0:
             message["mlp_moe"] = {}
-            mlp_router_weight = model.get_layers_mlp_router_weight(layer_idx=layer_idx)
+            mlp_router_weight = model.get_layers_mlp_router_weight(**kwargs)
             num_experts_local = margs.num_experts // margs.expert_model_parallel_size
             message["mlp_moe"]["mlp router weight"] = mlp_router_weight
             weight1 = []
