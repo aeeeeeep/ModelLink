@@ -563,7 +563,9 @@ def _validate_evaluation_args(args):
             raise ValueError(f"Test and dev directory must exists when specify prompt_type in evaluation")
 
 
-def _validate_moe_expert_capacity_factor(args):
+def _validate_moe_args(args):
+    if not args.use_mcore_models and args.num_experts and args.num_experts > 1:
+        raise ValueError(f'MOE is not supported in legacy model. Please activate `--use-mcore-models` to enable moe features.')
     if args.moe_expert_capacity_factor is not None:
         if args.moe_token_dispatcher_type != "alltoall":
             raise ValueError(f'moe_expert_capacity_factor only works with alltoall token dispatcher')
@@ -704,14 +706,13 @@ def validate_args_decorator(megatron_validate_args):
         _validate_position_embedding(args)
         _validate_high_availability(args)
         _validate_inference_args(args)
-        _validate_moe_expert_capacity_factor(args)
+        _validate_moe_args(args)
         _validate_mla(args)
         _validate_yarn(args)
         _validate_transformer_block_build_layers(args)
         _validate_group_limited_greedy(args)
         _validate_evaluation_args(args)
         _validate_output_layer_slice_num(args)
-
         _validate_optimizer(args)
 
         _add_dummy_args(args)
