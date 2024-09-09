@@ -21,7 +21,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --tensor-model-parallel-size 8  \
        --pipeline-model-parallel-size 1  \
        --task chat \
-       --hf-chat-template \
+       --prompt-type llama2 \
        --add-eos-token '<|eot_id|>' \
        --top-p 0.9 \
        --temperature 1 \
