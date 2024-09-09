@@ -910,7 +910,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
     </tr>
     <tr>
       <td rowspan="2"><a href="https://github.com/OpenBMB/MiniCPM">MiniCPM</a></td>
-      <td> 2B </td>
+      <td> <a herf="https://huggingface.co/openbmb/MiniCPM-2B-sft-bf16">2B </a></td>
       <td> 4K </td>
       <th> Mcore </th>
       <td> 1x8 </td>
@@ -922,7 +922,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
-      <td> 8x2B </td>
+      <td> <a herf="https://huggingface.co/openbmb/MiniCPM-MoE-8x2B">8x2B </a></td>
       <td> 4K </td>
       <th>Mcore</th>
       <td> 1x8 </td>

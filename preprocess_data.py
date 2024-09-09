@@ -125,6 +125,8 @@ def add_data_args(parser):
                        help="Where to store the cache of dataset from local.")
     group.add_argument("--map-keys", type=json.loads, default=None,
                        help="Dataset field mapping.")
+    group.add_argument("--pack", action="store_true",
+                       help="Package multiple samples into one sample in a fine tuning dataset.")
 
 
 def add_tokenizer_args(parser):

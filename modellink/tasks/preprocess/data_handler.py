@@ -63,7 +63,7 @@ class BaseDatasetHandler(object):
         proc_kwargs = {} if self.args.streaming else {"num_proc": self.args.workers}
         return self.raw_datasets.map(self._filter, remove_columns=remove_columns, **proc_kwargs)
 
-    def serialize_to_disk(self, iteration_batch_size=50):
+    def _original_serialize_to_disk(self, iteration_batch_size=50):
         """save idx and bin to disk"""
         startup_start = time.time()
         if not self.tokenized_dataset:
@@ -116,6 +116,94 @@ class BaseDatasetHandler(object):
         logger.info("Skip %s sample exceeded seq-length(%s)", skip_num // 3, self.args.seq_length)
         for key in self.args.json_keys:
             builders[key].finalize(output_idx_files[key])
+
+    def _sft_pack_serialize_to_disk(self):
+        """save idx and bin to disk"""
+        startup_start = time.time()
+        if not self.tokenized_dataset:
+            self.tokenized_dataset = self.get_tokenized_data()
+        output_bin_files = {}
+        output_idx_files = {}
+        builders = {}
+        level = "document"
+        if self.args.split_sentences:
+            level = "sentence"
+
+        logger.info("Vocab size: %s", self.tokenizer.vocab_size)
+        logger.info("Output prefix: %s", self.args.output_prefix)
+        for key in self.args.json_keys:
+            output_bin_files[key] = f"{self.args.output_prefix}_{key}_{level}.bin"
+            output_idx_files[key] = f"{self.args.output_prefix}_{key}_{level}.idx"
+            # vocab_size=None : use int32 dtype for -100 will be used in labels
+            builders[key] = indexed_dataset.IndexedDatasetBuilder(output_bin_files[key])
+
+        self.output_idx_files = output_idx_files
+        startup_end = time.time()
+        proc_start = time.time()
+        total_bytes_processed = 0
+        logger.info("Time to startup:%s", startup_end - startup_start)
+
+        valid_num = 0
+        key_data_dict = {key: [] for key in self.args.json_keys}
+        lengths = []
+        length2indexes = defaultdict(list)
+        for i, doc in enumerate(iter(self.tokenized_dataset), start=1):
+            batch = doc["input_ids"]
+            for sample in batch:
+                length = len(sample)
+                if length > self.args.seq_length:
+                    logger.warning(f"Dropped lengthy example with length {length} > {self.args.seq_length}.")
+                else:
+                    lengths.append(length)
+                    length2indexes[length].append(valid_num)
+                    for key in self.args.json_keys:
+                        key_data_dict[key].append(sample)
+                    valid_num += 1
+
+        logger.info(f"valid_num = {valid_num}, total_num = {len(self.tokenized_dataset)}, "
+                    f"percentage : {valid_num / len(self.tokenized_dataset) * 100}%")
+
+        knapsacks = greedy_knapsack(lengths, self.args.seq_length - 1)  # reserved for the padding token
+        logger.info(f"new samples num : {len(knapsacks)}")
+        for k, knapsack in enumerate(knapsacks):
+            packed_data_dict = {key: [] for key in self.args.json_keys}
+
+            for i, length in enumerate(knapsack):
+                index = length2indexes[length].pop()
+                for key in self.args.json_keys:
+                    packed_data_dict[key] += key_data_dict[key][index]
+
+            if k % self.args.log_interval == 0:
+                current = time.time()
+                elapsed = current - proc_start
+                logger.info("Processed %s documents (%s docs/s).", k, self.args.log_interval / elapsed)
+
+            pad_length = self.args.seq_length - len(packed_data_dict['input_ids'])
+            pad_token_id = self.tokenizer.pad_token_id if hasattr(self.tokenizer, 'pad_token_id') else 1
+            packed_data_dict['input_ids'] += [pad_token_id] * pad_length
+            packed_data_dict['attention_mask'] += [1] * pad_length
+            packed_data_dict['labels'] += [self.ignored_label] * pad_length
+
+            for key in self.args.json_keys:
+                if len(packed_data_dict[key]) != self.args.seq_length:
+                    raise ValueError("The length of packed example should be identical to the seq_length.")
+
+                sentence = torch.IntTensor(packed_data_dict[key])
+                builders[key].add_item(sentence)
+                builders[key].end_document()
+
+        for key in self.args.json_keys:
+            builders[key].finalize(output_idx_files[key])
+
+    
+    def serialize_to_disk(self, iteration_batch_size=50):
+        if self.args.pack:
+            if len(self.args.json_keys) == 1: # PretrainHandler
+                raise ValueError("Pre-training data processing does not need to be packed."
+                                 "Therefore the --pack parameter is not required.")
+            self._sft_pack_serialize_to_disk()
+        else:
+            self._original_serialize_to_disk(iteration_batch_size=iteration_batch_size)
 
     def _tokenize(self, prompt):
         result = self._unwrapped_tokenizer(text=prompt)
@@ -376,87 +464,6 @@ class GeneralInstructionHandler(BaseDatasetHandler):
             tokenized_full_prompt[key] = [tokenized_full_prompt[key]]
 
         return tokenized_full_prompt
-
-
-class PackGeneralInstructionHandler(GeneralInstructionHandler):
-
-    def serialize_to_disk(self, iteration_batch_size=50):
-        """save idx and bin to disk"""
-        startup_start = time.time()
-        if not self.tokenized_dataset:
-            self.tokenized_dataset = self.get_tokenized_data()
-        output_bin_files = {}
-        output_idx_files = {}
-        builders = {}
-        level = "document"
-        if self.args.split_sentences:
-            level = "sentence"
-
-        logger.info("Vocab size: %s", self.tokenizer.vocab_size)
-        logger.info("Output prefix: %s", self.args.output_prefix)
-        for key in self.args.json_keys:
-            output_bin_files[key] = f"{self.args.output_prefix}_{key}_{level}.bin"
-            output_idx_files[key] = f"{self.args.output_prefix}_{key}_{level}.idx"
-            # vocab_size=None : use int32 dtype for -100 will be used in labels
-            builders[key] = indexed_dataset.IndexedDatasetBuilder(output_bin_files[key])
-
-        self.output_idx_files = output_idx_files
-        startup_end = time.time()
-        proc_start = time.time()
-        total_bytes_processed = 0
-        logger.info("Time to startup:%s", startup_end - startup_start)
-
-        valid_num = 0
-        key_data_dict = {key: [] for key in self.args.json_keys}
-        lengths = []
-        length2indexes = defaultdict(list)
-        for i, doc in enumerate(iter(self.tokenized_dataset), start=1):
-            batch = doc["input_ids"]
-            for sample in batch:
-                length = len(sample)
-                if length > self.args.seq_length:
-                    logger.warning(f"Dropped lengthy example with length {length} > {self.args.seq_length}.")
-                else:
-                    lengths.append(length)
-                    length2indexes[length].append(valid_num)
-                    for key in self.args.json_keys:
-                        key_data_dict[key].append(sample)
-                    valid_num += 1
-
-        logger.info(f"valid_num = {valid_num}, total_num = {len(self.tokenized_dataset)}, "
-                    f"percentage : {valid_num / len(self.tokenized_dataset) * 100}%")
-
-        knapsacks = greedy_knapsack(lengths, self.args.seq_length - 1)  # reserved for the padding token
-        logger.info(f"new samples num : {len(knapsacks)}")
-        for k, knapsack in enumerate(knapsacks):
-            packed_data_dict = {key: [] for key in self.args.json_keys}
-
-            for i, length in enumerate(knapsack):
-                index = length2indexes[length].pop()
-                for key in self.args.json_keys:
-                    packed_data_dict[key] += key_data_dict[key][index]
-
-            if k % self.args.log_interval == 0:
-                current = time.time()
-                elapsed = current - proc_start
-                logger.info("Processed %s documents (%s docs/s).", k, self.args.log_interval / elapsed)
-
-            pad_length = self.args.seq_length - len(packed_data_dict['input_ids'])
-            pad_token_id = self.tokenizer.pad_token_id if hasattr(self.tokenizer, 'pad_token_id') else 1
-            packed_data_dict['input_ids'] += [pad_token_id] * pad_length
-            packed_data_dict['attention_mask'] += [1] * pad_length
-            packed_data_dict['labels'] += [self.ignored_label] * pad_length
-
-            for key in self.args.json_keys:
-                if len(packed_data_dict[key]) != self.args.seq_length:
-                    raise ValueError("The length of packed example should be identical to the seq_length.")
-
-                sentence = torch.IntTensor(packed_data_dict[key])
-                builders[key].add_item(sentence)
-                builders[key].end_document()
-
-        for key in self.args.json_keys:
-            builders[key].finalize(output_idx_files[key])
 
 
 class BelleMultiTurnInstructionHandler(GeneralInstructionHandler):
