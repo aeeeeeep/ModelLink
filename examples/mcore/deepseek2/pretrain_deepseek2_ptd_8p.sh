@@ -69,12 +69,13 @@ GPT_ARGS="
     --load $CKPT_LOAD_DIR \
     --use-distributed-optimizer \
     --use-flash-attn \
+    --shape-order BNSD \
     --use-mcore-models \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --expert-model-parallel-size ${EP} \
     --sequence-parallel \
-    --output-layer-slice-num 8 \
+    --output-layer-slice-num 10 \
     --num-layers 2 \
     --hidden-size 5120 \
     --ffn-hidden-size 12288 \

@@ -49,6 +49,7 @@ class MultiHeadLatentAttention(SelfAttention):
             self.core_attention = UlyssesContextAttention(self.core_attention, ulysses_group)
 
         self.use_flash_attn = args.use_flash_attn
+        self.shape_order = args.shape_order
         self.qk_rope_head_dim = args.qk_rope_head_dim
         self.qk_nope_head_dim = args.qk_nope_head_dim
         self.q_lora_rank = args.q_lora_rank
@@ -205,12 +206,13 @@ class MultiHeadLatentAttention(SelfAttention):
         k_pe = k_pe.repeat(1, 1, query.shape[2], 1)
         key = torch.cat([k_nope, k_pe], dim=-1)
 
-        # if self.use_flash_attn and self.q_head_dim != self.v_head_dim:
-        #     value = F.pad(value, [0, self.q_head_dim - self.v_head_dim])
         if self.use_flash_attn and self.q_head_dim != self.v_head_dim:
-            query = F.pad(query, [0, 256 - self.q_head_dim])
-            key = F.pad(key, [0, 256 - self.q_head_dim])
-            value = F.pad(value, [0, 256 - self.v_head_dim])
+            if self.shape_order == "BNSD":
+                value = F.pad(value, [0, self.q_head_dim - self.v_head_dim])
+            else:
+                query = F.pad(query, [0, 256 - self.q_head_dim])
+                key = F.pad(key, [0, 256 - self.q_head_dim])
+                value = F.pad(value, [0, 256 - self.v_head_dim])
         
         # Do repeat KV to support GQA+Ulysses
         args = get_args()
