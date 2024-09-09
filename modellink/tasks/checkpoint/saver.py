@@ -39,7 +39,7 @@ def add_arguments(parser):
                        help='Target tensor model parallel size, default to the pipeline parall size '
                             'in the input checkpoint if provided by the loader, otherwise to 1')
     group.add_argument('--save-model-type', type=str, default='megatron',
-                       choices=['megatron', 'huggingface'], help='Save model type')
+                       choices=['mg', 'hf'], help='Save model type')
     group.add_argument("--w-pack", type=bool,
                        help='True is w_pack weight for llm',
                        default=False)
@@ -53,6 +53,8 @@ def add_arguments(parser):
                        help='Use the implementation from megatron core')
     group.add_argument('--moe-grouped-gemm', action='store_true',
                        help='Usr moe grouped gemm.')
+    group.add_argument('--save-to-legacy', action='store_true',
+                       help='Whether to save as legacy')
 
 
 def update_padded_vocab_size(md, model_mg, orig_tensor, orig_word_embed):
@@ -154,9 +156,14 @@ def set_model_preprocess(model, embeddings_msg):
 
 
 def set_model_layer_norm(model_mg, msg, md, **kwargs):
+    margs = model_mg.get_args()
+    post_norm = margs.post_norm
     # duplicated tensors
     input_norm_weight = msg.pop("input norm weight")
-    post_norm_weight = msg.pop("post norm weight")
+    if post_norm:
+        post_norm_weight = msg.pop("post norm weight")
+    else:
+        post_norm_weight = msg.pop("pre mlp norm weight")
     input_norm_bias = None
     post_norm_bias = None
     if md.norm_has_bias:
@@ -164,9 +171,6 @@ def set_model_layer_norm(model_mg, msg, md, **kwargs):
     if md.norm_has_bias:
         post_norm_bias = msg.pop("post norm bias")
 
-    margs = model_mg.get_args()
-
-    post_norm = margs.post_norm
     if post_norm:
         pre_mlp_norm_weight = msg.pop("pre mlp norm weight")
         post_mlp_norm_weight = msg.pop("post mlp norm weight")
@@ -367,7 +371,10 @@ def set_model_postprocess(model_mg, msg, md, out_word_embed_list, **kwargs):
                 model_mg.set_final_layernorm_bias(**kwargs, data=final_norm_bias)
             if kwargs.get("pp_rank", 0) != 0 and not md.output_layer:
                 # Copy word embeddings to final pipeline rank
-                model_mg.set_word_embeddings_weight(**kwargs, data=out_word_embed_list[ep_rank][tp_rank])
+                if model_mg.args.use_mcore_models:
+                    model_mg.set_output_layer_weight(**kwargs, data=out_word_embed_list[ep_rank][tp_rank])
+                else:
+                    model_mg.set_word_embeddings_weight(**kwargs, data=out_word_embed_list[ep_rank][tp_rank])
     del final_norm_weight
     if final_norm_bias is not None:
         del final_norm_bias
@@ -407,10 +414,10 @@ def save_model(model_mg, md, **kwargs):
             for vp_rank in range(virtual_pipeline_model_parallel_size):
                 kwargs["vp_rank"] = vp_rank
                 vp_models.append(model_mg.get_model_item(**kwargs))
-            if args_cmd.save_model_type == 'megatron':
+            if args_cmd.save_model_type == 'mg':
                 # Split the PP into multiple VPPs and select the corresponding layers for each VPP by copying and deleting
                 save_checkpoint(md.iteration, vp_models, None, None, 0)
-            elif args_cmd.save_model_type == "huggingface":
+            elif args_cmd.save_model_type == "hf":
                 save_huggingface(args_cmd, model_mg)
 
 
@@ -468,6 +475,9 @@ def save_model_checkpoint(model_provider, queue, args):
     # so trick it into thinking we are plenty of processes
     if args.target_tensor_parallel_size is not None and args.target_pipeline_parallel_size is not None:
         os.environ["WORLD_SIZE"] = f'{args.target_tensor_parallel_size * args.target_pipeline_parallel_size}'
+
+    if args.use_mcore_models and args.save_to_legacy:
+        args.use_mcore_models = False
 
     # We want all arguments to come from us
     model_mg = get_megatron_model(model_provider=model_provider, args_cmd=args, md=md)

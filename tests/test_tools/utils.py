@@ -9,6 +9,7 @@ import re
 import json
 import glob
 import sys
+import subprocess
 import pytest
 import torch
 import torch_npu
@@ -58,13 +59,19 @@ def compare_state_dicts(state_dict1, state_dict2):
     return True
 
 
-def weight_compare(dir_1, dir_2, suffix="pt"):
+def weight_compare(dir_1, dir_2, suffix="pt", use_md5=False):
     models_path = glob.glob(os.path.join(dir_1, '**', f'*.{suffix}'), recursive=True)
+    if not models_path:
+        print(f"Can't find any weight files in {dir_1}.")
+        return False
     for path_1 in models_path:
         path_2 = path_1.replace(dir_1, dir_2)
-        state_dict1 = torch.load(path_1)
-        state_dict2 = torch.load(path_2)
-        are_equal = compare_state_dicts(state_dict1, state_dict2)
+        if use_md5:
+            are_equal = (get_md5sum(path_1) == get_md5sum(path_2))
+        else:
+            state_dict1 = torch.load(path_1)
+            state_dict2 = torch.load(path_2)
+            are_equal = compare_state_dicts(state_dict1, state_dict2)
         if not are_equal:
             return False
 
@@ -94,11 +101,29 @@ def build_args(request, monkeypatch):
     monkeypatch.setattr(sys, "argv", argv)
 
 
-def create_testconfig(path: str):
+def create_testconfig(path: str, cmd: bool = False):
     with open(path) as f:
         raw_data = json.load(f)
     
-    return {k: [tuple(s.values()) if len(s) > 1 else tuple(s.values())[0] for s in v] for k, v in raw_data.items()}
+    res = {k: [tuple(s.values()) if len(s) > 1 else tuple(s.values())[0] for s in v] for k, v in raw_data.items()}
+
+    if not cmd:
+        return res
+
+    def __dict2cmdlist(param_value):
+        cmdlsts = []
+        for target in param_value:
+            cmdlst = []
+            for k, v in target.items():
+                if v is not None:
+                    cmdlst.extend([f"--{k}", v])
+                else:
+                    cmdlst.append(f"--{k}")
+        cmdlsts.extend(cmdlst)
+        return cmdlsts
+
+    res_cmd = {key: __dict2cmdlist(value) for key, value in res.items()}
+    return res_cmd
 
 
 class ListHandler(logging.Handler):
@@ -126,3 +151,7 @@ def setup_logger(pattern):
     logger.addHandler(handler)
 
     return handler, handler.log_capture
+
+
+def run_cmd(cmd_strlist):
+    return subprocess.run(cmd_strlist).returncode

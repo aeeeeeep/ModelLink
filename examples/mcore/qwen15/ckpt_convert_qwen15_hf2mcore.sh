@@ -3,8 +3,8 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 python convert_ckpt.py \
     --model-type GPT \
-    --loader hf_mcore \
-    --saver mg_mcore \
+    --load-model-type hf \
+    --save-model-type mg \
     --target-tensor-parallel-size 8 \
     --target-pipeline-parallel-size 8 \
     --load-dir ./model_from_hf/qwen1.5_110B_hf/ \

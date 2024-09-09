@@ -5,10 +5,9 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python convert_ckpt.py \
 	--use-mcore-models \
 	--model-type-hf llama2 \
-	--save-model-type huggingface \
 	--model-type GPT \
-	--loader mg_mcore \
-	--saver mg_mcore \
+	--load-model-type mg \
+    --save-model-type hf \
 	--params-dtype bf16 \
 	--target-tensor-parallel-size 1 \
 	--target-pipeline-parallel-size 1 \
