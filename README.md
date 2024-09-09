@@ -896,6 +896,19 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Pass】</td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="https://huggingface.co/deepseek-ai/DeepSeek-V2">DeepSeek-V2</a></td>
+      <td> 60B </td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td> 4x8 </td>
+      <td> BF16 </td>
+      <td> 1083 </td>
+      <td> -- </td>
+      <td> 1343 </td>
+      <td><center>【昇腾】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
       <td rowspan="2"><a href="https://github.com/OpenBMB/MiniCPM">MiniCPM</a></td>
       <td> 2B </td>
       <td> 4K </td>
