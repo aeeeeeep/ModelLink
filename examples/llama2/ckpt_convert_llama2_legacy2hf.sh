@@ -2,7 +2,7 @@
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 #   --num-layers-per-virtual-pipeline-stage 5 \  结合需要使用
-python tools/checkpoint/convert_ckpt.py \
+python convert_ckpt.py \
     --model-type GPT \
     --loader megatron \
     --saver megatron \

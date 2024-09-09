@@ -20,7 +20,7 @@ import logging as logger
 import torch
 from megatron.training.checkpointing import save_checkpoint
 from megatron.core import mpu
-from models import get_megatron_model
+from .models import get_megatron_model
 
 logger.basicConfig(format="")
 logger.getLogger().setLevel(logger.INFO)
@@ -416,7 +416,7 @@ def save_model(model_mg, md, **kwargs):
 
 def save_huggingface(args, model):
     '''Set model params.'''
-    from models import get_huggingface_model
+    from .models import get_huggingface_model
     model_hf = get_huggingface_model(args)
     model_hf.get_modules_from_pretrained()
     args_cmd = model_hf.get_args_cmd()
@@ -428,7 +428,7 @@ def save_huggingface(args, model):
     model_hf.get_model_item().save_pretrained(save_dir)
 
 
-def save_model_checkpoint(queue, args):
+def save_model_checkpoint(model_provider, queue, args):
     # Search in directory above this
     sys.path.append(os.path.abspath(
         os.path.join(os.path.dirname(__file__),
@@ -470,7 +470,7 @@ def save_model_checkpoint(queue, args):
         os.environ["WORLD_SIZE"] = f'{args.target_tensor_parallel_size * args.target_pipeline_parallel_size}'
 
     # We want all arguments to come from us
-    model_mg = get_megatron_model(args_cmd=args, md=md)
+    model_mg = get_megatron_model(model_provider=model_provider, args_cmd=args, md=md)
     model_mg.initialize_megatron_args(queue=queue, saver_megatron=True)
 
     # Make models for first pipeline stage and fill in embeddings

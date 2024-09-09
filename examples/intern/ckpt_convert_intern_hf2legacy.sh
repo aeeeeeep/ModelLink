@@ -1,6 +1,6 @@
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-python tools/checkpoint/convert_ckpt.py \
+python convert_ckpt.py \
     --model-type GPT \
     --loader llama2_hf \
     --saver megatron \

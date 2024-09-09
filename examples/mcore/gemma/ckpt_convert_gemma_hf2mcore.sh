@@ -2,7 +2,7 @@
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 设置并行策略
-python tools/checkpoint/convert_ckpt.py \
+python convert_ckpt.py \
     --use-mcore-models \
     --model-type-hf gemma \
     --model-type GPT \

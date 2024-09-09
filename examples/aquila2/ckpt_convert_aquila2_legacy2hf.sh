@@ -2,7 +2,7 @@
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 #   --params-dtype bf16 结合需要使用
-python tools/checkpoint/convert_ckpt.py --model-type GPT \
+python convert_ckpt.py --model-type GPT \
     --loader megatron \
     --saver megatron \
     --save-model-type save_huggingface_llama \

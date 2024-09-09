@@ -37,7 +37,7 @@ class TestConvertCkptFromHuggingface(unittest.TestCase):
         """
         # run convert weight
         base_dir = Path(__file__).absolute().parent.parent.parent.parent
-        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = sys.argv[1:]
         subprocess.run(["python", file_path] + arguments)
 

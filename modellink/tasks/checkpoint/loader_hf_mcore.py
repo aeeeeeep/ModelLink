@@ -19,8 +19,8 @@ import types
 import logging as logger
 import torch
 import transformers
-from models import get_megatron_model
-from models import get_huggingface_model
+from .models import get_megatron_model
+from .models import get_huggingface_model
 
 logger.basicConfig(format="")
 logger.getLogger().setLevel(logger.INFO)
@@ -300,7 +300,7 @@ def get_message_output_layer(model, md):
     return message
 
 
-def _load_checkpoint(queue, args):
+def _load_checkpoint(model_provider, queue, args):
     # Llama-2 requires HF transformers >=4.31.0.
     verify_transformers_version()
 
@@ -316,7 +316,7 @@ def _load_checkpoint(queue, args):
     args_hf = model_hf.get_args()
     args_hf.moe_grouped_gemm = args.moe_grouped_gemm
 
-    model_mg = get_megatron_model(args_cmd=args)
+    model_mg = get_megatron_model(model_provider, args_cmd=args)
     model_mg.initialize_megatron_args(args_hf, queue)
 
     model_mg.set_tensor_model_parallel_world_size(model_mg.args.tensor_model_parallel_size)
@@ -366,9 +366,9 @@ def _load_checkpoint(queue, args):
     queue.put("done")
 
 
-def load_checkpoint(queue, args):
+def load_checkpoint(model_provider, queue, args):
     try:
-        _load_checkpoint(queue, args)
+        _load_checkpoint(model_provider, queue, args)
     except:
         queue.put("exit")
         raise

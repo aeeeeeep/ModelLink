@@ -35,7 +35,7 @@ class TestConvertCkptFromHuggingface:
         dk = 128
         
         base_dir = Path(__file__).absolute().parent.parent.parent
-        file_path = os.path.join(base_dir, "tools/checkpoint/convert_ckpt.py")
+        file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
             "--loader", args.loader,

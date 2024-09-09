@@ -178,10 +178,9 @@ def set_layer_state(args, model, hf_model, layer_idx):
     layer.post_attention_norm.weight.data.copy_(hf_layer.post_attention_layernorm.weight)
 
 
-def load_checkpoint_to_model(args):
+def load_checkpoint_to_model(model_provider, args):
     '''Set model params.'''
 
-    from pretrain_gpt import model_provider
     from transformers import AutoModelForCausalLM
 
     # Load Huggingface model.
@@ -199,7 +198,7 @@ def load_checkpoint_to_model(args):
     return model
 
 
-def _load_checkpoint(queue, args):
+def _load_checkpoint(model_provider, queue, args):
     # Llama-2 requires HF transformers >=4.31.0.
     verify_transformers_version()
 
@@ -329,7 +328,7 @@ def _load_checkpoint(queue, args):
     # Get first pipe stage.
     mpu.set_tensor_model_parallel_rank(0)
     mpu.set_pipeline_model_parallel_rank(0)
-    model = load_checkpoint_to_model(margs)
+    model = load_checkpoint_to_model(model_provider, margs)
 
     queue.put(md)
 
@@ -433,9 +432,9 @@ def _load_checkpoint(queue, args):
     queue.put("done")
 
 
-def load_checkpoint(queue, args):
+def load_checkpoint(model_provider, queue, args):
     try:
-        _load_checkpoint(queue, args)
+        _load_checkpoint(model_provider, queue, args)
     except:
         queue.put("exit")
         raise

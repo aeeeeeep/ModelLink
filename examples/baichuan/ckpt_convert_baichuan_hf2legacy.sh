@@ -2,7 +2,7 @@
  source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 选择你需要的并行策略，--params-dtype bf16 \  结合需要使用
-python tools/checkpoint/convert_ckpt.py \
+python convert_ckpt.py \
    --model-type GPT \
    --loader llama2_hf \
    --saver megatron \

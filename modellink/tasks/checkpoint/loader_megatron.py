@@ -133,10 +133,8 @@ def _load_checkpoint(queue, args):
 
     # Determine how to make our models
     if args.model_type == 'GPT':
-        from pretrain_gpt import model_provider
         margs.model_type = ModelType.encoder_or_decoder
     elif args.model_type == 'BERT':
-        from pretrain_bert import model_provider
         margs.model_type = ModelType.encoder_or_decoder
     else:
         raise Exception(f'unrecognized model type: {args.model_type}')
@@ -402,9 +400,9 @@ def _load_checkpoint(queue, args):
     queue.put("done")
 
 
-def load_checkpoint(queue, args):
+def load_checkpoint(model_provider, queue, args):
     try:
-        _load_checkpoint(queue, args)
+        _load_checkpoint(model_provider, queue, args)
     except:
         queue.put("exit")
         raise
