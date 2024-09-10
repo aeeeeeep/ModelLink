@@ -28,7 +28,7 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --task $TASK \
        --tensor-model-parallel-size 8 \
        --pipeline-model-parallel-size 1 \
-       --num-layers 64 \
+       --num-layers 80 \
        --hidden-size 8192 \
        --num-attention-heads 64 \
        --ffn-hidden-size 24576 \
