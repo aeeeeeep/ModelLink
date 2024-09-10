@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # The number of parameters is not aligned
-export  LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib:/root/miniconda3/lib:$LD_LIBRARY_PATH
 export HCCL_CONNECT_TIMEOUT=1800
 export COMBINED_ENABLE=1
 export CUDA_DEVICE_MAX_CONNECTIONS=1
@@ -28,7 +27,7 @@ torchrun $DISTRIBUTED_ARGS evaluation.py \
        --task $TASK \
        --tensor-model-parallel-size 8 \
        --pipeline-model-parallel-size 1 \
-       --num-layers 64 \
+       --num-layers 80 \
        --hidden-size 8192 \
        --num-attention-heads 64 \
        --ffn-hidden-size 24576 \
