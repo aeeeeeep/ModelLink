@@ -63,7 +63,8 @@
     # 安装加速库
     git clone https://gitee.com/ascend/MindSpeed.git
     cd MindSpeed
-    git checkout core_r0.6.0
+    # checkout commit from MindSpeed core_r0.6.0
+    git checkout e6ea2117 
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
