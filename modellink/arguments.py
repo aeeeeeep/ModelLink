@@ -409,7 +409,7 @@ def _add_training_args(parser):
     group.add_argument('--sparse-mode', type=int, default=0,
                        help='different modes of flash attention mask')
     group.add_argument('--shape-order', type=str, default='SBH',
-                       choices=['SBH', 'BSH', 'BSND'],
+                       choices=['SBH', 'BSH', 'BSND', 'BNSD'],
                        help='input shape order used by Flash attention')
     group.add_argument('--use-deter-comp',
                        action='store_true',
