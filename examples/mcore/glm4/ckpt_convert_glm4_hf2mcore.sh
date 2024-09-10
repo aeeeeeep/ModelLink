@@ -5,8 +5,8 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python tools/checkpoint/convert_ckpt.py \
    --model-type-hf chatglm3 \
    --model-type GPT \
-   --loader hf_mcore \
-   --saver mg_mcore \
+   --load-model-type hf \
+   --save-model-type mg \
    --target-tensor-parallel-size 2 \
    --target-pipeline-parallel-size 2 \
    --load-dir ./model_from_hf/glm4_hf \

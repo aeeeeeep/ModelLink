@@ -7,8 +7,8 @@ python convert_ckpt.py \
    --moe-grouped-gemm \
    --model-type-hf deepseek2 \
    --model-type GPT \
-   --loader hf_mcore \
-   --saver mg_mcore \
+   --load-model-type hf \
+   --save-model-type mg \
    --params-dtype bf16 \
    --target-tensor-parallel-size 1 \
    --target-pipeline-parallel-size 1 \

@@ -6,8 +6,8 @@ python convert_ckpt.py \
     --use-mcore-models \
     --model-type GPT \
     --model-type-hf llama2 \
-    --loader hf_mcore \
-    --saver mg_mcore \
+    --load-model-type hf \
+    --save-model-type mg \
     --target-tensor-parallel-size 8 \
     --target-pipeline-parallel-size 2 \
     --load-dir ./model_from_hf/Codellama-hf/ \

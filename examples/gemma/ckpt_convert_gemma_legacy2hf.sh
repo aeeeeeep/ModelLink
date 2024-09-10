@@ -4,9 +4,8 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python convert_ckpt.py \
     --model-type-hf gemma \
     --model-type GPT \
-    --loader mg_mcore \
-    --saver mg_mcore \
-    --save-model-type huggingface \
+    --load-model-type mg \
+    --save-model-type hf \
     --load-dir ./model_weights/gemma-legacy/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \

@@ -139,13 +139,12 @@ def get_message_preprocess(model, md):
 def get_message_layer_norm(message, model, layer_idx, md, args=None):
     # Get non-parallel tensors from tp_rank 0.
     message["input norm weight"] = model.get_layers_input_layernorm_weight(layer_idx=layer_idx)
-    message["post norm weight"] = model.get_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx)
 
     if args.post_norm:
-        message["post norm weight"] = model.get_layers_self_attention_post_attention_layernorm_weight(
-            layer_idx=layer_idx)
-        message["pre mlp norm weight"] = model.get_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx)
+        message["post norm weight"] = model.get_layers_self_attention_post_attention_layernorm_weight(layer_idx=layer_idx)
         message["post mlp norm weight"] = model.get_layers_self_attention_post_mlp_layernorm_weight(layer_idx=layer_idx)
+    else:
+        message["pre mlp norm weight"] = model.get_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx)
 
     if md.norm_has_bias:
         message["input norm bias"] = model.get_layers_input_layernorm_bias(layer_idx=layer_idx)

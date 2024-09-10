@@ -47,8 +47,8 @@ class CovertDynamicCkptFromHuggingfaceArgs:
 
 class CovertMCoreDynamicCkptFromHuggingfaceArgs:
     model_type = "GPT"
-    loader = "hf_mcore"
-    saver = "mg_mcore"
+    load_model_type = "hf"
+    save_model_type = "mg"
     target_tensor_parallel_size = "2"
     target_pipeline_parallel_size = "4"
     load_dir = "/data/llama-2-7b-hf/"
@@ -60,8 +60,8 @@ class CovertMCoreDynamicCkptFromHuggingfaceArgs:
 
 class CovertMCoreVPPCkptFromHuggingfaceArgs:
     model_type = "GPT"
-    loader = "hf_mcore"
-    saver = "mg_mcore"
+    load_model_type = "hf"
+    save_model_type = "mg"
     target_tensor_parallel_size = "2"
     target_pipeline_parallel_size = "4"
     load_dir = "/data/llama-2-7b-hf/"
@@ -73,8 +73,8 @@ class CovertMCoreVPPCkptFromHuggingfaceArgs:
 
 class CovertMCoreChatGLM3CkptFromHuggingfaceArgs:
     model_type = "GPT"
-    loader = "hf_mcore"
-    saver = "mg_mcore"
+    load_model_type = "hf"
+    save_model_type = "mg"
     target_tensor_parallel_size = "1"
     target_pipeline_parallel_size = "2"
     load_dir = "/data/chatglm3-6b-base-hf/"
@@ -85,8 +85,8 @@ class CovertMCoreChatGLM3CkptFromHuggingfaceArgs:
 
 class CovertMCoreQwen2CkptFromHuggingfaceArgs:
     model_type = "GPT"
-    loader = "hf_mcore"
-    saver = "mg_mcore"
+    load_model_type = "hf"
+    save_model_type = "mg"
     target_tensor_parallel_size = "1"
     target_pipeline_parallel_size = "1"
     load_dir = "/data/Qwen2-1.5B/"
@@ -120,8 +120,8 @@ class TestConvertCkptFromHuggingface:
         file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
-            "--loader", args.loader,
-            "--saver", args.saver,
+            "--load-model-type", args.load_model_type,
+            "--save-model-type", args.save_model_type,
             "--target-tensor-parallel-size", args.target_tensor_parallel_size,
             "--target-pipeline-parallel-size", args.target_pipeline_parallel_size,
             "--load-dir", args.load_dir,
@@ -146,8 +146,8 @@ class TestConvertCkptFromHuggingface:
         file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
-            "--loader", args.loader,
-            "--saver", args.saver,
+            "--load-model-type", args.load_model_type,
+            "--save-model-type", args.save_model_type,
             "--target-tensor-parallel-size", args.target_tensor_parallel_size,
             "--target-pipeline-parallel-size", args.target_pipeline_parallel_size,
             "--load-dir", args.load_dir,
@@ -194,8 +194,8 @@ class TestConvertCkptFromHuggingface:
         file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
-            "--loader", args.loader,
-            "--saver", args.saver,
+            "--load-model-type", args.load_model_type,
+            "--save-model-type", args.save_model_type,
             "--target-tensor-parallel-size", args.target_tensor_parallel_size,
             "--target-pipeline-parallel-size", args.target_pipeline_parallel_size,
             "--load-dir", args.load_dir,
@@ -293,8 +293,8 @@ class TestConvertCkptFromHuggingface:
         file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
-            "--loader", args.loader,
-            "--saver", args.saver,
+            "--load-model-type", args.load_model_type,
+            "--save-model-type", args.save_model_type,
             "--target-tensor-parallel-size", args.target_tensor_parallel_size,
             "--target-pipeline-parallel-size", args.target_pipeline_parallel_size,
             "--load-dir", args.load_dir,

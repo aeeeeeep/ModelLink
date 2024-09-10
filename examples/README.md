@@ -17,7 +17,7 @@
 ---
 
 ## 环境安装
-    
+
 【模型开发时推荐使用配套的环境版本】
 
 |    软件     | [版本](https://www.hiascend.com/zh/) |
@@ -51,15 +51,15 @@
     # python3.8
     conda create -n test python=3.8
     conda activate test
-    
+
     # 安装 torch 和 torch_npu，注意要选择对应python版本、x86或arm的torch、torch_npu及apex包
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl 
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-    
+
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-    
+
     # 安装加速库
     git clone https://gitee.com/ascend/MindSpeed.git
     cd MindSpeed
@@ -68,7 +68,7 @@
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
-    
+
     # 安装其余依赖库
     pip install -r requirements.txt 
 ```
@@ -106,7 +106,7 @@ cd ../../
 
 #### 2. 权重转换
 
-##### 2.1 Huggingface权重转换到Megatron-Legacy
+##### 2.1 Huggingface权重转换到Megatron
 
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
@@ -114,11 +114,12 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 python convert_ckpt.py \
     --model-type GPT \
-    --loader llama2_hf \
-    --saver megatron \
+    --load-model-type hf \
+    --save-model-type mg \
     --target-tensor-parallel-size 2 \
     --target-pipeline-parallel-size 4 \
     --num-layer-list 8,8,8,8 \
+    --model-type-hf llama2 \
     --load-dir ./model_from_hf/llama-2-7b-hf/ \
     --save-dir ./model_weights/llama-2-7b-legacy/ \
     --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
@@ -140,6 +141,16 @@ python convert_ckpt.py \
 
 可选参数，支持VPP划分，指定VPP的每个Stage层数，默认为None
 
+注意：VPP和动态PP划分只能二选一
+
+【--use-mcore-models】
+
+设置是否转换为Megatron-Mcore权重，若不指定，则默认转换为Megatron-Legacy权重
+
+【--model-type-hf】
+
+huggingface模型类别，默认为llama2，目前支持的模型见 [model_cfg.json](https://gitee.com/ascend/ModelLink/blob/master/modellink/tasks/checkpoint/model_cfg.json)
+
 【--tokenizer-model】
 
 需要指明到具体的分词器模型文件，如 tokenizer.model、tokenizer.json、qwen.tiktoken、None等，具体取决于huggingface中词表文件的格式形式
@@ -158,8 +169,15 @@ ModelLink Huggingface到Megatron-Legacy权重转换脚本命名风格及启动�
 bash examples/llama2/ckpt_convert_llama2_hf2legacy.sh
 ```
 
+ModelLink Huggingface到Megatron-Mcore权重转换脚本命名风格及启动方法为：
+```shell
+# 命名及启动：bash examples/model_name/ckpt_convert_xxx_hf2mcore.sh
+# 需要配置并行参数以及权重词表加载保存等路径
 
-##### 2.2 Megatron-Legacy权重转换到Huggingface
+bash examples/llama2/ckpt_convert_llama2_hf2mcore.sh
+```
+
+##### 2.2 Megatron权重转换到Huggingface
 
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
@@ -167,14 +185,15 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 python convert_ckpt.py \
     --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
+    --load-model-type mg \
+    --save-model-type hf \
+    --model-type-hf llama2 \
     --load-dir ./model_weights/llama-2-7b-legacy/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-2-7b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-7b-hf/mg2hg/
+    --save-dir ./model_from_hf/llama-2-7b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-7b-hf/mg2hf/
 ```
+参数意义参考2.1
 
 【启动脚本】
 
@@ -186,7 +205,78 @@ ModelLink Megatron-Legacy到Huggingface的权重转换脚本命名风格及启�
 bash examples/llama2/ckpt_convert_llama2_legacy2hf.sh
 ```
 
-##### 2.3 lora权重与base权重合并
+ModelLink Megatron-Mcore到Huggingface的权重转换脚本命名风格及启动方法为：
+```shell
+# 命名及启动：bash examples/model_name/ckpt_convert_xxx_mcore2hf.sh
+# 需要配置并行参数以及权重词表加载保存等路径
+
+bash examples/llama2/ckpt_convert_llama2_mcore2hf.sh
+```
+
+##### 2.3 Megatron权重互转
+
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# legacy转legacy
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type mg \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 2 \
+    --load-dir ./model_weights/llama-2-7b-legacy/ \
+    --save-dir ./model_weights/llama-2-7b-legacy_tp2pp2/
+
+# legacy转mcore
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type mg \
+    --use-mcore-models \
+    --load-from-legacy \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 2 \
+    --load-dir ./model_weights/llama-2-7b-legacy/ \
+    --save-dir ./model_weights/llama-2-7b-mcore_tp2pp2/
+
+# mcore转mocre
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type mg \
+    --use-mcore-models \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 2 \
+    --load-dir ./model_weights/llama-2-7b-mcore/ \
+    --save-dir ./model_weights/llama-2-7b-mcore_tp2pp2/
+
+# mcore转legacy
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type mg \
+    --use-mcore-models \
+    --save-to-legacy \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 2 \
+    --load-dir ./model_weights/llama-2-7b-mcore/ \
+    --save-dir ./model_weights/llama-2-7b-legacy_tp2pp2/
+```
+【load-from-legacy】 
+
+legacy转mcore时设置此参数以指定导入权重格式为legacy
+
+【save-to-legacy】 
+
+mcore转legacy时设置此参数以指定保存权重格式为legacy
+
+其余参数意义参考2.1
+
+注：上述权重legacy和mcore互转为高阶功能，modellink基于llama2提供基础能力，并进行版本迭代看护，其余模型的支持需要用户自行修改支持
+
+##### 2.4 lora权重与base权重合并
 
 在上述权重转换命令中，加入如下参数可以将训练的 lora 权重与base进行融合。
 
@@ -629,7 +719,7 @@ data1_xxx_text_document.idx, data1_xxx_text_document.bin, data2_xxx_text_documen
 #### 2. 配置预训练参数
 
 legacy分支的预训练脚本保存在 example 中各模型文件夹下：pretrain_xxx_xx.sh
- 
+
 mcore分支的预训练脚本保存在 example/mcore 中各模型文件夹下：pretrain_xxx_xx.sh
 
 需根据实际情况修改路径和参数值：
@@ -682,7 +772,7 @@ examples/mcore/llama2/pretrain_llama2_7b_ptd.sh *(mcore分支)*
     NODE_RANK="current node id"  #当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
     WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 ```
-                      
+
 
 #### 3. 启动预训练
 
@@ -840,7 +930,7 @@ MiniCPM-2B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                 
         --append-eod \
         --workers 4 \
         --log-interval 1000
-   
+
     # 请根据真实存放路径配置预训练脚本以下参数
     VOCAB_FILE="./vocab_file/gpt2-vocab.json"   # 词表
     MERGE_FILE="./vocab_file/gpt2-merges.txt"   # BPE 合并表

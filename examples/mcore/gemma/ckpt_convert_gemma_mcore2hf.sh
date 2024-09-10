@@ -6,9 +6,8 @@ python convert_ckpt.py \
     --use-mcore-models \
     --model-type-hf gemma \
     --model-type GPT \
-    --loader mg_mcore \
-    --saver mg_mcore \
-    --save-model-type huggingface \
+    --load-model-type hf \
+    --save-model-type mg \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --load-dir ./model_weights/gemma_mcore/ \

@@ -996,21 +996,13 @@ ModelLink支持Huggingface、Megatron-Legacy以及Megatron-Core之间的权重�
   <tbody>
     <tr>
       <td rowspan="20">Megatron-Legacy </td>
-      <td rowspan="8">Huggingface</td>
+      <td rowspan="6">Huggingface</td>
       <td>张量并行</td>
       <td>--target-tensor-parallel-size</td>
     </tr>
     <tr>
       <td>流水并行</td>
       <td>--target-pipeline-parallel-size</td>
-    </tr>
-    <tr>
-      <td>流水并行动态划分</td>
-      <td>--num-layer-list</td>
-    </tr>
-    <tr>
-      <td>虚拟流水并行</td>
-      <td>--num-layers-per-virtual-pipeline-stage</td>
     </tr>
     <tr>
       <td>LoRA训练模块</td>
@@ -1074,21 +1066,13 @@ ModelLink支持Huggingface、Megatron-Legacy以及Megatron-Core之间的权重�
   <tbody>
     <tr>
       <td rowspan="13">Megatron-Core </td>
-      <td rowspan="4">Huggingface</td>
+      <td rowspan="2">Huggingface</td>
       <td>张量并行</td>
       <td>--target-tensor-parallel-size</td>
     </tr>
     <tr>
       <td>流水并行</td>
       <td>--target-pipeline-parallel-size</td>
-    </tr>
-    <tr>
-      <td>流水并行动态划分</td>
-      <td>--num-layer-list</td>
-    </tr>
-    <tr>
-      <td>虚拟流水并行</td>
-      <td>--num-layers-per-virtual-pipeline-stage</td>
     </tr>
     <tr>
       <td rowspan="4">Megatron-Legacy</td>
@@ -1119,6 +1103,14 @@ ModelLink支持Huggingface、Megatron-Legacy以及Megatron-Core之间的权重�
     <tr>
       <td>专家并行</td>
       <td>--expert-model-parallel-size</td>
+    </tr>
+    <tr>
+      <td>流水并行动态划分</td>
+      <td>--num-layer-list</td>
+    </tr>
+    <tr>
+      <td>虚拟流水并行</td>
+      <td>--num-layers-per-virtual-pipeline-stage</td>
     </tr>
   </tbody>
 </table>

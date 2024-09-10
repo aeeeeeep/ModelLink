@@ -5,8 +5,8 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python convert_ckpt.py \
     --model-type-hf gemma \
     --model-type GPT \
-    --loader hf_mcore \
-    --saver mg_mcore \
+    --load-model-type hf \
+    --save-model-type mg \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
     --params-dtype bf16 \

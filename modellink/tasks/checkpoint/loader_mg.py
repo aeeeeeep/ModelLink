@@ -47,6 +47,8 @@ def add_arguments(parser):
                        help='Lora alpha.')
     group.add_argument('--moe-grouped-gemm', action='store_true',
                        help='Usr moe grouped gemm.')
+    group.add_argument('--load-from-legacy', action='store_true',
+                       help='Is loader legacy')
 
 
 def build_metadata(args, margs):
@@ -128,10 +130,9 @@ def get_message_layer_norm(message, model, md, **kwargs):
 
     if mg_args.post_norm:
         message["post norm weight"] = model.get_layers_self_attention_post_attention_layernorm_weight(**kwargs)
-        message["pre mlp norm weight"] = model.get_layers_self_attention_pre_mlp_layernorm_weight(**kwargs)
         message["post mlp norm weight"] = model.get_layers_self_attention_post_mlp_layernorm_weight(**kwargs)
     else:
-        message["post norm weight"] = model.get_layers_self_attention_pre_mlp_layernorm_weight(**kwargs)
+        message["pre mlp norm weight"] = model.get_layers_self_attention_pre_mlp_layernorm_weight(**kwargs)
 
     if md.norm_has_bias:
         message["post norm bias"] = model.get_layers_self_attention_post_attention_layernorm_bias(**kwargs)
@@ -184,6 +185,7 @@ def _get_message_layer_mlp(message, model, md=None, is_moe_mlp=False, **kwargs):
     mlp_l1_weight = []
     mlp_l0_bias = []
     for tp_rank in range(margs.tensor_model_parallel_size):
+        kwargs['tp_rank'] = tp_rank
         if is_moe_mlp:
             mlp_l0_weight.append(model.get_layers_mlp_experts_linear_fc1_weight(**kwargs))
             mlp_l1_weight.append(model.get_layers_mlp_experts_linear_fc2_weight(**kwargs))
@@ -323,6 +325,8 @@ def _load_checkpoint(model_provider, queue, args):
                      os.path.pardir)))
     if args.megatron_path is not None:
         sys.path.insert(0, args.megatron_path)
+    if args.use_mcore_models and args.load_from_legacy:
+        args.use_mcore_models = False
 
     model_mg = get_megatron_model(model_provider, args_cmd=args)
     model_mg.initialize_megatron_args(queue=queue, loader_megatron=True)
