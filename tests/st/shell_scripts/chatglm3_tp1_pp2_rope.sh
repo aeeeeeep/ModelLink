@@ -51,7 +51,7 @@ GPT_ARGS="
     --add-qkv-bias \
     --position-embedding-type rope \
     --no-rope-fusion \
-    --use-partial-rope \
+    --use-glm-rope \
     --rotary-percent 0.5 \
     --normalization RMSNorm \
     --use-fused-rmsnorm \

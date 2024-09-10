@@ -49,7 +49,7 @@ GPT_ARGS="
     --add-qkv-bias \
     --position-embedding-type rope \
     --overlap-grad-reduce \
-    --use-partial-rope \
+    --use-glm-rope \
     --rotary-percent 0.5 \
     --no-rope-fusion \
     --rotary-base 5000000 \

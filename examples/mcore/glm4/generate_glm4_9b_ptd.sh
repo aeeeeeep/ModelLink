@@ -35,7 +35,7 @@ torchrun ${DISTRIBUTED_ARGS} inference.py \
        --make-vocab-size-divisible-by 1 \
        --max-position-embeddings 8192 \
        --position-embedding-type rope \
-       --use-partial-rope \
+       --use-glm-rope \
        --rotary-percent 0.5 \
        --no-rope-fusion \
        --disable-bias-linear \

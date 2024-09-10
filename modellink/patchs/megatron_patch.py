@@ -29,8 +29,8 @@ from ..model import (
     GPTModel, parallel_transformer_init, transformer_language_model_forward_wrapper,
     norm_wrapper, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
-    ParallelAttention_wrapper, transformer_language_model_init,
-    ParallelAttentionForward, parallel_transformer_forward, parallel_mlp_init_wrapper,
+    ParallelAttention_wrapper, ParallelAttentionForward,
+    parallel_transformer_forward, parallel_mlp_init_wrapper,
     rms_norm_init_wrapper, rms_norm_forward, post_language_model_processing
 )
 from ..core import (initialize_model_parallel_decorator,
@@ -308,7 +308,6 @@ def patch_model():
     PatchManager.register_patch('megatron.legacy.model.gpt_model.post_language_model_processing', post_language_model_processing)
     # patch language model
     PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.forward', transformer_language_model_forward_wrapper)
-    PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.__init__', transformer_language_model_init)
     PatchManager.register_patch('megatron.training.checkpointing.load_args_from_checkpoint', load_args_from_checkpoint_wrapper)
 
 

@@ -317,9 +317,9 @@ def _add_network_size_args(parser):
                        default=False,
                        help='set padded vocab size'
                        )
-    group.add_argument('--use-partial-rope',
+    group.add_argument('--use-glm-rope',
                        action='store_true',
-                       help='use partial rope in ChatGLM3.'
+                       help='use custom partial rope in glm model.'
                        )
     
     group.add_argument("--use-fused-rmsnorm", action='store_true',
@@ -510,8 +510,8 @@ def _validate_position_embedding(args):
     """
     validate position embedding arguments.
     """
-    if args.use_partial_rope and args.use_fused_rotary_pos_emb:
-        raise AssertionError('Fused rotary embedding is not supported in partial rope.')
+    if args.use_glm_rope and args.use_fused_rotary_pos_emb:
+        raise AssertionError('Fused rotary embedding is not supported in glm rope.')
     if args.position_embedding_type == 'alibi' and args.sliding_window is not None:
         raise AssertionError('Sliding Window Attention is forbidden when use alibi.')
     if args.tokenizer_padding_side == 'left' and args.position_embedding_type == 'alibi':

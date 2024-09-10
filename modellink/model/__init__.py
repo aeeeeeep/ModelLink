@@ -20,6 +20,6 @@ from .transformer import (
     ParallelAttention_wrapper, ParallelAttentionForward,
     parallel_transformer_forward, parallel_mlp_init_wrapper
 )
-from .language_model import transformer_language_model_forward_wrapper, transformer_language_model_init
+from .language_model import transformer_language_model_forward_wrapper
 from .fused_layer_norm import norm_wrapper
 from .rms_norm import rms_norm_init_wrapper, rms_norm_forward

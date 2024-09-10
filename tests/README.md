@@ -32,7 +32,7 @@
     </tr>
     <tr>
         <td>Mcore</td>
-        <td>partial_rope</td>
+        <td>glm_rope, rotary_percent</td>
         <td><a href="st/shell_scripts/shell_scripts/chatglm3_tp1_pp2_rope.sh">chatglm3_tp1_pp2_rope.sh</a></td>
         <td>Y</td>
         <td>Y</td>
