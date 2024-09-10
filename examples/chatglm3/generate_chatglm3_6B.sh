@@ -35,7 +35,8 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --make-vocab-size-divisible-by 1 \
        --max-position-embeddings 8192 \
        --position-embedding-type rope \
-       --use-partial-rope \
+       --use-glm-rope \
+       --rotary-percent 0.5 \
        --disable-bias-linear \
        --add-qkv-bias \
        --swiglu \
@@ -56,8 +57,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --no-gradient-accumulation-fusion \
        --exit-on-missing-checkpoint \
        --seed 42 \
-       --fp16 \
-       --prompt-type chatglm3_system \
+       --fp16
        | tee logs/generate_chatglm3_6B.log
 
 

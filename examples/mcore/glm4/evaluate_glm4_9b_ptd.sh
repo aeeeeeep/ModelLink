@@ -46,7 +46,7 @@ torchrun ${DISTRIBUTED_ARGS} evaluation.py   \
        --untie-embeddings-and-output-weights \
        --make-vocab-size-divisible-by 1 \
        --position-embedding-type rope \
-       --use-partial-rope \
+       --use-glm-rope \
        --rotary-percent 0.5 \
        --no-rope-fusion \
        --no-chat-template \

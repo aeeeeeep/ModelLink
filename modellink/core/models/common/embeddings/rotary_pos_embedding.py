@@ -96,7 +96,7 @@ def rotary_embedding_forward(self, max_seq_len: int, offset: int = 0):
     # first part even vector components, second part odd vector components,
     #  2 * dim in dimension size
 
-    if args.use_partial_rope:
+    if args.use_glm_rope:
         emb = torch.stack([torch.cos(freqs), torch.sin(freqs)], dim=-1)
         if self.inv_freq.dtype in (torch.float16, torch.bfloat16, torch.int8):
             emb = emb.bfloat16() if self.inv_freq.dtype == torch.bfloat16 else emb.half()
@@ -142,7 +142,7 @@ def apply_rotary_pos_emb(t, freqs, rotary_interleaved=False):
     """
 
     args = get_args()
-    if args.use_partial_rope:
+    if args.use_glm_rope:
         return _process_partial_rope(freqs, t)
 
     if args.use_fused_rotary_pos_emb:
@@ -160,7 +160,7 @@ def apply_rotary_pos_emb(t, freqs, rotary_interleaved=False):
 
 def apply_rotary_pos_emb_bshd(t: Tensor, freqs: Tensor, rotary_interleaved: bool = False) -> Tensor:
     args = get_args()
-    if args.use_partial_rope:
+    if args.use_glm_rope:
         return _process_partial_rope(freqs, t)
 
     _mscale = 1

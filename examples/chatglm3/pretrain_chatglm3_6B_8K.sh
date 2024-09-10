@@ -1,5 +1,6 @@
 #!/bin/bash
 export CUDA_DEVICE_MAX_CONNECTIONS=1
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
 
 NPUS_PER_NODE=8
 MASTER_ADDR=localhost
@@ -42,7 +43,8 @@ GPT_ARGS="
     --disable-bias-linear \
     --add-qkv-bias \
     --position-embedding-type rope \
-    --use-partial-rope \
+    --use-glm-rope \
+    --rotary-percent 0.5 \
     --normalization RMSNorm \
     --use-fused-rmsnorm \
     --swiglu \
