@@ -160,10 +160,7 @@ def set_model_layer_norm(model_mg, msg, md, **kwargs):
     post_norm = margs.post_norm
     # duplicated tensors
     input_norm_weight = msg.pop("input norm weight")
-    if post_norm:
-        post_norm_weight = msg.pop("post norm weight")
-    else:
-        post_norm_weight = msg.pop("pre mlp norm weight")
+    post_norm_weight = msg.pop("post norm weight")
     input_norm_bias = None
     post_norm_bias = None
     if md.norm_has_bias:

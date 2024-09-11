@@ -13,8 +13,8 @@
         <th>Memory</th>
     </tr>
     <tr>
-        <td rowspan="13">ST</td>
-        <td rowspan="9">Pretrain</td>
+        <td rowspan="14">ST</td>
+        <td rowspan="10">Pretrain</td>
         <td>Mcore</td>
         <td>TP，PP，VPP，重计算，enable_recompute_layers_per_pp_rank</td>
         <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_ptd.sh">llama2_tp2_pp4_vpp2.sh</a></td>
@@ -66,6 +66,14 @@
         <td>Mcore</td>
         <td>MLA-Attention，MoeGroupedGemm，EP，AllgatherDispatcher</td>
         <td><a href="st/shell_scripts/deepseek_v2_mcore_tp1_pp1_ep8.sh">deepseek_v2_mcore_tp1_pp1_ep8.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>Mcore</td>
+        <td>post_norm, query_pre_attn_scalar, interleave_sliding_window, add_rmsnorm_offset, input_embeds_norm</td>
+        <td><a href="st/shell_scripts/shell_scripts/gemma2_tp8_pp1_ptd.sh">gemma2_tp8_pp1_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
