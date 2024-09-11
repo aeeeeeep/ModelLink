@@ -36,7 +36,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --num-layers 42 \
        --hidden-size 3584  \
        --kv-channels 256 \
-       --ffn-hidden-size 14436 \
+       --ffn-hidden-size 14336 \
        --num-attention-heads 16  \
        --position-embedding-type rope \
        --seq-length 8192 \

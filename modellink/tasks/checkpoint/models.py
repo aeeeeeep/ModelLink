@@ -219,6 +219,11 @@ class ModelBase(abc.ABC):
         if src_model.has_layers_mlp_linear_fc2_bias(**kwargs):
             fc2_bias = src_model.get_layers_mlp_linear_fc2_bias(**kwargs)
             self.set_layers_mlp_linear_fc2_bias(data=fc2_bias, **kwargs)
+        if self.args.post_norm:
+            pre_mlp_layernorm_weight = src_model.get_layers_self_attention_pre_mlp_layernorm_weight(**kwargs)
+            post_mlp_layernorm_weight = src_model.get_layers_self_attention_post_mlp_layernorm_weight(**kwargs)
+            self.set_layers_self_attention_pre_mlp_layernorm_weight(data=pre_mlp_layernorm_weight, **kwargs)
+            self.set_layers_self_attention_post_mlp_layernorm_weight(data=post_mlp_layernorm_weight, **kwargs)
     
     def _set_mlp_experts_state(self, src_model, **kwargs):
         '''Set MLP experts params.'''
@@ -240,12 +245,6 @@ class ModelBase(abc.ABC):
         weight2 = src_model.get_layers_mlp_experts_weight2_module(**kwargs)
         self.set_layers_mlp_experts_weight1_module(data=weight1, **kwargs)
         self.set_layers_mlp_experts_weight2_module(data=weight2, **kwargs)
-
-        if self.args.post_norm:
-            pre_mlp_layernorm_weight = src_model.get_layers_self_attention_pre_mlp_layernorm_weight(**kwargs)
-            post_mlp_layernorm_weight = src_model.get_layers_self_attention_post_mlp_layernorm_weight(**kwargs)
-            self.set_layers_self_attention_pre_mlp_layernorm_weight(data=pre_mlp_layernorm_weight, **kwargs)
-            self.set_layers_self_attention_post_mlp_layernorm_weight(data=post_mlp_layernorm_weight, **kwargs)
 
     def set_mlp_state(self, layer_idx, src_model):
         args = src_model.get_args()

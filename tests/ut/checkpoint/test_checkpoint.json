@@ -23,17 +23,34 @@
         {
             "param": {
                 "model-type":"GPT",
-                "load-model-type":"hf",
+                "load-model-type":"mg",
                 "save-model-type": "hf",
                 "target-tensor-parallel-size": "1",
                 "target-pipeline-parallel-size": "1",
                 "target-expert-parallel-size": "1",
                 "save-dir":"/data/Mixtral-8x7B-v0.1/",
-                "load-dir":"/data/wttest/test/hf2mc_mixtral_tp1pp4ep2vpp2",
+                "load-dir":"/data/wttest/base/hf2mc_mixtral_tp1pp4ep2vpp2",
                 "use-mcore-models": null,
                 "model-type-hf": "mixtral",
-                "tokenizer-model":"/data/Mixtral-8x7B-v0.1/tokenizer.model",
                 "params-dtype": "bf16"
+            }
+        }
+    ],
+    "test_gemma2_hf2mcore_tp8pp1": [
+        {
+            "param": {
+                "model-type": "GPT",
+                "load-model-type": "hf",
+                "save-model-type": "mg",
+                "target-tensor-parallel-size": "8",
+                "target-pipeline-parallel-size": "1",
+                "load-dir": "/data/gemma2-9b-hf/",
+                "save-dir": "/data/gemma2-9b-mg-tp8pp1-mcore-test/",
+                "use-mcore-models": null,
+                "post-norm": null,
+                "model-type-hf": "gemma2",
+                "params-dtype": "bf16",
+                "tokenizer-model": "/data/gemma2-9b-hf/tokenizer.json"
             }
         }
     ]
