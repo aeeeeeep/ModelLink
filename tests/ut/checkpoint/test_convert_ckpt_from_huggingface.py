@@ -71,6 +71,19 @@ class CovertMCoreVPPCkptFromHuggingfaceArgs:
     num_layers_per_virtual_pipeline_stage = "2"
 
 
+class CovertLegacyChatGLM3CkptFromHuggingfaceArgs:
+    model_type = "GPT"
+    load_model_type = "hf"
+    save_model_type = "mg"
+    model_type_hf = "chatglm3"
+    target_tensor_parallel_size = "2"
+    target_pipeline_parallel_size = "4"
+    load_dir = "/data/chatglm3-6b-base-hf/"
+    save_dir = "/data/chatglm3-6b-base-mg-tp2pp4-legacy-test/"
+    base_dir = "/data/chatglm3-6b-base-mg-tp2pp4-legacy-base/"
+    tokenizer_model = "/data/chatglm3-6b-base-hf/tokenizer.model"
+
+
 class CovertMCoreChatGLM3CkptFromHuggingfaceArgs:
     model_type = "GPT"
     load_model_type = "hf"
@@ -207,6 +220,30 @@ class TestConvertCkptFromHuggingface:
         ]
         exit_code = subprocess.run(["python", file_path] + arguments).returncode
         assert exit_code == 0 and weight_compare(args.base_dir, args.save_dir), "convert_mcore_pack_gqa_form_huggingface failed!"
+
+    def test_convert_legacy_pack_gqa_form_huggingface(self):
+        args = CovertLegacyChatGLM3CkptFromHuggingfaceArgs()
+        """
+        Test whether the weight to be converted as we want in `--save-dir`. We will check the model layer name, 
+        including embedding, final_norm, output and encoder. In the encoder, there will be some different layers 
+        to compose the unique transformer layer and all these layer stack to compose the entity of the model.
+        """
+        base_dir = Path(__file__).absolute().parents[3]
+        file_path = os.path.join(base_dir, "convert_ckpt.py")
+        arguments = [
+            "--load-model-type", args.load_model_type,
+            "--save-model-type", args.save_model_type,
+            "--model-type", args.model_type,
+            "--target-tensor-parallel-size", args.target_tensor_parallel_size,
+            "--target-pipeline-parallel-size", args.target_pipeline_parallel_size,
+            "--load-dir", args.load_dir,
+            "--save-dir", args.save_dir,
+            "--add-qkv-bias",
+            "--tokenizer-model", args.tokenizer_model,
+            "--model-type-hf", args.model_type_hf
+        ]
+        exit_code = subprocess.run(["python", file_path] + arguments).returncode
+        assert exit_code == 0 and weight_compare(args.base_dir, args.save_dir), "convert_legacy_pack_gqa_form_huggingface failed!"
 
     def test_convert_weights_form_huggingface(self):
         args = CovertCkptFromHuggingfaceArgs()

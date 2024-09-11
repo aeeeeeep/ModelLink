@@ -123,7 +123,7 @@
         <td rowspan="9">UT</td>
         <td>Inference</td>
         <td>Legacy</td>
-        <td>greedy_search, lora_inference, deterministic_computation</td>
+        <td>greedy_search, lora_inference, deterministic_computation, chatglm3_inference</td>
         <td><a href="ut/inference/test_inference.py">test_inference.py</td>
         <td>Y</td>
         <td></td>

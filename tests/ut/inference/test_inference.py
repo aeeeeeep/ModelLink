@@ -41,14 +41,35 @@ def acquire_context(log_capture):
     return context
 
 
+class TestInferenceWorldSize2(DistributedTest):
+    world_size = 2
+    test_config = create_testconfig(Path(__file__).with_suffix(".json"))
+
+    @pytest.mark.parametrize("params", test_config["test_chatglm3_legacy_greedy_search"])
+    def test_chatglm3_legacy_greedy_search(self, build_args, params):
+        os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
+        os.environ['HCCL_DETERMINISTIC'] = "True"
+        if dist.get_rank() == 0:
+            handler, log_capture = setup_logger(PATTERN)
+
+        main()
+        if dist.get_rank() == 0:
+            print("=============== chatglm3 legacy greedy search =============")
+            print(log_capture)
+            context = acquire_context(log_capture)
+            assert [context] == [
+                "I'm fine, thanks."
+            ], "forward pass has been changed, check it!"
+
+
 class TestInference(DistributedTest):
     world_size = 8
     test_config = create_testconfig(Path(__file__).with_suffix(".json"))
 
-    
-    @pytest.mark.parametrize("params", test_config["test_greedy_search"])
-    def test_greedy_search(self, build_args, params):
+    @pytest.mark.parametrize("params", test_config["test_llama2_greedy_search"])
+    def test_llama2_greedy_search(self, build_args, params):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
+        os.environ['HCCL_DETERMINISTIC'] = "True"
         if dist.get_rank() == 0:
             handler, log_capture = setup_logger(PATTERN)
 
@@ -61,18 +82,18 @@ class TestInference(DistributedTest):
                 "I'm doing well. I'm in the middle of a 3-day weekend, so I'm enjoying that."
             ], "forward pass has been changed, check it!"
 
-
-    @pytest.mark.parametrize("params", test_config["test_lora_inference"])
-    def test_lora_inference(self, build_args, params):
+    @pytest.mark.parametrize("params", test_config["test_lora_greedy_search"])
+    def test_lora_greedy_search(self, build_args, params):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
+        os.environ['HCCL_DETERMINISTIC'] = "True"
         if dist.get_rank() == 0:
             handler, log_capture = setup_logger(PATTERN)
 
         main()
         if dist.get_rank() == 0:
-            print("=============== lora_inference =============")
+            print("=============== lora greedy search =============")
             print(log_capture)
             context = acquire_context(log_capture)
             assert [context] == [
-                "I'm doing well. I'm in the middle of a 3-day weekend, so I'm enjoying that."
+                "I'm doing well. I'm in the middle of a 3-day weekend, so I'm enjoying the extra time off."
             ], "forward pass has been changed, check it!"
