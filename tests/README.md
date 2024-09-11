@@ -168,7 +168,7 @@
     <tr>
         <td>Checkpoint</td>
         <td>Mcore, Legacy</td>
-        <td>mcore_dynamic, mcore_vpp, mcore_pack_gqa, legacy_dynamic, mcore_qwen2</td>
+        <td>hf2mg, mg2hf, mg2mg; tp, pp, ep, vpp, dpp, lora</td>
         <td><a href="ut/checkpoint">checkpoint</a></td>
         <td>Y</td>
         <td></td>
@@ -205,6 +205,7 @@
         <td colspan="7"></td>
     </tr>
 </table>
+
 
 
 
