@@ -19,8 +19,6 @@ TP=4
 PP=1
 
 DISTRIBUTED_ARGS="
-    --use-mcore-models \
-    --use-distributed-optimizer \
     --nproc_per_node $NPUS_PER_NODE \
     --nnodes $NNODES \
     --node_rank $NODE_RANK \
@@ -29,6 +27,8 @@ DISTRIBUTED_ARGS="
 "
 
 GPT_ARGS="
+    --use-mcore-models \
+    --use-distributed-optimizer \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
