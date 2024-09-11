@@ -186,10 +186,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
     <tr>
       <td><a href="https://huggingface.co/baichuan-inc/Baichuan2-13B-Base/tree/main">13B</a></td>
       <td>4K</td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 1x8</td>
       <td> BF16 </td>
-      <td> 1668 </td>
+      <td> 1754 </td>
       <td> -- </td>
       <td> 2062 </td>
       <td><center>【昇腾】</td>
