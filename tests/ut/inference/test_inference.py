@@ -48,7 +48,6 @@ class TestInferenceWorldSize2(DistributedTest):
     @pytest.mark.parametrize("params", test_config["test_chatglm3_legacy_greedy_search"])
     def test_chatglm3_legacy_greedy_search(self, build_args, params):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
-        os.environ['HCCL_DETERMINISTIC'] = "True"
         if dist.get_rank() == 0:
             handler, log_capture = setup_logger(PATTERN)
 
@@ -69,7 +68,6 @@ class TestInference(DistributedTest):
     @pytest.mark.parametrize("params", test_config["test_llama2_greedy_search"])
     def test_llama2_greedy_search(self, build_args, params):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
-        os.environ['HCCL_DETERMINISTIC'] = "True"
         if dist.get_rank() == 0:
             handler, log_capture = setup_logger(PATTERN)
 
@@ -85,7 +83,6 @@ class TestInference(DistributedTest):
     @pytest.mark.parametrize("params", test_config["test_lora_greedy_search"])
     def test_lora_greedy_search(self, build_args, params):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
-        os.environ['HCCL_DETERMINISTIC'] = "True"
         if dist.get_rank() == 0:
             handler, log_capture = setup_logger(PATTERN)
 
