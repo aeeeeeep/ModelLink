@@ -21,26 +21,29 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --tensor-model-parallel-size 1  \
        --pipeline-model-parallel-size 1  \
        --use-mcore-models \
+       --task chat \
+       --prompt-type llama2 \
        --use-kv-cache \
        --use-flash-attn \
+       --top-p 0.6 \
+       --temperature 0.9 \
        --use-fused-swiglu \
        --use-fused-rmsnorm \
        --use-fused-rotary-pos-emb \
-       --num-layers 32 \
-       --hidden-size 4096  \
-       --ffn-hidden-size 11008 \
+       --num-layers 40 \
+       --hidden-size 5120  \
+       --ffn-hidden-size 13824 \
        --position-embedding-type rope \
        --seq-length 4096 \
        --max-new-tokens 256 \
-       --micro-batch-size 4 \
-       --global-batch-size 16 \
-       --num-attention-heads 32  \
+       --micro-batch-size 1 \
+       --global-batch-size 1 \
+       --num-attention-heads 40  \
        --max-position-embeddings 4096 \
        --swiglu \
        --load "${CHECKPOINT}"  \
        --tokenizer-type PretrainedFromHF  \
        --tokenizer-name-or-path "${TOKENIZER_PATH}" \
-       --tokenizer-model "${TOKENIZER_MODEL}"  \
        --tokenizer-not-use-fast \
        --fp16 \
        --normalization RMSNorm \
@@ -53,5 +56,5 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --no-gradient-accumulation-fusion \
        --exit-on-missing-checkpoint \
        --make-vocab-size-divisible-by 1 \
-       | tee logs/generate_mcore_llama2_7b.log
+       | tee logs/chat_mcore_llama2_13b.log
 

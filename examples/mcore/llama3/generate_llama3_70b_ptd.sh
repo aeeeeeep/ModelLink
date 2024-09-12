@@ -10,18 +10,21 @@ MASTER_ADDR=localhost
 MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
-NPUS_PER_NODE=8
+NPUS_PER_NODE=4
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
 torchrun $DISTRIBUTED_ARGS inference.py \
-       --tensor-model-parallel-size 8 \
+       --tensor-model-parallel-size 4 \
        --pipeline-model-parallel-size 1 \
        --use-mcore-models \
+       --use-kv-cache \
+       --use-flash-attn \
        --use-fused-swiglu \
-       --use-rotary-position-embeddings \
+       --use-fused-rmsnorm \
        --use-fused-rotary-pos-emb \
+       --use-rotary-position-embeddings \
        --load ${CHECKPOINT} \
        --tokenizer-type PretrainedFromHF \
        --tokenizer-name-or-path ${TOKENIZER_PATH} \
@@ -48,7 +51,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --attention-softmax-in-fp32 \
        --exit-on-missing-checkpoint \
        --make-vocab-size-divisible-by 16032 \
-       --fp16 \
+       --bf16 \
        --seed 42 \
-       | tee logs/generate_llama3_70b_mcore.log
+       | tee logs/generate_mcore_llama3_70b.log
 

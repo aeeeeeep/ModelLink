@@ -119,10 +119,6 @@ def get_alibi(self, seq_length):
 def dot_product_attention_forward_wrapper(fn):
     @wraps(fn)
     def wrapper(self, query, key, value, attention_mask, attn_mask_type, packed_seq_params):
-        if get_args().use_flash_attn:
-            return dot_product_attention_forward(self, query, key, value, attention_mask, attn_mask_type,
-                                                 packed_seq_params)
-
         assert packed_seq_params is None, (
             "Packed sequence is not supported by DotProductAttention."
             "Please use TEDotProductAttention instead."
@@ -137,14 +133,26 @@ def dot_product_attention_forward_wrapper(fn):
         # creates a view that has the keys and values virtually repeated along their dimension to
         # match the number of queries.
 
-        # attn_mask_type is not used.
-        if self.num_attention_heads_per_partition // self.num_query_groups_per_partition > 1:
-            key = key.repeat_interleave(
-                self.num_attention_heads_per_partition // self.num_query_groups_per_partition, dim=2
-            )
-            value = value.repeat_interleave(
-                self.num_attention_heads_per_partition // self.num_query_groups_per_partition, dim=2
-            )
+        args = get_args()
+        heads_per_gqa_group = self.num_attention_heads_per_partition // self.num_query_groups_per_partition
+
+        if not args.use_flash_attn:
+            if heads_per_gqa_group > 1:
+                key = key.repeat_interleave(heads_per_gqa_group, dim=2)
+                value = value.repeat_interleave(heads_per_gqa_group, dim=2)
+        else:
+            # Do repeat KV to support GQA+Ulysses and PFA
+            should_kv_repeat_before_uly = args.context_parallel_size > 1 and \
+                            args.context_parallel_algo in ['ulysses_cp_algo', 'hybrid_cp_algo'] and \
+                            args.kv_head_repeat_before_uly_alltoall
+            should_kv_repeat_before_pfa = hasattr(args, 'use_kv_cache') and args.use_kv_cache
+
+            if heads_per_gqa_group > 1 and (should_kv_repeat_before_uly or should_kv_repeat_before_pfa):
+                key = key.repeat_interleave(heads_per_gqa_group, dim=2)
+                value = value.repeat_interleave(heads_per_gqa_group, dim=2)
+
+            return flash_attention_forward(self, query, key, value, attention_mask, attn_mask_type,
+                                                 packed_seq_params)
 
         # [b, np, sq, sk]
         output_size = (
@@ -254,7 +262,7 @@ def dot_product_attention_forward_wrapper(fn):
     return wrapper
 
 
-def dot_product_attention_forward(
+def flash_attention_forward(
         self,
         query: Tensor,
         key: Tensor,
@@ -318,24 +326,54 @@ def dot_product_attention_forward(
 
         if self.alibi and pse is None:
             pse = self.alibi.alibi_pse.reshape(
-                batch_size, n_head, self.alibi.alibi_pse.size(1), -1) * self.beta * self.norm_factor
+                batch_size, n_head, self.alibi.alibi_pse.size(1), -1) 
+            if hasattr(args, 'use_kv_cache') and args.use_kv_cache:
+                pse = pse * self.beta
+            else:
+                pse = pse * self.beta * self.norm_factor
             args.pre_tockens = seq_length
             args.sparse_mode = 0
 
-        output = torch_npu.npu_fusion_attention(
-            query, key, value, n_head, args.shape_order,
-            pse=pse,
-            padding_mask=None,
-            atten_mask=self.attention_mask,
-            actual_seq_qlen=actual_seq_len,
-            actual_seq_kvlen=actual_seq_len,
-            scale=scale,
-            pre_tockens=args.pre_tockens,
-            next_tockens=args.next_tockens,
-            keep_prob=1 - self.attention_dropout.p,
-            inner_precise=0,
-            sparse_mode=args.sparse_mode
-        )[0]
+        if hasattr(args, 'use_kv_cache') and args.use_kv_cache:
+            query, key, value = [rearrange(x, 's b h -> b s h') for x in [query, key, value]]
+            if query.shape[1] == 1 and query.shape[1] != key.shape[1]:
+                output = torch_npu.npu_incre_flash_attention(
+                    query, key, value,
+                    num_heads=n_head, 
+                    input_layout="BSH",
+                    pse_shift=pse,
+                    padding_mask=None,
+                    scale_value=scale
+                )
+            else:
+                output = torch_npu.npu_prompt_flash_attention(
+                    query, key, value,
+                    num_heads=n_head, 
+                    input_layout="BSH",
+                    pse_shift=pse,
+                    sparse_mode=args.sparse_mode,
+                    padding_mask=None,
+                    atten_mask=self.attention_mask,
+                    scale_value=scale,
+                    pre_tokens=args.pre_tockens,
+                    next_tokens=args.next_tockens
+                )
+            output = output.transpose(0, 1)
+        else:
+            output = torch_npu.npu_fusion_attention(
+                query, key, value, n_head, args.shape_order,
+                pse=pse,
+                padding_mask=None,
+                atten_mask=self.attention_mask,
+                actual_seq_qlen=actual_seq_len,
+                actual_seq_kvlen=actual_seq_len,
+                scale=scale,
+                pre_tockens=args.pre_tockens,
+                next_tockens=args.next_tockens,
+                keep_prob=1 - self.attention_dropout.p,
+                inner_precise=0,
+                sparse_mode=args.sparse_mode
+            )[0]
 
         if args.reset_attention_mask or args.reset_position_ids:
             output = rearrange(output, '(s b) h d -> s b (h d)', s=seq_length)

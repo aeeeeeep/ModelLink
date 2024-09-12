@@ -1,4 +1,5 @@
 #!/bin/bash
+
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # modify script model path and tokenizer path

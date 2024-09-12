@@ -1,5 +1,4 @@
 #!/bin/bash
-
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # please fill these path configurations
@@ -11,19 +10,22 @@ MASTER_ADDR=localhost
 MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
-NPUS_PER_NODE=8
+NPUS_PER_NODE=1
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
 torchrun $DISTRIBUTED_ARGS inference.py \
-       --tensor-model-parallel-size 8 \
+       --tensor-model-parallel-size 1 \
        --pipeline-model-parallel-size 1 \
        --use-mcore-models \
+       --use-kv-cache \
+       --use-flash-attn \
        --use-fused-swiglu \
-       --use-rotary-position-embeddings \
+       --use-fused-rmsnorm \
        --use-fused-rotary-pos-emb \
-       --load ${CHECKPOINT}  \
+       --use-rotary-position-embeddings \
+       --load ${CHECKPOINT} \
        --tokenizer-type PretrainedFromHF \
        --tokenizer-name-or-path ${TOKENIZER_PATH} \
        --tokenizer-not-use-fast \
@@ -49,7 +51,7 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --attention-softmax-in-fp32 \
        --exit-on-missing-checkpoint \
        --make-vocab-size-divisible-by 16032 \
-       --fp16 \
+       --bf16 \
        --seed 42 \
-       | tee logs/generate_llama3_8b_mcore.log
+       | tee logs/generate_mcore_llama3_8b.log
 

@@ -134,7 +134,7 @@ def patch_core_models(args):
     from ..core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper
     from ..core.transformer.dot_product_attention import dot_product_attention_init_wrapper, \
         dot_product_attention_forward_wrapper
-    from ..core.transformer.attention import attention_init_wrapper, attention_forward
+    from ..core.transformer.attention import attention_init_wrapper
     from ..core.models.gpt.gpt_model import gpt_model_init_wrapper
 
     # Embedding
@@ -145,7 +145,6 @@ def patch_core_models(args):
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__', rotary_embedding_init_wrapper)
 
     # Attention
-    PatchManager.register_patch('megatron.core.transformer.attention.Attention.forward', attention_forward)
     PatchManager.register_patch('megatron.core.transformer.attention.Attention.__init__', attention_init_wrapper)
     PatchManager.register_patch('megatron.core.transformer.dot_product_attention.DotProductAttention.__init__', dot_product_attention_init_wrapper)
     PatchManager.register_patch('megatron.core.transformer.dot_product_attention.DotProductAttention.forward', dot_product_attention_forward_wrapper)
