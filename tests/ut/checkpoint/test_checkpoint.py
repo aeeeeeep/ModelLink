@@ -22,7 +22,7 @@ import re
 import math
 import pytest
 import modellink
-from test_tools.utils import create_testconfig, weight_compare, run_cmd
+from tests.test_tools.utils import create_testconfig, weight_compare, run_cmd
 
 
 BASE_DIR = Path(__file__).absolute().parents[3]

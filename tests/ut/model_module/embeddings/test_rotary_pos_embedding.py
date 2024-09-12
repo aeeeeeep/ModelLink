@@ -19,7 +19,7 @@ import pytest
 import torch
 import mindspeed
 import modellink
-from tests.common import create_testconfig
+from tests.test_tools.dist_test import create_testconfig
 from megatron.core.models.common.embeddings.rotary_pos_embedding import RotaryEmbedding
 
 

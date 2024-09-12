@@ -4,6 +4,7 @@ export PYTHONPATH=$BASE_DIR:$PYTHONPATH
 
 SHELL_SCRIPTS_DIR="$BASE_DIR/shell_scripts"
 BASELINE_DIR="$BASE_DIR/baseline_results"
+EXEC_PY_DIR=$(dirname "$BASE_DIR")
 
 GENERATE_LOG_DIR=/data/run_logs
 GENERATE_JSON_DIR=/data/run_jsons
@@ -30,7 +31,7 @@ for test_case in "$SHELL_SCRIPTS_DIR"/*.sh; do
         exit 1
     fi
     # begin to execute the logic of compare
-    pytest -x $BASE_DIR/st_utils/test_ci_st.py \
+    pytest -x $EXEC_PY_DIR/test_tools/test_ci_st.py \
         --baseline-json $BASELINE_DIR/$file_name_prefix.json \
         --generate-log $GENERATE_LOG_DIR/$file_name_prefix.log \
         --generate-json $GENERATE_JSON_DIR/$file_name_prefix.json

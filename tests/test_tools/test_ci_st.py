@@ -1,6 +1,6 @@
 import pytest
 import modellink
-from st_utils.common import transfer_logs_as_json, read_json
+from tests.test_tools.acquire_json import transfer_logs_as_json, read_json
 
 
 WARM_UP = 5
