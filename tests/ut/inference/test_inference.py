@@ -22,8 +22,8 @@ import logging
 from torch import distributed as dist
 import pytest
 from inference import main
-from tests.common import DistributedTest
-from test_tools.utils import build_args, create_testconfig, setup_logger
+from tests.test_tools.dist_test import DistributedTest
+from tests.test_tools.utils import build_args, create_testconfig, setup_logger
 
 
 PATTERN = r"ModelLink:\n(.*)"

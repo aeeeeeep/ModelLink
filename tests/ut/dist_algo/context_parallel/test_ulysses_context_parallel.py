@@ -14,8 +14,8 @@ from mindspeed.core.context_parallel.ulysses_context_parallel import UlyssesCont
 
 from modellink.utils import seed_all
 
-from tests.common import DistributedTest
-from test_tools.utils import initialize_model_parallel
+from tests.test_tools.dist_test import DistributedTest
+from tests.test_tools.utils import initialize_model_parallel
 
 
 class FlashSelfAttention(torch.nn.Module):
