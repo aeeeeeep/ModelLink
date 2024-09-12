@@ -420,10 +420,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
     <tr>
       <td><a href="https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/tree/main">34B</a></td>
       <td>4K</td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td>2x8</td>
       <td>BF16 </td>
-      <td> 749 </td>
+      <td> 810 </td>
       <td> -- </td>
       <td> 796 </td>
       <td>【GTS】</td>
@@ -432,10 +432,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
     <tr>
       <td><a href="https://huggingface.co/meta-llama/Llama-2-70b-hf">70B</a></td>
       <td>4K</td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td>4x8</td>
       <td>BF16 </td>
-      <td> 420 </td>
+      <td> 439 </td>
       <td> -- </td>
       <td> 430 </td>
       <td>【GTS】</td>
