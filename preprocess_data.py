@@ -101,7 +101,8 @@ def add_data_args(parser):
                        help='Keep newlines between sentences when splitting.')
     # LlamaFactory
     group.add_argument('--prompt-type', type=str, default=None,
-                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'glm4', 'chatml', 'chatml_de', 'qwen', 'llama3', 'llama2', 'mistral', 'mixtral', 'gemma', 'alpaca'],
+                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'chatml', 'glm4',
+                       'chatml_de', 'qwen', 'llama3', 'llama2', 'mistral', 'mixtral', 'gemma', 'alpaca', 'llama3'],
                        help='Which template to use for constructing prompts in training.'
                             'e.g., "qwen"')
     group.add_argument("--interleave-probs", default=None,

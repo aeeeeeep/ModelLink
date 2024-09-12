@@ -10,6 +10,7 @@
 - [权重下载及转换](#权重下载及转换)
 - [数据集准备及处理](#数据集准备及处理)
 - [大模型分布式预训练](#大模型分布式预训练)
+- [大模型分布式指令微调](#大模型分布式指令微调)
 - [大模型分布式推理](#大模型分布式推理)
 - [大模型分布式评估](#大模型分布式评估)
 - [社区BUG列表](#社区BUG列表)
@@ -506,7 +507,7 @@ Alpaca风格示例：
 
 目前支持的模板有：
 
-`['empty', 'default', 'chatglm3_system', 'chatml', 'qwen', llama2]`
+`['empty', 'default', 'chatglm3_system', 'chatml', 'qwen', 'llama2', 'llama3', 'alpaca']`
 
 【--handler-name】
 
@@ -726,6 +727,7 @@ mcore分支的预训练脚本保存在 example/mcore 中各模型文件夹下：
 **示例：** 
 
 examples/llama2/pretrain_llama2_7b_ptd.sh      *(legacy分支)*
+
 examples/mcore/llama2/pretrain_llama2_7b_ptd.sh *(mcore分支)*
 
 路径配置：包括**权重保存路径**、**权重加载路径**、**词表路径**、**数据集路径**
@@ -797,6 +799,112 @@ examples/mcore/llama2/pretrain_llama2_7b_ptd.sh *(mcore分支)*
 - 多机训练需在多个终端同时启动预训练脚本(每个终端的预训练脚本只有NODE_RANK参数不同，其他参数均相同)
 - 如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据
 
+---
+
+
+## 大模型分布式指令微调
+
+#### 1. 准备工作
+配置脚本前需要完成前置准备工作，包括：**环境安装**、**数据集准备及处理**、**Huggingface权重转换**，详情可查看对应章节
+
+#### 2. 配置微调参数
+
+legacy分支的全参微调脚本保存在 example 中各模型文件夹下：tune_xxx_xx_full_ptd.sh
+ 
+mcore分支的全参微调脚本保存在 example/mcore 中各模型文件夹下：tune_xxx_xx_full_ptd.sh
+
+需根据实际情况修改路径和参数值：
+
+**示例：** 
+
+examples/llama2/tune_llama2_7b_full_ptd.sh      *(legacy分支)*
+
+examples/mcore/llama2/tune_llama2_7b_full_ptd.sh *(mcore分支)*
+
+路径配置：包括**权重保存路径**、**权重加载路径**、**词表路径**、**数据集路径**
+ ```shell
+    # 根据实际情况配置权重保存、权重加载、词表、数据集路径
+    CKPT_SAVE_DIR="./ckpt/llama-2-7b"  #权重保存路径
+    CKPT_LOAD_DIR="./model_weights/llama-2-7b-legacy/"  #权重加载路径
+    TOKENIZER_MODEL="./model_from_hf/llama-2-7b-hf/"  #词表路径
+    DATA_PATH="./finetune_dataset/alpaca"  #数据集路径
+```
+【--tokenizer-type】 
+
+参数值为PretrainedFromHF时， 词表路径仅需要填到模型文件夹即可，不需要到tokenizer.model文件
+
+【--data-path】 
+
+目前不支持多数据集微调，支持把多个数据集合并为一个数据集处理，参考数据集合并章节
+
+需要指定前缀，与数据预处理时的"--output-prefix"保持一致
+
+**示例：**
+
+数据预处理时`output-prefix`为`"./finetune_dataset/alpaca"`
+ ```shell
+python ./preprocess_data.py \
+    --output-prefix ./finetune_dataset/alpaca \
+    ......
+```
+则指令微调`DATA_PATH`也应为`"./finetune_dataset/alpaca"`
+
+ ```shell
+DATA_PATH="./finetune_dataset/alpaca"  #数据集路径
+```
+
+【prompt-type】
+
+用于指定模型模板，能够让base模型微调后能具备更好的对话能力。
+
+【variable-seq-lengths】
+
+支持以动态的序列长度进行微调，默认padding到`8`的整数倍，可以通过`--pad-to-multiple-of`参数来修改padding的倍数。
+
+
+【单机运行】 
+```shell
+    GPUS_PER_NODE=8
+    MASTER_ADDR=locahost
+    MASTER_PORT=6000
+    NNODES=1  
+    NODE_RANK=0  
+    WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
+```
+【多机运行】 
+```shell
+    # 根据分布式集群实际情况配置分布式参数
+    GPUS_PER_NODE=8  #每个节点的卡数
+    MASTER_ADDR="your master node IP"  #都需要修改为主节点的IP地址（不能为localhost）
+    MASTER_PORT=6000
+    NNODES=2  #集群里的节点数，以实际情况填写,
+    NODE_RANK="current node id"  #当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
+    WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
+```
+                      
+
+#### 3. 启动全参微调
+
+【legacy分支】 
+```shell
+    bash example/模型文件夹/tune_xxx_xxx_full_ptd.sh
+```
+**示例：** *(以llama2-7B为例)*
+```shell
+    bash examples/llama2/tune_llama2_7b_full_ptd.sh
+```
+
+【mcore分支】 
+```shell
+    bash example/mcore/模型文件夹/tune_xxx_xxx_full_ptd.sh
+```
+
+**示例：** 
+```shell
+    bash examples/mcore/llama2/tune_llama2_7b_full_ptd.sh
+```
+**注意**：
+- 多机微调需在多个终端同时启动全参微调脚本(每个终端的全参微调脚本只有NODE_RANK参数不同，其他参数均相同)
 
 ---
 
@@ -823,12 +931,45 @@ TOKENIZER_PATH="./model_from_hf/llama-2-hf/"
 # 启动任务
 bash examples/llama2/generate_llama2_7b_ptd.sh
 ```
+#### 2. Chat：指令微调后chat对话
 
+ModelLink 指令微调后chat对话脚本命名风格及启动方法为：
+```shell
+# Legacy
+# 命名及启动：examples/model_name/chat_xxx.sh
+bash examples/llama2/chat_llama2_7b_ptd.sh
+
+# Mcore
+# 命名及启动：examples/mcore/model_name/chat_xxx.sh
+bash examples/mcore/llama2/chat_llama2_7b_ptd.sh
+```
+
+```shell
+# 按实际情况修改启动脚本中模型权重路径和分词器路径
+CHECKPOINT="./model_weights/llama-2-7b-legacy"
+TOKENIZER_PATH="./model_from_hf/llama-2-hf/"
+
+# 启动任务
+bash examples/llama2/chat_llama2_7b_ptd.sh
+```
+
+【history-turns】
+
+在多轮对话中，可以指定参数`--history-turns`来改变历史对话记录轮数，默认为记录`3`轮
+
+【hf-chat-template】
+
+如果模型的tokenizer已经具备`chat_template`属性，则可以选择通过添加`--hf-chat-template`来使用模型内置的对话模板
+
+【prompt-type】
+
+模型对话模板，作用与`--hf-chat-template`一致，但不需要模型的tokenizer已经具备`chat_template`属性，微调后推理对话时应选择模型对应的对话模板
 
 ---
 
 ## 大模型分布式评估
 
+#### 1. 基准评估
 ModelLink 基准评估脚本命名风格及启动方法为：
 ```shell
 # Legacy
@@ -854,7 +995,31 @@ TASK="mmlu"
 # 启动评估脚本
 bash examples/llama2/evaluate_llama2_7B_ptd.sh
 ```
-【lora权重评估】
+
+#### 2. 指令微调评估
+
+使用指令微调后权重的评估脚本命名风格及启动方法为：
+
+```shell
+bash examples/llama2/evaluate_llama2_7B_full_ptd.sh
+```
+
+【prompt-type】
+
+模型对话模板，选择模型对应的对话模板进行评估
+
+
+【hf-chat-template】
+
+如果模型的tokenizer已经具备`chat_template`属性，则可以选择通过添加`--hf-chat-template`来使用模型内置的对话模板进行评估
+
+
+【eval-language】
+
+根据评估数据集语言来确定，默认为`en`，如果评估数据集为中文数据集，则应设置为`zh`
+
+
+#### 3. lora权重评估
 
 使用lora权重的评估脚本命名风格及启动方法为：
 

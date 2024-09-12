@@ -117,7 +117,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2849 </td>
       <td> -- </td>
       <td> 2874 </td>
-      <td><center>【GTS】</center></td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -130,7 +130,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 3323 </td>
       <td> -- </td>
       <td> 2673 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -142,7 +142,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 854 </td>
       <td> -- </td>
       <td> 732 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -155,7 +155,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2685 </td>
       <td> -- </td>
       <td> 2036 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -167,7 +167,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1213 </td>
       <td> -- </td>
       <td> 862 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -180,7 +180,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2664 </td>
       <td> -- </td>
       <td> 3969 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -192,7 +192,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1754 </td>
       <td> -- </td>
       <td> 2062 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -205,7 +205,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2034 </td>
       <td> -- </td>
       <td> 2525 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -217,7 +217,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 100 </td>
       <td> -- </td>
       <td> 107 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -292,7 +292,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 902 </td>
       <td> -- </td>
       <td> 762 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -305,7 +305,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2776 </td>
       <td> -- </td>
       <td> 2854 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -317,7 +317,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 341 </td>
       <td> -- </td>
       <td> 414 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -330,8 +330,8 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1141 </td>
       <td> -- </td>
       <td> 1348 </td>
-      <td><center>【GTS】</td>
-      <td><center>【Test】</td>
+      <td>【GTS】</td>
+      <td>【Test】</td>
       <tr>
       <td> 32K </td>
       <th> Mcore </th>
@@ -339,8 +339,8 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> BF16 </td>
       <td> 4982 </td>
       <td> -- </td>
-      <td><center> 5476 </td>
-      <td><center>【GTS】</td>
+      <td> 5476 </td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -353,7 +353,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 3600 </td>
       <td> -- </td>
       <td> 3804 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -365,7 +365,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1895 </td>
       <td> -- </td>
       <td> 2012 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -377,7 +377,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
         <td>621</td>
         <td> -- </td>
         <td>776</td>
-        <td><center>【昇腾】</td>
+        <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -389,7 +389,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 348 </td>
       <td> -- </td>
       <td> 426 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -402,7 +402,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 4672 </td>
       <td> -- </td>
       <td> 3850 </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -414,7 +414,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2016 </td>
       <td> -- </td>
       <td> 1920 </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -426,7 +426,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 749 </td>
       <td> -- </td>
       <td> 796 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -438,7 +438,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 420 </td>
       <td> -- </td>
       <td> 430 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -451,7 +451,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2400 </td>
       <td> -- </td>
       <td> 2674 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -463,7 +463,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 353 </td>
       <td> -- </td>
       <td> 355 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -476,7 +476,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2280 </td>
       <td> -- </td>
       <td> 2520 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -488,7 +488,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1297 </td>
       <td> -- </td>
       <td> -- </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -500,7 +500,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 399 </td>
       <td> -- </td>
       <td> -- </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -513,7 +513,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2499 </td>
       <td> -- </td>
       <td> 2867 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -525,7 +525,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1560 </td>
       <td> -- </td>
       <td> 1578 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -537,7 +537,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 285 </td>
       <td> -- </td>
       <td> 345 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     </tr>
@@ -551,7 +551,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 22834 </td>
       <td> -- </td>
       <td> 25306 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-1.8B/tree/main">1.8B</a> </td>
@@ -562,7 +562,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 13029 </td>
       <td> -- </td>
       <td> 12181 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-4B/tree/main">4B</a> </td>
@@ -573,7 +573,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 5033 </td>
       <td> -- </td>
       <td> 5328 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-7B/tree/main">7B</a> </td>
@@ -584,7 +584,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2862 </td>
       <td> -- </td>
       <td> 2621 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-14B/tree/main">14B</a> </td>
@@ -595,7 +595,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1717 </td>
       <td> -- </td>
       <td> 1702 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-32B/tree/main">32B</a> </td>
@@ -606,7 +606,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 751 </td>
       <td> -- </td>
       <td> 708 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-72B/tree/main">72B</a> </td>
@@ -617,7 +617,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 339 </td>
       <td> -- </td>
       <td> 317 </td>
-      <td><center>【GTS】</td>    
+      <td>【GTS】</td>    
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-110B/tree/main">110B</a> </td>
@@ -628,7 +628,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 223 </td>
       <td> -- </td>
       <td> -- </td>
-      <td><center>【GTS】</td>    
+      <td>【GTS】</td>    
       <td>【Test】</td>
     </tr>
     </tr>
@@ -641,7 +641,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 3146 </td>
       <td> -- </td>
       <td> 3866 </td>
-      <td><center>【GTS】</td>    
+      <td>【GTS】</td>    
       <td>【Test】</td>
     </tr>
     <tr>
@@ -654,8 +654,8 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 28618 </td>
       <td> -- </td>
       <td> 34859 </td>
-      <td><center>【GTS】</td>
-      <td><center>【Test】</td>
+      <td>【GTS】</td>
+      <td>【Test】</td>
       <tr>
       <td> 32K </td>
       <th> Mcore </th>
@@ -663,8 +663,8 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> BF16 </td>
       <td> 11338 </td>
       <td> -- </td>
-      <td><center> -- </td>
-      <td><center>【GTS】</td>
+      <td> -- </td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td rowspan="2"> <a href="https://huggingface.co/Qwen/Qwen2-1.5B/tree/main">1.5B</a> </td>
@@ -675,8 +675,8 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 15456 </td>
       <td> -- </td>
       <td> 15603 </td>
-      <td><center>【GTS】</td>
-      <td><center>【Test】</td>
+      <td>【GTS】</td>
+      <td>【Test】</td>
       <tr>
       <td> 32K </td>
       <th> Mcore </th>
@@ -684,8 +684,8 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> BF16 </td>
       <td> 7281 </td>
       <td> -- </td>
-      <td><center> 8538 </td>
-      <td><center>【GTS】</td>
+      <td> 8538 </td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td rowspan="2"><a href="https://huggingface.co/Qwen/Qwen2-7B/tree/main">7B</a></td>
@@ -696,7 +696,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 4034 </td>
       <td> -- </td>
       <td>4241 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> 32K</td>
@@ -706,7 +706,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2040 </td>
       <td> -- </td>
       <td>2045 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td><a href="https://huggingface.co/Qwen/Qwen2-72B/tree/main">72B</a></td>
@@ -716,8 +716,8 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>BF16 </td>
       <td> 368 </td>
       <td> -- </td>
-      <td><center>-- </td>
-      <td><center>【GTS】</td>
+      <td>-- </td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr> 
     <tr>
@@ -730,7 +730,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 855 </td>
       <td> -- </td>
       <td> 730 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -743,7 +743,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 706 </td>
       <td> -- </td>
       <td> 837 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -755,7 +755,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 239 </td>
       <td> 254 </td>
       <td> -- </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -766,7 +766,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> -- </td>
       <td> 215 </td>
       <td> -- </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -779,7 +779,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2900 </td>
       <td> -- </td>
       <td> 2734 </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -792,7 +792,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 7067 </td>
       <td> -- </td>
       <td> 7602 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -804,7 +804,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2939 </td>
       <td> -- </td>
       <td> 2607 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -817,7 +817,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1713 </td>
       <td> -- </td>
       <td> 1595 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -829,7 +829,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 827 </td>
       <td> -- </td>
       <td> 800 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -842,7 +842,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 153 </td>
       <td> -- </td>
       <td> -- </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -854,7 +854,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1890 </td>
       <td> -- </td>
       <td> 1840 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -867,7 +867,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 424 </td>
       <td> 1066 </td>
       <td> -- </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -879,7 +879,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 351 </td>
       <td> 918 </td>
       <td> -- </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -892,7 +892,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1082 </td>
       <td> -- </td>
       <td> 993.8 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -905,7 +905,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 1083 </td>
       <td> -- </td>
       <td> 1343 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -918,7 +918,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 7314 </td>
       <td> -- </td>
       <td> 7953 </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -930,7 +930,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2981 </td>
       <td> -- </td>
       <td> 3172 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Test】</td>
     </tr>
   </tbody>
@@ -1310,6 +1310,213 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
 
 
 
+
+---
+
+## 分布式指令微调
+ModelLink支持指令微调，方案与<a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a>统一，并且微调效果在保持一致的前提下，ModelLink可以表现出优异性能。
+
+【与<a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a>微调Loss对比】
+<table border:none>
+<tbody>
+    <tr>
+        <th rowspan="1">Llama2-7b模型与<a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a>微调5个epoch后的loss对比图
+
+  <p align="center"> <img src="sources/images/tune_llama2_7b_ModelLink_DeepSpeed_compare.png" height="350px" width="500px"> </p>
+        </th>
+        <th rowspan="1">Qwen-7b模型与<a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a>微调4个epoch后的loss对比图
+
+<p align="center"> <img src="sources/images/tune_qwen_7b_ModelLink_DeepSpeed_compare.png" height="350px" width="500px"> </p>
+        </th>
+    </tr>
+</tbody>
+</table>
+
+
+【Llama2-7b微调后对话效果对比】
+<table>
+    <tr>
+        <th rowspan="1">Question</th>
+        <th rowspan="1">ModelLink</th>
+        <th colspan="1"><a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a></th>
+    </tr>
+    <tr>
+        <th>What is the product of 6 and 2?</th>
+        <th>The product of 6 and 2 is 12.</th>
+        <th>The product of 6 and 2 is 12.</th>
+    </tr>
+    <tr>
+        <th>Look up the boiling point of water.</th>
+        <th>The boiling point of water is 100°C (212°F)..</th>
+        <th>The boiling point of water is 100 degrees Celsius (212 degrees Fahrenheit).</th>
+    </tr>
+    <tr>
+        <th>Generate a poem that expresses joy.</th>
+        <th>I open my arms and accept life's challenge, 
+
+Embracing all of life's uncertainty. 
+
+A future of promise awaits,
+
+One that I can find in my fate. 
+
+A journey full of hope and discovery,
+
+A journey that will never end in disappointment. 
+
+For I have found the strength to keep going,
+
+Researching and learning, ever knowing. 
+
+The future is mine, and mine alone,
+
+A future that I have to own,
+
+And I will never be alone,
+
+For I will have the courage to face all of my fears,
+
+And the joy of life will be mine forever.</th>
+        <th>I am so happy, so thankful and blessed,
+
+To have a heart that's full of cheer,
+
+My soul is on fire, my spirit runs free,
+
+My love is warm, my courage is high,
+
+My world is bright and my outlook is clear,
+
+My heart is light, my spirit runs free.
+
+I take each day with a positive outlook,
+
+My energy is so high, I can't be beat,
+
+My joy is real, my emotions run deep,
+
+My soul is full and my heart does soep.
+
+I am thankful for everything I have,
+
+My life is precious and my values ​​true,
+
+My hope is high and my spirit runs free,
+
+My soul is full and my heart does soep.</th>
+    </tr>
+</table>
+
+【现版本实测性能、显存（硬件信息：Atlas 900 A2 PODc）】
+
+下述列表中的模型，我们在[examples/README.md](./examples/README.md)中提供了相应的使用说明，里面有详细的模型微调、推理、评估流程.
+其中性能的单位是samples/s。
+
+<table>
+    <tr>
+        <th rowspan="2">模型</th>
+        <th rowspan="2">--prompt-type</th>
+        <th colspan="2">ModelLink + NPU</th>
+        <th colspan="2"><a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a> + NPU</th>
+        <th colspan="2"><a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a> + 参考</th>
+    </tr>
+    <tr>
+        <th>序列长度</th>
+        <th>性能</th>
+        <th>序列长度</th>
+        <th>性能</th>
+        <th>序列长度</th>
+        <th>性能</th>
+    </tr>
+    <tr>
+        <td rowspan="1">llama2-7b</td>
+        <td rowspan="1">llama2</td>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+    </tr>
+    <tr>
+        <td rowspan="1">qwen-7b</td>
+        <td rowspan="1">qwen</td>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+    </tr>
+
+</table>
+
+上述列表中的数据均为实测数据，且具体微调的数据集均保持一致。
+
+【指令微调特性】
+
+<table>
+    <tr>
+        <th></th>
+        <th>特性名称</th>
+        <th>特性入参</th>
+    </tr>
+    <tr>
+        <td rowspan="1">支持数据集格式</td>
+        <td colspan="2">Alpaca风格、Sharegpt风格</td>
+    </tr>
+    <tr>
+        <td rowspan="3">微调数据预处理特性</td>
+        <td>数据集字段映射</td>
+        <td>--map-keys</td>
+    </tr>
+    <tr>
+        <td>prompt模板</td>
+        <td>--prompt-type</td>
+    </tr>
+    <tr>
+        <td>数据集处理器</td>
+        <td>--handler-name</td>
+    </tr>
+    <tr>
+        <td rowspan="2">微调特性</td>
+        <td>动态padding</td>
+        <td>--variable-seq-lengths</td>
+    </tr>
+    <tr>
+        <td>prompt模板</td>
+        <td>--prompt-type</td>
+    </tr>
+    <tr>
+        <td rowspan="3">微调后推理对话特性</td>
+        <td>历史对话记录轮数</td>
+        <td>--history-turns</td>
+    </tr>
+    <tr>
+        <td>hf对话模板</td>
+        <td>--hf-chat-template</td>
+    </tr>
+    <tr>
+        <td>prompt模板</td>
+        <td>--prompt-type</td>
+    </tr>
+    <tr>
+        <td rowspan="3">微调后评估特性</td>
+        <td>评估数据集语言</td>
+        <td>--eval-language</td>
+    </tr>
+        <td>hf对话模板</td>
+        <td>--hf-chat-template</td>
+    <tr>
+        <td>prompt模板</td>
+        <td>--prompt-type</td>
+    </tr>
+    <tr>
+        <td>指令微调模板支持列表</td>
+        <td  colspan="2">['empty', 'default', 'chatglm3_system', 'chatml', 'qwen', 'llama2', 'llama3', 'alpaca']</td>
+    </tr>
+
+</table>
 
 ---
 
