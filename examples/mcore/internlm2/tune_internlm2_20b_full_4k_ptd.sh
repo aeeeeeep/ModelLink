@@ -30,7 +30,6 @@ DISTRIBUTED_ARGS="
 GPT_ARGS="
     --finetune \
     --is-instruction-dataset \
-    --variable-seq-lenghts \
     --prompt-type chatml \
     --use-mcore-models \
     --sequence-parallel \
@@ -51,7 +50,7 @@ GPT_ARGS="
     --make-vocab-size-divisible-by 1 \
     --lr 1e-6 \
     --padded-vocab-size 92544 \
-    --train-iters 2000 \
+    --train-iters 1000 \
     --disable-bias-linear \
     --init-method-std 0.01 \
     --attention-dropout 0.0 \
@@ -76,7 +75,6 @@ GPT_ARGS="
     --use-flash-attn \
     --use-rotary-position-embeddings \
     --use-fused-rotary-pos-emb \
-    --use-partial-rope \
     --use-fused-rmsnorm \
     --use-fused-swiglu \
     --use-distributed-optimizer \
@@ -90,8 +88,8 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 2000 \
-    --eval-interval 2000 \
+    --save-interval 1000 \
+    --eval-interval 1000 \
     --eval-iters 0 \
 "
 
