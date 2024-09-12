@@ -208,9 +208,55 @@
         <td></td>
         <td></td>
     </tr>
+</table>
+
+### Pipline
+<table>
     <tr>
-        <td>Pipeline</td>
-        <td colspan="7"></td>
+        <th>Model</th>
+        <th>Structure</th>
+        <th>Module</th>
+        <th>Test Case</th>
+        <th>Accuracy</th>
+        <th>Throughput</th>
+        <th>Memory</th>
+    </tr>
+    <tr>
+        <td rowspan="5"><a href="pipeline/baichuan2-13B">Baichuan2-13B</a></td>
+        <td rowspan="5">Legacy</td>
+        <td>pretrain</td>
+        <td><a href="pipeline/baichuan2-13B/baichuan2_13B_tp8_pp1_ptd.sh">baichuan2_13B_tp8_pp1_ptd.sh</a></td>
+        <td>Y</td>
+        <td>N</td>
+        <td>N</td>
+    </tr>
+    <tr>
+        <td>checkpoint_conversion</td>
+        <td><a href="pipeline/baichuan2-13B/test_convert_weight_from_huggingface.py">test_convert_weight_from_hf.py</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>data_process</td>
+        <td><a href="pipeline/baichuan2-13B/test_process_pretrain_data.py">test_process_pretrain_data.py</a></td>
+        <td>Y</td>
+        <td>N</td>
+        <td>N</td>
+    </tr>
+    <tr>
+        <td>inference</td>
+        <td><a href="pipeline/baichuan2-13B/test_generation.py">test_generation.py</a></td>
+        <td>Y</td>
+        <td>N</td>
+        <td>N</td>
+    </tr>
+    <tr>
+        <td>evaluation</td>
+        <td><a href="pipeline/baichuan2-13B/test_evaluation.py">test_evaluation.py</a></td>
+        <td>Y</td>
+        <td>N</td>
+        <td>N</td>
     </tr>
 </table>
 
@@ -246,4 +292,12 @@
 
 #### Pipeline
 
-待补充说明...
+①贡献脚本用例放置于`pipline/`的对应模型文件夹下，如`baichuan2-13B`,文件命名规则为 {模型名}_{切分策略} 或者 {模型名}_{特性名称}， 如 `baichuan2_13B_tp8_pp1_ptd.sh`，请贡献者严格对齐；
+
+② 注意脚本用例中不需要单独重定向log，日志收集工作已在 `pipe_run.sh` 中进行统一管理；
+
+③ 标杆数据请放置于 `pipline/baseline` 文件夹下，**命名保证完全与 shell 脚本对齐**，否则自动化脚本执行将扫描不到；
+
+④ 获取标杆数据：通过门禁任务执行获得首次数据，并将结果保存至本地 log 或者 txt 文件中，后通过本地执行 `tests/st/st_utils/common.py` 中的 `transfer_logs_as_json` 函数进行提取，最后再连同用例脚本上仓即可；
+
+⑤ 在贡献时候需要考虑最终校验的具体指标，精度、性能、显存，在对应指标空白处填上 `Y`，如无校验的保留空白即可。
