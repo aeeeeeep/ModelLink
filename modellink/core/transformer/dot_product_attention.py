@@ -253,20 +253,42 @@ def dot_product_attention_forward(
         if use_sliding_windows:
             args.pre_tockens = args.sliding_window
 
-        output = torch_npu.npu_fusion_attention(
-            query, key, value, n_head, args.shape_order,
-            pse=None,
-            padding_mask=None,
-            atten_mask=attention_mask,
-            actual_seq_qlen=actual_seq_len,
-            actual_seq_kvlen=actual_seq_len,
-            scale=scale,
-            pre_tockens=args.pre_tockens,
-            next_tockens=args.next_tockens,
-            keep_prob=1 - self.attention_dropout.p,
-            inner_precise=0,
-            sparse_mode=args.sparse_mode
-        )[0]
+        if hasattr(args, 'use_kv_cache') and args.use_kv_cache:
+            query, key, value = [rearrange(x, 's b h -> b s h') for x in [query, key, value]]
+            if query.shape[1] == 1 and query.shape[1] != key.shape[1]:
+                output = torch_npu.npu_incre_flash_attention(
+                    query, key, value,
+                    num_heads=n_head, 
+                    input_layout="BSH",
+                    padding_mask=None,
+                    scale_value=scale
+                )
+            else:
+                output = torch_npu.npu_prompt_flash_attention(
+                    query, key, value,
+                    num_heads=n_head, 
+                    input_layout="BSH",
+                    sparse_mode=args.sparse_mode,
+                    padding_mask=None,
+                    atten_mask=attention_mask,
+                    scale_value=scale,
+                    pre_tokens=args.pre_tockens,
+                    next_tokens=args.next_tockens
+                )
+            output = output.transpose(0, 1)
+        else:
+            output = torch_npu.npu_fusion_attention(
+                query, key, value, n_head, 'SBH',
+                pse=None,
+                padding_mask=None,
+                atten_mask=attention_mask,
+                scale=scale,
+                pre_tockens=args.pre_tockens,
+                next_tockens=args.next_tockens,
+                keep_prob=1 - self.attention_dropout.p,
+                inner_precise=0,
+                sparse_mode=args.sparse_mode
+            )[0]
 
         if args.reset_attention_mask or args.reset_position_ids:
             output = rearrange(output, '(s b) h d -> s b (h d)', s=seq_length)
