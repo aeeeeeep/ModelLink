@@ -78,6 +78,10 @@ def weight_compare(dir_1, dir_2, suffix="pt", use_md5=False):
     return True
 
 
+def compare_files_md5(file1, file2):
+    return get_md5sum(file1) == get_md5sum(file2)
+
+
 def get_md5sum(fpath):
     if not os.path.isfile(fpath):
         raise FileNotFoundError(f"{fpath} is not a file or not exists !")

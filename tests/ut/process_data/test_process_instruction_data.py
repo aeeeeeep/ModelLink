@@ -1,141 +1,92 @@
-import sys
 import os
-import math
-
+import pytest
+from pathlib import Path
 import pandas as pd
-
 import modellink
-from test_tools.utils import judge_expression, get_md5sum
-from modellink.tokenizer import build_tokenizer
-from modellink.tokenizer.tokenizer import _AutoTokenizer
-from modellink.tasks.preprocess.data_handler import GeneralInstructionHandler
-from modellink.tasks.preprocess.data_handler import build_dataset, get_dataset_handler
-from preprocess_data import get_args, build_splitter
-from merge_datasets import get_args as get_args_mgd
-from merge_datasets import merge_datasets
+from test_tools.utils import build_args, create_testconfig, setup_logger, compare_files_md5
+from preprocess_data import main as preprocess_datasets_main
+from merge_datasets import main as merge_datasets_main
 
+
+PATTERN = "preprocess"
 
 class TestProcessInstructionData:
+    """
+        The unified dataset is divided into two parts, 
+        individual processing results as well as results from the combined dataset.
+        The three designed test cases are as follows: 
+        1. processing of the first segment of the split dataset
+        2. processing of the second segment of the split dataset
+        3. merging the two segments and processing them together.
+    """
 
-    def setup_class(self):
-        sys.argv = [
-            sys.argv[0],
-            "--input", "/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet",
-            "--tokenizer-type", "PretrainedFromHF",
-            "--handler-name", "GeneralInstructionHandler",
-            "--output-prefix", "/data/tune_dataset/alpaca",
-            "--tokenizer-name-or-path", "/data/llama-2-7b-hf",
-            "--workers", "4",
-            "--log-interval", "1000",
-            "--append-eod"
-        ]
-        self.args = get_args()
-        self.tokenizer = build_tokenizer(self.args)
-        self.splitter = build_splitter(self.args)
-        self.raw_dataset = build_dataset(self.args)
-        self.handler = get_dataset_handler(self.args, self.raw_dataset, self.tokenizer, self.splitter)
-    
-    def test_build_tokenizer(self):
-        """
-        Test normal function of the tokenizer:
-            the instance of tokenizer
-            the length of vocabulary
-            the encode function
-            the decode function
-            the eod append
-            ...(If missed something else, welcome to add)
-        """
-        judge_expression(isinstance(self.tokenizer, _AutoTokenizer))
-        judge_expression(self.tokenizer.vocab_size == 32000)
-        judge_expression(self.tokenizer.tokenize('<0xF7>') == [1, 529, 29900, 29916, 29943, 29955, 29958])
-        judge_expression(self.tokenizer.detokenize(31338) == '堂')
-        judge_expression(self.tokenizer.detokenize(self.tokenizer.eod) == '</s>')
-    
-    def test_build_splitter(self):
-        """
-        If there's no split_sentence, default process is `IdentitySplitter()`.
-        """
-        pass
+    test_config = create_testconfig(Path(__file__).with_suffix(".json"))
 
-    def test_build_dataset(self):
-        """
-        Test the raw_dataset, need to test number of columns and rows
-        """
-        judge_expression(len(self.raw_dataset.__getitem__("instruction")) == 52002)
-        judge_expression(len(self.raw_dataset.__getitem__("input")) == 52002)
-        judge_expression(len(self.raw_dataset.__getitem__("output")) == 52002)
-        judge_expression(len(self.raw_dataset.__getitem__("text")) == 52002)
+    @pytest.mark.parametrize("full_params, params, merge_params", 
+        [(test_config["instruction_dataset"][0], test_config["test_datasets_part1"][0], test_config["test_merge_datasets"][0])])
+    def test_instruction_datasets_part1(self, build_args, full_params, params, merge_params):
+        if not os.path.isdir(full_params["test-out-part"]):
+            os.makedirs(full_params["test-out-part"])
+        df = pd.read_parquet(full_params["input-dataset"])
+        df.iloc[:25000, :].to_parquet(params["input"])
+        
+        handler, log_capture = setup_logger(PATTERN)
+        preprocess_datasets_main()
+        print("=============== instruction datasets part1 =============")
+        print(log_capture)
+
+        prefix_str = params["output-prefix"].split('/')[-1]
+        mid_strs = [merge_params["keys"][0], merge_params["keys"][1], merge_params["keys"][2]]
+        end_suffixs = [".bin", ".idx"]
+        for mid_str in mid_strs:
+            for end_suffix in end_suffixs:
+                end_str = "_" + mid_str + end_suffix
+                base_file = full_params["base-out-part"] + prefix_str + end_str
+                test_file = params["output-prefix"] + end_str
+                assert compare_files_md5(base_file, test_file)
+                
+
+    @pytest.mark.parametrize("full_params, params, merge_params", 
+        [(test_config["instruction_dataset"][0], test_config["test_datasets_part2"][0], test_config["test_merge_datasets"][0])])
+    def test_instruction_datasets_part2(self, build_args, full_params, params, merge_params):
+        if not os.path.isdir(full_params["test-out-part"]):
+            os.makedirs(full_params["test-out-part"])
+        df = pd.read_parquet(full_params["input-dataset"])
+        df.iloc[25000:, :].to_parquet(params["input"])
+        
+        handler, log_capture = setup_logger(PATTERN)
+        preprocess_datasets_main()
+        print("=============== instruction datasets part2 =============")
+        print(log_capture)
+
+        prefix_str = params["output-prefix"].split('/')[-1]
+        mid_strs = [merge_params["keys"][0], merge_params["keys"][1], merge_params["keys"][2]]
+        end_suffixs = [".bin", ".idx"]
+        for mid_str in mid_strs:
+            for end_suffix in end_suffixs:
+                end_str = "_" + mid_str + end_suffix
+                base_file = full_params["base-out-part"] + prefix_str + end_str
+                test_file = params["output-prefix"] + end_str
+                assert compare_files_md5(base_file, test_file)
+
     
-    def test_get_dataset_handler(self):
-        """
-        Test if get the right data handler for pretrain
-        """
-        judge_expression(isinstance(self.handler, GeneralInstructionHandler))
-    
-    def test_serialize_to_disk(self):
-        """
-        Test generate pretrain object files and files are not None(MB).
-        """
-        self.handler.serialize_to_disk()
-        folder_path = "/data/tune_dataset"
-        bin_file = 0
-        idx_file = 0
-        total_size = 0
-        for file_name in os.listdir(folder_path):
-            file_path = os.path.join(folder_path, file_name)
-            if os.path.isfile(file_path):
-                if file_path.endswith(".bin") and file_name.startswith('alpaca_'):
-                    bin_file += 1
-                    total_size += os.path.getsize(file_path)
-                if file_path.endswith(".idx") and file_name.startswith('alpaca_'):
-                    idx_file += 1
-                    total_size += os.path.getsize(file_path)
-        judge_expression(bin_file == 3)
-        judge_expression(idx_file == 3)
-        judge_expression(math.isclose(total_size / (1024 * 1024), 48 * 2, abs_tol=3))
-        
-    def test_merge_datasets(self):
-        """
-        Test merge datasets, compare the `split-preprocess-merge` file and the `dirct-preprocess` file.
-        """
-        df = pd.read_parquet("/data/train-00000-of-00001-a09b74b3ef9c3b56.parquet")
-        df.iloc[:18000, :].to_parquet("/data/0001-alpaca.parquet")
-        df.iloc[18000:36000, :].to_parquet("/data/0002-alpaca.parquet")
-        df.iloc[36000:, :].to_parquet("/data/0003-alpaca.parquet")
-        
-        if not os.path.isdir("/data/tune_dataset/test_merge/subs"):
-            os.makedirs("/data/tune_dataset/test_merge/subs")
-        for subid in ["0001", "0002", "0003"]:
-            sys.argv = [
-                sys.argv[0],
-                "--input", f"/data/{subid}-alpaca.parquet",
-                "--tokenizer-type", "PretrainedFromHF",
-                "--handler-name", "GeneralInstructionHandler",
-                "--output-prefix", f"/data/tune_dataset/test_merge/subs/{subid}-alpaca",
-                "--tokenizer-name-or-path", "/data/llama-2-7b-hf",
-                "--workers", "4",
-                "--log-interval", "1000",
-                "--append-eod"
-            ]
-            args = get_args()
-            tokenizer = build_tokenizer(args)
-            splitter = build_splitter(args)
-            raw_dataset = build_dataset(args)
-            handler = get_dataset_handler(args, raw_dataset, tokenizer, splitter)
-            handler.serialize_to_disk()
-        
-        sys.argv = [
-            sys.argv[0],
-            "--input", "/data/tune_dataset/test_merge/subs",
-            "--output-prefix", "/data/tune_dataset/test_merge/alpaca",
-            "--keys", "packed_attention_mask_document", "packed_input_ids_document", "packed_labels_document"
-        ]
-        args = get_args_mgd()
-        merge_datasets(args)
-        
-        judge_expression(get_md5sum("/data/tune_dataset/alpaca_packed_attention_mask_document.idx") == get_md5sum("/data/tune_dataset/test_merge/alpaca_packed_attention_mask_document.idx"))
-        judge_expression(get_md5sum("/data/tune_dataset/alpaca_packed_attention_mask_document.bin") == get_md5sum("/data/tune_dataset/test_merge/alpaca_packed_attention_mask_document.bin"))
-        judge_expression(get_md5sum("/data/tune_dataset/alpaca_packed_input_ids_document.idx") == get_md5sum("/data/tune_dataset/test_merge/alpaca_packed_input_ids_document.idx"))
-        judge_expression(get_md5sum("/data/tune_dataset/alpaca_packed_input_ids_document.bin") == get_md5sum("/data/tune_dataset/test_merge/alpaca_packed_input_ids_document.bin"))
-        judge_expression(get_md5sum("/data/tune_dataset/alpaca_packed_labels_document.idx") == get_md5sum("/data/tune_dataset/test_merge/alpaca_packed_labels_document.idx"))
-        judge_expression(get_md5sum("/data/tune_dataset/alpaca_packed_labels_document.bin") == get_md5sum("/data/tune_dataset/test_merge/alpaca_packed_labels_document.bin"))
+    @pytest.mark.parametrize("full_params, params", 
+        [(test_config["instruction_dataset"][0], test_config["test_merge_datasets"][0])])
+    def test_merge_instruction_datasets(self, build_args, full_params, params):
+        if not os.path.isdir(full_params["test-out-merge"]):
+            os.makedirs(full_params["test-out-merge"])
+
+        handler, log_capture = setup_logger(PATTERN)
+        merge_datasets_main()
+        print("=============== merge instruction datasets =============")
+        print(log_capture)
+
+        prefix_str = params["output-prefix"].split('/')[-1]
+        mid_strs = [params["keys"][0], params["keys"][1], params["keys"][2]]
+        end_suffixs = [".bin", ".idx"]
+        for mid_str in mid_strs:
+            for end_suffix in end_suffixs:
+                end_str = "_" + mid_str + end_suffix
+                base_file = full_params["base-out-merge"] + prefix_str + end_str
+                test_file = params["output-prefix"] + end_str
+                assert compare_files_md5(base_file, test_file)
