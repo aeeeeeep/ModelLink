@@ -259,6 +259,16 @@
         "layers_mlp_linear_fc2": "model.layers[layer_idx].mlp.experts[expert_idx].w2",
         "final_layernorm": "model.norm"
       }
+    },
+    "baichuan2": {
+      "__base__": "base",
+      "config_set_value": {
+        "qkv_type": "pack_gqa",
+        "max_position_embeddings": 4096
+      },
+      "model_hf_key_mapping": {
+        "layers_self_attention_linear_qkv_pack": "model.layers[layer_idx].self_attn.W_pack"
+      }
     }
   }
 }

@@ -72,7 +72,7 @@ def main():
                         help='Do not perform checking on the name and ordering of weights',
                         dest='checking')
     parser.add_argument('--model-type-hf', type=str, default="llama2",
-                        choices=['llama2', 'mixtral', 'chatglm3', 'gemma', 'gemma2', 'bloom', 'qwen', 'internlm2', 'deepseek2', 'minicpm', 'minicpm-moe'],
+                        choices=['baichuan2', 'llama2', 'mixtral', 'chatglm3', 'gemma', 'gemma2', 'bloom', 'qwen', 'internlm2', 'deepseek2', 'minicpm', 'minicpm-moe'],
                         help='model type of huggingface')
     known_args, _ = parser.parse_known_args()
 
