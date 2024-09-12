@@ -1052,8 +1052,6 @@ bash examples/llama2/evaluate_llama2_7B_full_mmlu_ptd.sh
 bash examples/llama2/evaluate_llama2_7B_lora_mmlu_ptd.sh
 ```
 
----
-
 
 ## <span id="jump8"> 社区BUG列表
 
