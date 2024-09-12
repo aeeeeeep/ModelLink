@@ -2,7 +2,7 @@
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # 权重格式转换，设置需要的并行配置
-python tools/checkpoint/convert_ckpt.py \
+python convert_ckpt.py \
     --model-type GPT \
     --load-model-type hf \
     --save-model-type mg \
