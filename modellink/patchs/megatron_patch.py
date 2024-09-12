@@ -228,8 +228,9 @@ def patch_core_transformers(args):
             PatchManager.register_patch('megatron.core.transformer.moe.token_dispatcher.MoEAlltoAllTokenDispatcher', MoEAlltoAllTokenDispatcher)
 
     # For groupMLP especially deepseek
-    from ..core.transformer.moe.experts import groupedmlp_init_wrapper
+    from mindspeed.core.transformer.moe.experts import groupedmlp_init_wrapper, groupedmlp_forward_wrapper
     PatchManager.register_patch('megatron.core.transformer.moe.experts.GroupedMLP.__init__', groupedmlp_init_wrapper)
+    PatchManager.register_patch('megatron.core.transformer.moe.experts.GroupedMLP.forward', groupedmlp_forward_wrapper)
 
 
 
