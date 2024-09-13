@@ -86,4 +86,5 @@ torchrun $DISTRIBUTED_ARGS $basepath/pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --load ${CKPT_LOAD_DIR} \
-    --distributed-backend nccl
+    --distributed-backend nccl \
+    | tee logs/train_bloom_7b_11.log

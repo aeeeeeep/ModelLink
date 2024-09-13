@@ -61,7 +61,8 @@ class TestCIST:
         # lm loss in case of approximation.
         for step, (expected_val, actual_val) in enumerate(zip(expected_list, actual_list)):
             print(f"Checking step {step + 1} for lm loss")
-
+            assert actual_val == pytest.approx(expected=expected_val, rel=self.margin_loss), \
+            f"The loss at step {step} should be approximate to {expected_val} but it is {actual_val}."
             
     def _compare_throughput(self, expected_list, actual_list):
         # First few iterations might take a little longer. So we take the last 70 percent of the timings
@@ -70,7 +71,10 @@ class TestCIST:
             actual_avg_throughput = sum(actual_list[WARM_UP:]) / (len(actual_list) - WARM_UP)
         except:
             raise ZeroDivisionError
-        
+
+        assert actual_avg_throughput >= expected_avg_throughput or \
+            abs(actual_avg_throughput - expected_avg_throughput) / expected_avg_throughput <= self.margin_throughput_percent, \
+            f"The actual avg throughput {actual_avg_throughput} degradate expected avg throughput {expected_avg_throughput}"
 
 
     def _compare_memory(self, expected_list, actual_list):
