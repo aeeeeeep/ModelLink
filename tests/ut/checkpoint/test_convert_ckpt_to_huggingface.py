@@ -24,7 +24,7 @@ class TestConvertCkptFromHuggingface:
 
     def test_combine_lora_weights_to_huggingface(self):
         """
-        Test whether the weight to be converted as we want in `--lora-dir`. We will check the combine weight
+        Test whether the weight to be converted as we want in `--lora-load`. We will check the combine weight
         in huggingface equals loraB @ loraA * rate + base in megatron.
         """
         args = CovertCkptToHuggingfaceArgs()
@@ -34,7 +34,7 @@ class TestConvertCkptFromHuggingface:
         tp = 8
         dk = 128
         
-        base_dir = Path(__file__).absolute().parent.parent.parent
+        base_dir = Path(__file__).absolute().parents[3]
         file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
@@ -42,14 +42,14 @@ class TestConvertCkptFromHuggingface:
             "--saver", args.saver,
             "--save-model-type", "save_huggingface_llama",
             "--load-dir", args.load_dir,
-            "--lora-dir", args.lora_dir,
+            "--lora-load", args.lora_dir,
             "--target-tensor-parallel-size", "1",
             "--target-pipeline-parallel-size", "1",
             "--save-dir", args.save_dir
         ]
         
-        subprocess.run(["python", file_path] + arguments)
-        
+        exit_code = subprocess.run(["python3", file_path] + arguments).returncode
+        assert exit_code == 0
         output_dir = os.path.join(args.save_dir, "mg2hg")
         
         model = AutoModelForCausalLM.from_pretrained(output_dir, trust_remote_code=True, low_cpu_mem_usage=True)

@@ -41,7 +41,8 @@ def add_arguments(parser):
     group.add_argument('--lora-alpha', type=int, default=32,
                        help='Lora alpha.')
 
-def _load_checkpoint(queue, args):
+
+def _load_checkpoint(model_provider, queue, args):
 
     # Search in directory above this
     sys.path.append(os.path.abspath(
