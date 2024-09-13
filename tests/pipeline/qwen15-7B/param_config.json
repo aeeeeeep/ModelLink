@@ -1,0 +1,71 @@
+{
+    "CONVERT_CKPT_PARAM": [
+        "--model-type", "GPT",
+        "--loader", "llama2_hf",
+        "--saver", "megatron",
+        "--load-dir", "/home/dataset/Qwen1.5-7B-hf",
+        "--save-dir", "/home/dataset/Qwen1.5-7B-mt-t8p1",
+        "--target-tensor-parallel-size", "8",
+        "--target-pipeline-parallel-size", "1",
+        "--tokenizer-model", "None",
+        "--make-vocab-size-divisible-by", "16",
+        "--add-qkv-bias"
+    ],
+
+    "NETWORK_SIZE": [
+        "--num-layers", "32",
+        "--hidden-size", "4096",
+        "--ffn-hidden-size", "11008",
+        "--num-attention-heads", "32",
+        "--max-position-embeddings", "32768",
+        "--position-embedding-type", "rope",
+        "--make-vocab-size-divisible-by", "16",
+        "--normalization", "RMSNorm",
+        "--swiglu",
+        "--untie-embeddings-and-output-weights",
+        "--load", "/home/dataset/Qwen1.5-7B-mt-t8p1",
+        "--add-qkv-bias"
+    ],
+
+    "TOKENIZER_PARAM": [
+        "--tokenizer-type", "PretrainedFromHF",
+        "--tokenizer-name-or-path", "/home/dataset/Qwen1.5-7B-hf"
+    ],
+
+    "DISTRIBUTED_PARAM": [
+        "--tensor-model-parallel-size", "8",
+        "--pipeline-model-parallel-size", "1"
+    ],
+
+    "INFERENCE_PARAM": [
+        "--max-new-tokens", "256",
+        "--tokenizer-not-use-fast",
+	"--exit-on-missing-checkpoint"
+    ],
+
+    "EVALUATION_PARAM": [
+        "--tokenizer-not-use-fast",
+        "--task-data-path", "/home/dataset/eval_dataset/mmlu/test",
+        "--task", "mmlu",
+        "--max-new-tokens", "1",
+        "--exit-on-missing-checkpoint"
+    ],
+
+    "AUXILIARY_PARAM": [
+        "--micro-batch-size", "2",
+        "--global-batch-size", "64",
+        "--no-masked-softmax-fusion",
+        "--disable-bias-linear",
+        "--no-gradient-accumulation-fusion",
+        "--bf16",
+        "--seed", "42",
+        "--use-fused-rmsnorm",
+        "--no-load-optim",
+        "--no-load-rng",
+        "--seq-length", "8192",
+        "--padded-vocab-size", "151936",
+        "--rotary-base", "1000000",
+        "--attention-softmax-in-fp32"
+    ]
+}
+

@@ -1,0 +1,63 @@
+{
+    "CONVERT_CKPT_FROM_HF": [
+        "--model-type", "GPT",
+        "--loader", "chatglm3_hf",
+        "--saver", "megatron",
+        "--target-tensor-parallel-size", "1",
+        "--target-pipeline-parallel-size", "2",
+        "--add-qkv-bias",
+        "--load-dir", "/home/dataset/chatglm3-6B",
+        "--save-dir", "/home/dataset/chatglm3-6B-tp1-pp2",
+        "--tokenizer-model", "/home/dataset/chatglm3-6B/tokenizer.model"
+    ],
+    
+    "NETWORK_SIZE": [
+        "--num-layers", "28",
+        "--hidden-size", "4096",
+        "--ffn-hidden-size", "13696",
+        "--num-attention-heads", "32",
+        "--max-position-embeddings", "32768",
+        "--group-query-attention",
+        "--num-query-groups", "2",
+        "--position-embedding-type", "rope",
+        "--use-glm-rope",
+        "--add-qkv-bias",
+        "--make-vocab-size-divisible-by", "1",
+        "--padded-vocab-size", "65024",
+        "--normalization", "RMSNorm",
+        "--swiglu",
+        "--untie-embeddings-and-output-weights"
+    ],
+
+    "DISTRIBUTED_PARAM": [
+        "--tensor-model-parallel-size", "1",
+        "--pipeline-model-parallel-size", "2"
+    ],
+
+    "INFERENCE_AUX": [
+        "--tokenizer-type", "PretrainedFromHF",
+        "--tokenizer-model", "/home/dataset/chatglm3-6B/tokenizer.model",
+        "--tokenizer-name-or-path", "/home/dataset/chatglm3-6B",
+        "--load", "/home/dataset/chatglm3-6B-tp1-pp2",
+        "--seed", "42",
+        "--tokenizer-not-use-fast",
+        "--exit-on-missing-checkpoint"
+    ],
+
+    "INFERENCE_PARAM": [
+        "--max-new-tokens", "256"
+    ],
+
+    "AUXILIARY_PARAM": [
+        "--micro-batch-size", "1",
+        "--global-batch-size", "8",
+        "--no-masked-softmax-fusion",
+        "--disable-bias-linear",
+        "--no-gradient-accumulation-fusion",
+        "--fp16",
+        "--attention-softmax-in-fp32",
+        "--no-load-optim",
+        "--no-load-rng",
+        "--seq-length", "8192"
+    ]
+}
