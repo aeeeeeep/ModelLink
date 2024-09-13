@@ -15,8 +15,8 @@ import megatron.core.parallel_state as mpu
 from mindspeed.core.context_parallel.ulysses_context_parallel import UlyssesContextAttention
 from mindspeed.core.parallel_state import get_context_parallel_group_for_hybrid_ulysses
 
-from tests.common import DistributedTest
-from test_tools.utils import initialize_model_parallel
+from tests.test_tools.dist_test import DistributedTest
+from tests.test_tools.utils import initialize_model_parallel
 from modellink.core.transformer import get_attention_mask, MUST_COMPRESS
 from modellink.core.transformer.mask_generator import set_attention_mask
 from modellink.utils import seed_all

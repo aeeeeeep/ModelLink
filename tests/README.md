@@ -1,6 +1,6 @@
 ## ModelLink 测试用例贡献说明
 
-### 看护列表
+### 门禁看护列表
 <table>
     <tr>
         <th>Tests</th>
@@ -8,9 +8,9 @@
         <th>Structure</th>
         <th>Features</th>
         <th>Scripts</th>
-        <th>Accuracy</th>
-        <th>Throughput</th>
-        <th>Memory</th>
+        <th>Acc.</th>
+        <th>Throu.</th>
+        <th>Mem.</th>
     </tr>
     <tr>
         <td rowspan="14">ST</td>
@@ -33,7 +33,7 @@
     <tr>
         <td>Mcore</td>
         <td>glm_rope, rotary_percent</td>
-        <td><a href="st/shell_scripts/shell_scripts/chatglm3_tp1_pp2_rope.sh">chatglm3_tp1_pp2_rope.sh</a></td>
+        <td><a href="st/shell_scripts/chatglm3_tp1_pp2_rope.sh">chatglm3_tp1_pp2_rope.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
@@ -64,7 +64,7 @@
     </tr>
     <tr>
         <td>Mcore</td>
-        <td>MLA-Attention，MoeGroupedGemm，EP，AllgatherDispatcher</td>
+        <td>mla_attention，moe_grouped_gemm，EP，allgather_dispatcher</td>
         <td><a href="st/shell_scripts/deepseek_v2_mcore_tp1_pp1_ep8.sh">deepseek_v2_mcore_tp1_pp1_ep8.sh</a></td>
         <td>Y</td>
         <td>Y</td>
@@ -73,7 +73,7 @@
     <tr>
         <td>Mcore</td>
         <td>post_norm, query_pre_attn_scalar, interleave_sliding_window, add_rmsnorm_offset, input_embeds_norm</td>
-        <td><a href="st/shell_scripts/shell_scripts/gemma2_tp8_pp1_ptd.sh">gemma2_tp8_pp1_ptd.sh</a></td>
+        <td><a href="st/shell_scripts/gemma2_tp8_pp1_ptd.sh">gemma2_tp8_pp1_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
@@ -128,7 +128,7 @@
         <td>Y</td>
     </tr>
     <tr>
-        <td rowspan="9">UT</td>
+        <td rowspan="14">UT</td>
         <td>Inference</td>
         <td>Legacy</td>
         <td>greedy_search, lora_inference, deterministic_computation, chatglm3_inference</td>
@@ -141,24 +141,36 @@
         <td>Evaluation</td>
         <td>Legacy</td>
         <td>mmlu, prompt_mmlu,      
-        prompt_boolq, prompt_ceval, qwen2_mmlu, lora_mmlu</td>
+        prompt_boolq, prompt_ceval, qwen2_mmlu, lora_mmlu, agieval, humaneval, bbh</td>
         <td><a href="ut/evaluation/test_evaluate.py">test_evaluate.py</td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
     <tr>
-        <td>CP</td>
-        <td>Mcore</td>
-        <td>hybrid, ring_attn, ulysses</td>
-        <td><a href="ut/dist_algo/context_parallel">context_parallel</a></td>
+        <td rowspan="3">CP</td>
+        <td rowspan="3">Mcore</td>
+        <td>hybrid</td>
+        <td><a href="ut/dist_algo/context_parallel/test_hybrid_context_parallel.py">test_hybrid_context_parallel.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+        <td>ring_attn</td>
+        <td><a href="ut/dist_algo/context_parallel/test_ringattn_context_parallel.py">test_ringattn_context_parallel.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+        <td>ulysses</td>
+        <td><a href="ut/dist_algo/context_parallel/test_ulysses_context_parallel.py"> test_ulysses_context_parallel.py </a></td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
     <tr>
         <td rowspan="2">ModelModule</td>
-        <td>Mcore</td>
+        <td rowspan="2">Mcore</td>
         <td>rope</td>
         <td><a href="ut/model_module/embeddings/test_rotary_pos_embedding.py">test_rotary_pos_embedding.py</a></td>
         <td>Y</td>
@@ -166,7 +178,6 @@
         <td></td>
     </tr>
     <tr>
-        <td>Mcore, Legacy</td>
         <td>transformer_attention</td>
         <td><a href="ut/model_module/transformer/test_attention.py">test_attention.py</a></td>
         <td>Y</td>
@@ -174,19 +185,41 @@
         <td></td>
     </tr>
     <tr>
-        <td>Checkpoint</td>
-        <td>Mcore, Legacy</td>
-        <td>hf2mg, mg2hf, mg2mg; tp, pp, ep, vpp, dpp, lora</td>
-        <td><a href="ut/checkpoint">checkpoint</a></td>
+        <td rowspan="4">Checkpoint</td>
+        <td rowspan="2"> Mcore </td>
+        <td> hf2mcore, tp, pp, ep, dpp, vpp; hf2mcore, tp</td>
+        <td><a href="ut/checkpoint/test_checkpoint.py">test_checkpoint.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>hf2mcore, tp, pp, dpp, vpp, chatglm3, qwen2</td>
+        <td><a href="ut/checkpoint/test_convert_ckpt_from_huggingface.py">test_hf2mcore.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td rowspan="2">Legacy</td>
+        <td> legacy2mcore, lora</td>
+        <td><a href="ut/checkpoint/test_convert_ckpt_from_huggingface.py">test_legacy2hf.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>legacy2legacy, lora</td>
+        <td><a href="ut/checkpoint/test_convert_ckpt_from_megatron.py">test_legacy2legacy.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
 	<tr>
         <td rowspan="3">ProcessData</td>
-        <td rowspan="3">Mcore, Legacy</td>
+        <td rowspan="3">Mcore</td>
         <td>pretrain_data_handler, pretrain_merge_datasets</td>
-        <td><a href="ut/process_data">process_data</a></td>
+        <td><a href="ut/process_data/test_process_pretrain_data.py">test_process_process_pretrain_data.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
@@ -208,9 +241,55 @@
         <td></td>
         <td></td>
     </tr>
+</table>
+
+### Pipline 二级流水看护列表
+<table>
     <tr>
-        <td>Pipeline</td>
-        <td colspan="7"></td>
+        <th>Model</th>
+        <th>Structure</th>
+        <th>Module</th>
+        <th>Test Case</th>
+        <th>Accuracy</th>
+        <th>Throughput</th>
+        <th>Memory</th>
+    </tr>
+    <tr>
+        <td rowspan="5"><a href="pipeline/baichuan2-13B">Baichuan2-13B</a></td>
+        <td rowspan="5">Legacy</td>
+        <td>pretrain</td>
+        <td><a href="pipeline/baichuan2-13B/baichuan2_13B_tp8_pp1_ptd.sh">baichuan2_13B_tp8_pp1_ptd.sh</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>checkpoint_conversion</td>
+        <td><a href="pipeline/baichuan2-13B/test_convert_weight_from_huggingface.py">test_convert_weight_from_hf.py</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>data_process</td>
+        <td><a href="pipeline/baichuan2-13B/test_process_pretrain_data.py">test_process_pretrain_data.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>inference</td>
+        <td><a href="pipeline/baichuan2-13B/test_generation.py">test_generation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>evaluation</td>
+        <td><a href="pipeline/baichuan2-13B/test_evaluation.py">test_evaluation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
     </tr>
 </table>
 
@@ -229,7 +308,7 @@
 
 ④ 获取标杆数据：通过门禁任务执行获得首次数据，并将结果保存至本地 log 或者 txt 文件中，后通过本地执行 `st/st_utils/common.py` 中的 `transfer_logs_as_json` 函数进行提取，最后再连同用例脚本上仓即可；
 
-⑤ 在贡献时候需要考虑最终校验的具体指标，精度、性能、显存，在对应指标空白处填上 `Y`，如无校验的保留空白即可。
+⑤ 在贡献时候需要考虑最终校验的具体指标，精度(Acc.)、性能(Throu.)、显存(Mem.)，在对应指标空白处填上 `Y`，如无校验的保留空白即可。
 
 
 #### UT
@@ -240,10 +319,18 @@
 
 ③ 新增用例可以在原有用例基础上做 `test_xxx` 的补充，尽量保证测试功能的集成性；对于存在 .json 文件的用例，贡献时在 .json 中加入 `test_xxx` 配置，然后在 .py 中通过 `@pytest.mark.parameterize` 传入参数、构造用例，**请注意 .json 中的 key 值命名需与 .py 中的 test_xxx 保持统一**；
 
-④ 在贡献时候需要考虑最终校验的具体指标，精度、性能、显存，在对应指标空白处填上 `Y`，如无校验的保留空白即可。
+④ 在贡献时候需要考虑最终校验的具体指标，精度(Acc.)、性能(Throu.)、显存(Mem.)，在对应指标空白处填上 `Y`，如无校验的保留空白即可。
 
 
 
 #### Pipeline
 
-待补充说明...
+①贡献脚本用例放置于`pipline/`的对应模型文件夹下，如`baichuan2-13B`,文件命名规则为 {模型名}_{切分策略} 或者 {模型名}_{特性名称}， 如 `baichuan2_13B_tp8_pp1_ptd.sh`，请贡献者严格对齐；
+
+② 注意脚本用例中不需要单独重定向log，日志收集工作已在 `pipe_run.sh` 中进行统一管理；
+
+③ 标杆数据请放置于 `pipline/baseline` 文件夹下，**命名保证完全与 shell 脚本对齐**，否则自动化脚本执行将扫描不到；
+
+④ 获取标杆数据：通过门禁任务执行获得首次数据，并将结果保存至本地 log 或者 txt 文件中，后通过本地执行 `tests/st/st_utils/common.py` 中的 `transfer_logs_as_json` 函数进行提取，最后再连同用例脚本上仓即可；
+
+⑤ 在贡献时候需要考虑最终校验的具体指标，精度(Acc.)、性能(Throu.)、显存(Mem.)，在对应指标空白处填上 `Y`，如无校验的保留空白即可。

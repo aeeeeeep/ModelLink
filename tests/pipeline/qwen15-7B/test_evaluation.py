@@ -11,7 +11,7 @@ import pandas as pd
 import torch
 import torch_npu
 from transformers import AutoTokenizer
-from tests.common import DistributedTest
+from tests.test_tools.dist_test import DistributedTest
 from utils import ParamConfig, assert_judge
 import modellink
 from megatron.legacy.model import GPTModel
