@@ -33,7 +33,7 @@ PATTERN = r"acc = (.*)"
 def acquire_score(log_capture):
     # Acquire the final score for evaluation tasks, still universal.
     score_str = log_capture[0]
-    score_pattern = r"(\d+\.\d+)"
+    score_pattern = r"(\d+\.\d+(?:e[+-]?\d+)?)"
     match = re.search(score_pattern, score_str)
     if match:
         score = float(match.group(1).strip())
