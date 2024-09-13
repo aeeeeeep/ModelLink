@@ -523,9 +523,9 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-4B/tree/main">4B</a> </td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 1x8 </td>
-      <td> 5033 </td>
+      <td> 5221 </td>
       <td> -- </td>
       <td> 5328 </td>
       <td>【GTS】</td>
@@ -533,9 +533,9 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-7B/tree/main">7B</a> </td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 1x8 </td>
-      <td> 2862 </td>
+      <td> 2951 </td>
       <td> -- </td>
       <td> 2621 </td>
       <td>【GTS】</td>
@@ -543,9 +543,9 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-14B/tree/main">14B</a> </td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 1x8 </td>
-      <td> 1717 </td>
+      <td> 1760 </td>
       <td> -- </td>
       <td> 1702 </td>
       <td>【GTS】</td>
