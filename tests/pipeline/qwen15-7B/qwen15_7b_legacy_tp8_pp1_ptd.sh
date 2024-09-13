@@ -97,7 +97,6 @@ torchrun $DISTRIBUTED_ARGS $basepath/pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \
-    --distributed-backend nccl \
-    | tee logs/train_qwen_7b_11.log
+    --distributed-backend nccl
 
 
