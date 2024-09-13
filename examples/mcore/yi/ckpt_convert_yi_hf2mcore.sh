@@ -11,5 +11,5 @@ python convert_ckpt.py \
     --target-tensor-parallel-size 8 \
     --target-pipeline-parallel-size 2 \
     --load-dir ./model_from_hf/Yi-hf/ \
-    --save-dir ./modelweights/Yi-mcore/ \
+    --save-dir ./model_weights/Yi-mcore/ \
     --tokenizer-model ./model_from_hf/Yi-hf/tokenizer.model
