@@ -721,6 +721,8 @@ def _add_dummy_args(args):
     args.adaptive_recompute_device_size = -1
     args.adaptive_recompute_profiling_step = 10
     args.moe_tp_extend_ep = False
+    args.recompute_in_bubble = False
+    args.recompute_in_advance = False
 
 
 def validate_args_decorator(megatron_validate_args):
