@@ -1,4 +1,4 @@
-# ModelLink 开发使用指南
+# ModelLink 使用指南
 
 <p align="left">
 </p>
@@ -6,18 +6,36 @@
 ## 目录
 
 
-- [环境安装](#环境安装)
-- [权重下载及转换](#权重下载及转换)
-- [数据集准备及处理](#数据集准备及处理)
-- [大模型分布式预训练](#大模型分布式预训练)
-- [大模型分布式指令微调](#大模型分布式指令微调)
-- [大模型分布式推理](#大模型分布式推理)
-- [大模型分布式评估](#大模型分布式评估)
-- [社区BUG列表](#社区BUG列表)
+- [环境安装](#jump1)
+  * [仓库拉取](#jump1.1)
+  * [环境搭建](#jump1.2)
+- [权重下载及转换](#jump2)
+  * [权重下载](#jump2.1)
+  * [权重转换](#jump2.2)
+- [数据集准备及处理](#jump3)
+  * [数据集下载](#jump3.1)
+  * [数据集处理](#jump3.2)
+  * [数据集合并](#jump3.3)
+- [大模型分布式预训练](#jump4)
+  * [准备工作](#jump4.1)
+  * [配置参数](#jump4.2)
+  * [启动预训练](#jump4.3)
+- [大模型分布式指令微调](#jump5)
+  * [准备工作](#jump5.1)
+  * [配置微调参数](#jump5.2)
+  * [启动全参微调](#jump5.3)
+- [大模型分布式推理](#jump6)
+  * [Generate：流式推理](#jump6.1)
+  * [Chat：指令微调后chat对话](#jump6.2)
+- [大模型分布式评估](#jump7)
+  * [基准评估](#jump7.1)
+  * [指令微调评估](#jump7.2)
+  * [LoRA权重评估](#jump7.3)
+- [社区BUG列表](#jump8)
 
 ---
 
-## 环境安装
+## <span id="jump1"> 环境安装
 
 【模型开发时推荐使用配套的环境版本】
 
@@ -31,7 +49,7 @@
 | Torch_npu |           在研版本           |
 
 
-#### 1. 克隆仓库到本地服务器
+#### <span id="jump1.1"> 1. 仓库拉取
 
 ```shell
     git clone https://gitee.com/ascend/ModelLink.git 
@@ -46,7 +64,7 @@
     mkdir dataset
     mkdir ckpt
 ```
-#### 2. 环境搭建
+#### <span id="jump1.2"> 2. 环境搭建
 
 ```bash
     # python3.8
@@ -56,6 +74,8 @@
     # 安装 torch 和 torch_npu，注意要选择对应python版本、x86或arm的torch、torch_npu及apex包
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl 
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+    
+    # apex for Ascend 参考 https://gitee.com/ascend/apex
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
 
     # 修改 ascend-toolkit 路径
@@ -76,9 +96,9 @@
 
 ---
 
-## 权重下载及转换
+## <span id="jump2"> 权重下载及转换
 
-#### 1. 权重下载
+#### <span id="jump2.1"> 1. 权重下载
 
 从Huggingface等网站下载开源模型权重
 
@@ -105,9 +125,9 @@ wget https://huggingface.co/daryl149/llama-2-7b-hf/resolve/main/tokenizer_config
 cd ../../
 ```
 
-#### 2. 权重转换
+#### <span id="jump2.2"> 2. 权重转换
 
-##### 2.1 Huggingface权重转换到Megatron
+##### 2.1 Huggingface权重转换到Megatron-LM格式
 
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
@@ -178,7 +198,7 @@ ModelLink Huggingface到Megatron-Mcore权重转换脚本命名风格及启动方
 bash examples/llama2/ckpt_convert_llama2_hf2mcore.sh
 ```
 
-##### 2.2 Megatron权重转换到Huggingface
+##### 2.2 Megatron-LM权重转换到Huggingface格式
 
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
@@ -214,7 +234,7 @@ ModelLink Megatron-Mcore到Huggingface的权重转换脚本命名风格及启动
 bash examples/llama2/ckpt_convert_llama2_mcore2hf.sh
 ```
 
-##### 2.3 Megatron权重互转
+##### 2.3 Megatron-LM格式权重互转
 
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
@@ -265,11 +285,11 @@ python tools/checkpoint/convert_ckpt.py \
     --load-dir ./model_weights/llama-2-7b-mcore/ \
     --save-dir ./model_weights/llama-2-7b-legacy_tp2pp2/
 ```
-【load-from-legacy】 
+【--load-from-legacy】 
 
 legacy转mcore时设置此参数以指定导入权重格式为legacy
 
-【save-to-legacy】 
+【--save-to-legacy】 
 
 mcore转legacy时设置此参数以指定保存权重格式为legacy
 
@@ -279,7 +299,7 @@ mcore转legacy时设置此参数以指定保存权重格式为legacy
 
 ##### 2.4 lora权重与base权重合并
 
-在上述权重转换命令中，加入如下参数可以将训练的 lora 权重与base进行融合。
+在上述权重转换命令中，加入如下参数可以将训练的lora权重与base进行融合。
 
 ```bash
 --lora-load ${CHECKPOINT_LORA}  \
@@ -343,9 +363,9 @@ bash examples/llama2/ckpt_convert_llama2_legacy2hf_lora.sh
 
 ---
 
-## 数据集准备及处理
+## <span id="jump3"> 数据集准备及处理
 
-#### 1. 数据集下载
+#### <span id="jump3.1"> 1. 数据集下载
 
 从Huggingface等网站下载开源数据集，保存到ModelLink/dataset/ 目录
 
@@ -369,7 +389,7 @@ wget https://huggingface.co/datasets/lsb/enwiki20230101/resolve/main/data/train-
 cd ..
 ```
 
-#### 2. 数据集处理
+#### <span id="jump3.2"> 2. 数据集处理
 
 ##### 2.1 预训练数据集处理方法
 
@@ -502,12 +522,7 @@ Alpaca风格示例：
 
 【--prompt-type】
 
-
 用于指定模型模板，能够让base模型微调后能具备更好的对话能力。
-
-目前支持的模板有：
-
-`['empty', 'default', 'chatglm3_system', 'chatml', 'qwen', 'llama2', 'llama3', 'alpaca']`
 
 【--handler-name】
 
@@ -670,7 +685,7 @@ bash examples/llama2/data_convert_llama2_instruction.sh
 微调时，数据集路径输入 ./finetune_dataset/alpaca 即可
 
 
-#### 3. 数据集合并
+#### <span id="jump3.3"> 3. 数据集合并
 
 若要对预处理好的多个数据集进行合并，须将待合并数据集放在一个单独文件夹里面，然后按如下调用命令：
 
@@ -711,12 +726,12 @@ data1_xxx_text_document.idx, data1_xxx_text_document.bin, data2_xxx_text_documen
 ---
 
 
-## 大模型分布式预训练
+## <span id="jump4"> 大模型分布式预训练
 
-#### 1. 准备工作
+#### <span id="jump4.1"> 1. 准备工作
 配置脚本前需要完成前置准备工作，包括：**环境安装**、**数据集准备及处理**、**Huggingface权重转换**，详情可查看对应章节
 
-#### 2. 配置预训练参数
+#### <span id="jump4.2"> 2. 配置预训练参数
 
 legacy分支的预训练脚本保存在 example 中各模型文件夹下：pretrain_xxx_xx.sh
 
@@ -775,7 +790,7 @@ examples/mcore/llama2/pretrain_llama2_7b_ptd.sh *(mcore分支)*
 ```
 
 
-#### 3. 启动预训练
+#### <span id="jump4.3"> 3. 启动预训练
 
 【legacy分支】 
 ```shell
@@ -802,12 +817,12 @@ examples/mcore/llama2/pretrain_llama2_7b_ptd.sh *(mcore分支)*
 ---
 
 
-## 大模型分布式指令微调
+## <span id="jump5"> 大模型分布式指令微调
 
-#### 1. 准备工作
+#### <span id="jump5.1"> 1. 准备工作
 配置脚本前需要完成前置准备工作，包括：**环境安装**、**数据集准备及处理**、**Huggingface权重转换**，详情可查看对应章节
 
-#### 2. 配置微调参数
+#### <span id="jump5.2"> 2. 配置微调参数
 
 legacy分支的全参微调脚本保存在 example 中各模型文件夹下：tune_xxx_xx_full_ptd.sh
  
@@ -853,11 +868,11 @@ python ./preprocess_data.py \
 DATA_PATH="./finetune_dataset/alpaca"  #数据集路径
 ```
 
-【prompt-type】
+【--prompt-type】
 
 用于指定模型模板，能够让base模型微调后能具备更好的对话能力。
 
-【variable-seq-lengths】
+【--variable-seq-lengths】
 
 支持以动态的序列长度进行微调，默认padding到`8`的整数倍，可以通过`--pad-to-multiple-of`参数来修改padding的倍数。
 
@@ -883,7 +898,7 @@ DATA_PATH="./finetune_dataset/alpaca"  #数据集路径
 ```
                       
 
-#### 3. 启动全参微调
+#### <span id="jump5.3"> 3. 启动全参微调
 
 【legacy分支】 
 ```shell
@@ -908,9 +923,9 @@ DATA_PATH="./finetune_dataset/alpaca"  #数据集路径
 
 ---
 
-## 大模型分布式推理
+## <span id="jump6"> 大模型分布式推理
 
-#### 1. Generate：流式推理
+#### <span id="jump6.1"> 1. Generate：流式推理
 
 ModelLink 流式推理脚本命名风格及启动方法为：
 ```shell
@@ -931,7 +946,7 @@ TOKENIZER_PATH="./model_from_hf/llama-2-hf/"
 # 启动任务
 bash examples/llama2/generate_llama2_7b_ptd.sh
 ```
-#### 2. Chat：指令微调后chat对话
+#### <span id="jump6.2"> 2. Chat：指令微调后chat对话
 
 ModelLink 指令微调后chat对话脚本命名风格及启动方法为：
 ```shell
@@ -953,23 +968,23 @@ TOKENIZER_PATH="./model_from_hf/llama-2-hf/"
 bash examples/llama2/chat_llama2_7b_ptd.sh
 ```
 
-【history-turns】
+【--history-turns】
 
 在多轮对话中，可以指定参数`--history-turns`来改变历史对话记录轮数，默认为记录`3`轮
 
-【hf-chat-template】
+【--hf-chat-template】
 
 如果模型的tokenizer已经具备`chat_template`属性，则可以选择通过添加`--hf-chat-template`来使用模型内置的对话模板
 
-【prompt-type】
+【--prompt-type】
 
 模型对话模板，作用与`--hf-chat-template`一致，但不需要模型的tokenizer已经具备`chat_template`属性，微调后推理对话时应选择模型对应的对话模板
 
 ---
 
-## 大模型分布式评估
+## <span id="jump7">大模型分布式评估
 
-#### 1. 基准评估
+#### <span id="jump7.1"> 1. 基准评估
 ModelLink 基准评估脚本命名风格及启动方法为：
 ```shell
 # Legacy
@@ -978,7 +993,10 @@ bash examples/llama2/evaluate_llama2_7b_ptd.sh
 
 # Mcore
 # 命名及启动：examples/mcore/model_name/evaluate_xxx.sh
-bash examples/mcore/llama2/evaluate_llama2_7b_ptd.sh
+bash examples/mcore/llama2/evaluate_llama2_7b_mmlu_ptd.sh
+
+# 使用lora权重的评估脚本命名风格及启动方法为：
+bash examples/llama2/evaluate_llama2_7B_lora_ptd.sh
 ```
 
 ```shell
@@ -990,83 +1008,51 @@ TOKENIZER_PATH="./model_from_hf/llama-2-hf/"  #词表路径
 CHECKPOINT="./model_weights/llama-2-7b-legacy"  #权重路径
 # 配置任务和数据集路径
 DATA_PATH="./mmlu/data/test/"
-TASK="mmlu"
+TASK="mmlu"  # 支持 mmlu、ceval、agieval、bbh、boolq、human_eval
 
 # 启动评估脚本
-bash examples/llama2/evaluate_llama2_7B_ptd.sh
+bash examples/mcore/llama2/evaluate_llama2_7B_mmlu_ptd.sh
 ```
 
-#### 2. 指令微调评估
+【--max-new-tokens】
+
+表示模型输出的生成长度，多项选择问题的输出长度会比编码任务的输出长度小，该参数很大程度上影响了模型的评估性能
+
+
+【--evaluation-batch-size】
+
+可以设置多batch推理，提升模型评估性能
+
+
+#### <span id="jump7.2"> 2. 指令微调评估
 
 使用指令微调后权重的评估脚本命名风格及启动方法为：
 
 ```shell
-bash examples/llama2/evaluate_llama2_7B_full_ptd.sh
+bash examples/llama2/evaluate_llama2_7B_full_mmlu_ptd.sh
 ```
 
-【prompt-type】
+【--prompt-type】
 
 模型对话模板，选择模型对应的对话模板进行评估
 
-
-【hf-chat-template】
+【--hf-chat-template】
 
 如果模型的tokenizer已经具备`chat_template`属性，则可以选择通过添加`--hf-chat-template`来使用模型内置的对话模板进行评估
 
-
-【eval-language】
+【--eval-language】
 
 根据评估数据集语言来确定，默认为`en`，如果评估数据集为中文数据集，则应设置为`zh`
 
-
-#### 3. lora权重评估
+#### <span id="jump7.3">  3. LoRA权重评估
 
 使用lora权重的评估脚本命名风格及启动方法为：
 
 ```shell
-bash examples/llama2/evaluate_llama2_7B_lora_ptd.sh
+bash examples/llama2/evaluate_llama2_7B_lora_mmlu_ptd.sh
 ```
 
-
-ModelLink已支持模型评估分数如下：
-
-
-| 模型            | 任务                                                                        | ModelLink | 社区值                                                                   | 模型           | 任务                                                                     | ModelLink | 社区值                                                                 |
-|---------------|---------------------------------------------------------------------------|-----------|-----------------------------------------------------------------------|--------------|------------------------------------------------------------------------|-----------|---------------------------------------------------------------------|
-| Aquila-7B     | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 77.3%     | --                                                                    | Aquila2-7B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 77.8%     | 77.6%                                                               |
-| Aquila2-34B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 88.0%     | 87.0%                                                                 | Baichuan-7B  | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 69.0%     | [67.0%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)        |
-| Baichuan-13B  | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 74.7%     | [73.6%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)          | Baichuan2-7B | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 70.0%     | [63.2%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)        |
-| Baichuan2-13B | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 78.0%     | [67.0%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)          | Bloom-7B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                   | 25.1%     | 25.4%                                                               |
-| Bloom-176B    | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 64.5%     | --                                                                    | ChatGLM3-6B  | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                   | 61.5%     | 61.4%                                                               |
-| GLM4-9B       | [MMLU](https://paperswithcode.com/dataset/mmlu)              | 74.5%     | [74.7%](https://huggingface.co/THUDM/glm-4-9b) | --           | --                                                                     | --        | --                                                                  |
-| CodeLLaMA-34B | <a href="https://huggingface.co/datasets/openai_humaneval">Human Eval</a> | 48.78%    | [48.8%](https://paperswithcode.com/sota/code-generation-on-humaneval) | Gemma-2B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 39.6%     | 39.7%                                                               |
-| Gemma-7B      | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                  | 52.2%     | 52.2%                                                                 | InternLM-7B  | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 48.7%     | [51.0](https://huggingface.co/internlm/internlm-7b)                 |
-| Gemma2-9B     | [MMLU](https://paperswithcode.com/dataset/mmlu)              | 70.7%     | [71.3%](https://huggingface.co/google/gemma-2-9b)                     | Gemma2-27B   | [MMLU](https://paperswithcode.com/dataset/mmlu)              | 75.5%     | [75.2%](https://huggingface.co/google/gemma-2-27b)                  |
-| LLaMA-7B      | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 74.6%     | [75.4](https://hub.opencompass.org.cn/dataset-detail/BoolQ)           | LLaMA-13B    | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 79.6%     | [78.7](https://hub.opencompass.org.cn/dataset-detail/BoolQ)         |
-| LLaMA-33B     | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 83.2%     | [83.1](https://paperswithcode.com/sota/question-answering-on-boolq)   | LLaMA-65B    | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 85.7%     | [86.6](https://paperswithcode.com/sota/question-answering-on-boolq) |
-| LLaMA2-7B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 45.7%     | 45.3%                                                                 | LLaMA2-13B   | [BoolQ](https://paperswithcode.com/dataset/boolq)                      | 82.2%     | [81.7](https://paperswithcode.com/sota/question-answering-on-boolq) |
-| LLaMA2-34B    | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 82.0%     | --                                                                    | LLaMA2-70B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 86.4%     | --                                                                  |
-| LLaMA3-8B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 65.2%     | 66.6%                                                                 | LLaMA3-70B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 78.4%     | 79.5%                                                               |
-| LLaMA3.1-8B   | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 65.26%    | 66.7%                                                                 | LLaMA3.1-70B | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                | 81.8%     | 79.3%                                                               |
-| Mistral-7B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 56.3%     | 56.3%                                                                 | Mixtral-8x7B | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 69.9%     | [70.6%](https://paperswithcode.com/sota/multi-task-language-understanding-on-mmlu)                                                               |
-| Mistral-8x22B | [MMLU](https://paperswithcode.com/dataset/mmlu)    | 77%       | [77.8%](https://mistral.ai/news/mixtral-8x22b/)                                                                 | --           | --                                                                     | --        | --                                                                  |
-| QWen-7B       | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 58.1%     | [58.2%](https://huggingface.co/Qwen/Qwen-7B)                          | Qwen-14B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 65.3%     | [66.3%](https://huggingface.co/Qwen/Qwen-14B)                       |
-| QWen-72B      | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 74.6%     | [77.4%](https://huggingface.co/Qwen/Qwen-72B)                         | QWen1.5-0.5B | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                   | 31.8%     | 31.8%                                                               |
-| QWen1.5-1.8b  | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 46.2%     | [46.8%](https://qwenlm.github.io/zh/blog/qwen1.5/)                    | QWen1.5-4B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 55.0%     | [0.561](https://qwenlm.github.io/zh/blog/qwen1.5)                   |
-| QWen1.5-7B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 60.3%     | [61.0%](https://qwenlm.github.io/zh/blog/qwen1.5/)                    | QWen1.5-14B  | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 67.3%     | [67.6%](https://qwenlm.github.io/zh/blog/qwen1.5)                   |
-| QWen1.5-32B   | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 72.6%     | [73.4%](https://huggingface.co/Qwen/Qwen-72B)                         | QWen1.5-72B  | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 76.4%     | [77.5%](https://qwenlm.github.io/zh/blog/qwen1.5)                   |
-| Qwen1.5-110B  | [MMLU](https://paperswithcode.com/dataset/mmlu)                           | 80.4%     | [80.4%](https://qwenlm.github.io/zh/blog/qwen1.5-110b/)               | Yi-34B       | [MMLU](https://paperswithcode.com/dataset/mmlu)                         | 76.3%     | [75.8%](https://hub.opencompass.org.cn/dataset-detail/MMLU)         |
-| Qwen2-0.5B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                           | 44.6%     | [45.4%](https://qwenlm.github.io/zh/blog/qwen2/)                      | Qwen2-1.5B   | [MMLU](https://paperswithcode.com/dataset/mmlu)                         | 54.7%     | [56.5%](https://qwenlm.github.io/zh/blog/qwen2/)                    |
-| QWen2-7B      | [MMLU](https://paperswithcode.com/dataset/mmlu)                           | 70.3%     | [70.3%](https://qwenlm.github.io/zh/blog/qwen2/)                      | Qwen2-72B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                         | 83.6%     | [84.2%](https://qwenlm.github.io/zh/blog/qwen2/)                    |
-| CodeQwen1.5-7B | [Human Eval](https://huggingface.co/datasets/openai_humaneval)            | 54.8%     | [51.8%](https://qwenlm.github.io/zh/blog/codeqwen1.5/)                      |
-MiniCPM-2B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                           | 51.6%     | [53.4%](https://github.com/OpenBMB/MiniCPM?tab=readme-ov-file#3)                      | MiniCPM-MoE-8x2B | [BoolQ](https://github.com/google-research-datasets/boolean-questions)                      | 83.9%     | --                                                                  |
-
-
-
----
-
-
-## 社区BUG列表
+## <span id="jump8"> 社区BUG列表
 
 
 1. Baichuan-13B: 在任务执行过程中如果出现报错：AttributeError: 'BaichuanTokenizer’ object has no attribute 'sp_model'，请执行下面命令解决这个问题：
