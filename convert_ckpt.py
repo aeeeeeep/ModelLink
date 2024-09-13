@@ -27,7 +27,10 @@ MODULE_ROOT = "modellink.tasks.checkpoint"
 
 
 def load_plugin(plugin_type, name):
-    module_name = f"{MODULE_ROOT}.{plugin_type}_{name}"
+    if name == '':
+        module_name = f"{MODULE_ROOT}.{plugin_type}"
+    else:
+        module_name = f"{MODULE_ROOT}.{plugin_type}_{name}"
     try:
         plugin = importlib.import_module(module_name)
     except ModuleNotFoundError:
@@ -54,6 +57,9 @@ def main():
                         help='Type of the model')
     parser.add_argument('--loader', type=str, default='megatron',
                         help='Module name to load checkpoint, should be on python path')
+    parser.add_argument('--load-model-type', type=str, nargs='?',
+                        default=None, const=None, choices=['hf', 'mg'],
+                        help='Module name to load checkpoint, should be on python path')
     parser.add_argument('--saver', type=str, default='megatron',
                         help='Module name to save checkpoint, should be on python path')
     parser.add_argument('--load-dir', type=str, required=True,
@@ -66,10 +72,17 @@ def main():
                         help='Do not perform checking on the name and ordering of weights',
                         dest='checking')
     parser.add_argument('--model-type-hf', type=str, default="llama2",
-                        choices=['llama2', 'mixtral', 'chatglm3', 'gemma', 'gemma2', 'bloom', 'qwen', 'internlm2', 'deepseek2', 'minicpm', 'minicpm-moe'], help='model-type')
+                        choices=['baichuan2', 'llama2', 'mixtral', 'chatglm3', 'gemma', 'gemma2', 'bloom', 'qwen', 'internlm2', 'deepseek2', 'minicpm', 'minicpm-moe'],
+                        help='model type of huggingface')
     known_args, _ = parser.parse_known_args()
-    loader = load_plugin('loader', known_args.loader)
-    saver = load_plugin('saver', known_args.saver)
+
+    use_saver = known_args.load_model_type is None
+    if use_saver:
+        loader = load_plugin('loader', known_args.loader)
+        saver = load_plugin('saver', known_args.saver)
+    else:
+        loader = load_plugin('loader', known_args.load_model_type)
+        saver = load_plugin('saver', '')
 
     loader.add_arguments(parser)
     saver.add_arguments(parser)

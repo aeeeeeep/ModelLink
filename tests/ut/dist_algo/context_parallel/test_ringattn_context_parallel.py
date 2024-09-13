@@ -10,8 +10,8 @@ from megatron.training.global_vars import set_args
 from megatron.training.arguments import parse_args
 
 from modellink.utils import seed_all
-from tests.common import DistributedTest
-from test_tools.utils import initialize_model_parallel
+from tests.test_tools.dist_test import DistributedTest
+from tests.test_tools.utils import initialize_model_parallel
 from modellink.core.transformer import get_attention_mask
 from modellink.core.transformer.dot_product_attention import do_ring_context_parallel
 

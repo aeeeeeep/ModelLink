@@ -6,8 +6,8 @@ python convert_ckpt.py \
    --use-mcore-models \
    --model-type-hf gemma2 \
    --model-type GPT \
-   --loader hf_mcore \
-   --saver mg_mcore \
+   --load-model-type hf \
+   --save-model-type mg \
    --params-dtype bf16 \
    --post-norm \
    --target-tensor-parallel-size 8 \

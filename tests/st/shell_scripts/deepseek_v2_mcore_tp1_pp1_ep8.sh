@@ -71,6 +71,7 @@ GPT_ARGS="
     --load $CKPT_LOAD_DIR \
     --use-distributed-optimizer \
     --use-flash-attn \
+    --shape-order BNSD \
     --use-mcore-models \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \

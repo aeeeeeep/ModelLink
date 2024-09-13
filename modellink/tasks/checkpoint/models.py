@@ -219,6 +219,11 @@ class ModelBase(abc.ABC):
         if src_model.has_layers_mlp_linear_fc2_bias(**kwargs):
             fc2_bias = src_model.get_layers_mlp_linear_fc2_bias(**kwargs)
             self.set_layers_mlp_linear_fc2_bias(data=fc2_bias, **kwargs)
+        if self.args.post_norm:
+            pre_mlp_layernorm_weight = src_model.get_layers_self_attention_pre_mlp_layernorm_weight(**kwargs)
+            post_mlp_layernorm_weight = src_model.get_layers_self_attention_post_mlp_layernorm_weight(**kwargs)
+            self.set_layers_self_attention_pre_mlp_layernorm_weight(data=pre_mlp_layernorm_weight, **kwargs)
+            self.set_layers_self_attention_post_mlp_layernorm_weight(data=post_mlp_layernorm_weight, **kwargs)
     
     def _set_mlp_experts_state(self, src_model, **kwargs):
         '''Set MLP experts params.'''
@@ -240,12 +245,6 @@ class ModelBase(abc.ABC):
         weight2 = src_model.get_layers_mlp_experts_weight2_module(**kwargs)
         self.set_layers_mlp_experts_weight1_module(data=weight1, **kwargs)
         self.set_layers_mlp_experts_weight2_module(data=weight2, **kwargs)
-
-        if self.args.post_norm:
-            pre_mlp_layernorm_weight = src_model.get_layers_self_attention_pre_mlp_layernorm_weight(**kwargs)
-            post_mlp_layernorm_weight = src_model.get_layers_self_attention_post_mlp_layernorm_weight(**kwargs)
-            self.set_layers_self_attention_pre_mlp_layernorm_weight(data=pre_mlp_layernorm_weight, **kwargs)
-            self.set_layers_self_attention_post_mlp_layernorm_weight(data=post_mlp_layernorm_weight, **kwargs)
 
     def set_mlp_state(self, layer_idx, src_model):
         args = src_model.get_args()
@@ -339,7 +338,7 @@ class HuggingfaceModel(ModelBase):
 
     def initialize_args(self):
         # Read huggingface args.
-        if self.args_cmd.save_model_type == 'huggingface':
+        if self.args_cmd.save_model_type == 'hf':
             cfg_dir = self.args_cmd.save_dir
         else:
             cfg_dir = self.args_cmd.load_dir
@@ -374,7 +373,7 @@ class HuggingfaceModel(ModelBase):
 
     def get_modules_from_pretrained(self, device_map="cpu", trust_remote_code=True):
         # Load Huggingface model.
-        if self.args_cmd.save_model_type == "huggingface":
+        if self.args_cmd.save_model_type == "hf":
             load_dir = self.args_cmd.save_dir
         else:
             load_dir = self.args_cmd.load_dir
@@ -676,7 +675,7 @@ class MegatronModel(ModelBase):
                 'recompute_num_layers', 'recompute_method', 'encoder_num_layers', 'encoder_seq_length',
                 'distribute_saved_activations', 'train_iters', 'lr_decay_iters', 'lr_warmup_iters',
                 'lr_warmup_fraction', 'start_weight_decay', 'end_weight_decay', 'make_vocab_size_divisible_by',
-                'masked_softmax_fusion', 'num_layer_list', 'lora_target_modules', 'expert_model_parallel_size'
+                'masked_softmax_fusion', 'num_layer_list', 'lora_target_modules', 'expert_model_parallel_size', 'use_mcore_models'
             ]
 
             for arg, value in vars(self.md.checkpoint_args).items():
@@ -771,6 +770,7 @@ class MegatronModel(ModelBase):
             self.args.fp16 = True
         if self.args_cmd.add_dense_bias:
             self.args.skip_bias_add = False
+        self.args.use_mcore_models = self.args_cmd.use_mcore_models
 
         if loader_megatron:
             self.args.lora_target_modules = self.args_cmd.lora_target_modules

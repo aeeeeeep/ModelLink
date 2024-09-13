@@ -19,7 +19,7 @@ import pytest
 import torch
 import mindspeed
 import modellink
-from tests.common import create_testconfig
+from tests.test_tools.dist_test import create_testconfig
 from megatron.core.models.common.embeddings.rotary_pos_embedding import RotaryEmbedding
 
 
@@ -29,7 +29,7 @@ class TestRotaryPosEmbedding:
     @pytest.fixture
     def mock_dependency(self, request, monkeypatch):
         monkeypatch.setattr(modellink.core.models.common.embeddings.rotary_pos_embedding, "get_args",
-                            lambda : SimpleNamespace(use_partial_rope = request.getfixturevalue("chatglm"),
+                            lambda : SimpleNamespace(use_glm_rope=request.getfixturevalue("chatglm"),
                             rope_scaling_type = None,
                             ))
         monkeypatch.setattr(mindspeed.core.fusions.rotary_pos_embedding, "get_args",

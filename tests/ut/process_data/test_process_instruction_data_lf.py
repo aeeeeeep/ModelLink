@@ -5,7 +5,7 @@ import math
 import pandas as pd
 
 import modellink
-from test_tools.utils import judge_expression, get_md5sum
+from tests.test_tools.utils import judge_expression, get_md5sum
 from modellink.tokenizer import build_tokenizer
 from modellink.tokenizer.tokenizer import _AutoTokenizer
 from modellink.tasks.preprocess.data_handler import AlpacaStyleInstructionHandler, SharegptStyleInstructionHandler

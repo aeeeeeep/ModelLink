@@ -3,11 +3,9 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 python convert_ckpt.py \
     --model-type GPT \
-    --loader mg_mcore \
-    --saver mg_mcore \
+    --load-model-type mg \
+    --save-model-type hf \
     --model-type-hf chatglm3 \
-    --save-model-type huggingface \
-    --save-model-type save_huggingface_chatglm3 \
     --load-dir ./model_weights/Chatglm3-legacy/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \

@@ -29,18 +29,23 @@ from megatron.core.utils import make_sharded_tensor_for_checkpoint, make_viewles
 
 def get_num_layers_to_build_wrapper(fn):
     @wraps(fn)
-    def wrapper(self, *args, **kwargs):
-        num_layers_to_build = fn(self, *args, **kwargs)
-        args = get_args()
-        # add args_pos_norm, different with megatron
-        if args.num_layer_list:
-            if parallel_state.get_virtual_pipeline_model_parallel_world_size() is not None:
-                raise ValueError("Dynamic pipeline model and virtual pipeline cannot be enabled at the same time.")
+    def wrapper(config):
+        num_layers_to_build = fn(config)
+        num_layer_list = config.num_layer_list
+        if num_layer_list:
             pp_stage = parallel_state.get_pipeline_model_parallel_rank()
-            num_layer_list = list(map(int, args.num_layer_list.split(',')))
             num_layers_to_build = num_layer_list[pp_stage]
-
         return num_layers_to_build
+    return wrapper
+
+
+def get_layer_offset_wrapper(fn):
+    @wraps(fn)
+    def wrapper(self):
+        if self.config.num_layer_list:
+            pp_stage = parallel_state.get_pipeline_model_parallel_rank()
+            return self.config.layer_offset[pp_stage]
+        return fn(self)
     return wrapper
 
 

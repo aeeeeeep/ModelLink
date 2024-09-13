@@ -54,7 +54,7 @@ GPT_ARGS="
     --position-embedding-type rope \
     --no-rope-fusion \
     --use-distributed-optimizer \
-    --use-partial-rope \
+    --use-glm-rope \
     --rotary-percent 0.5 \
     --use-flash-attn \
     --use-fused-rmsnorm \

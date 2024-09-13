@@ -29,8 +29,8 @@ from ..model import (
     GPTModel, parallel_transformer_init, transformer_language_model_forward_wrapper,
     norm_wrapper, state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
-    ParallelAttention_wrapper, transformer_language_model_init,
-    ParallelAttentionForward, parallel_transformer_forward, parallel_mlp_init_wrapper,
+    ParallelAttention_wrapper, ParallelAttentionForward,
+    parallel_transformer_forward, parallel_mlp_init_wrapper,
     rms_norm_init_wrapper, rms_norm_forward, post_language_model_processing
 )
 from ..core import (initialize_model_parallel_decorator,
@@ -218,12 +218,10 @@ def patch_core_transformers(args):
     if args.moe_expert_capacity_factor:
         from ..core.transformer.moe.router import aux_loss_load_balancing, apply_load_balancing_loss
         from ..core.transformer.moe.moe_utils import topk_softmax_with_capacity
-        from ..arguments import core_transformer_config_from_args_wrapper
         # balancing strategy relies on moe_expert_capacity_factor
         PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.aux_loss_load_balancing', aux_loss_load_balancing)
         PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.apply_load_balancing_loss', apply_load_balancing_loss)
         PatchManager.register_patch('megatron.core.transformer.moe.moe_utils.topk_softmax_with_capacity', topk_softmax_with_capacity)
-        PatchManager.register_patch('megatron.training.arguments.core_transformer_config_from_args', core_transformer_config_from_args_wrapper)
 
         if args.moe_token_dispatcher_type == 'alltoall':
             from ..core.transformer.moe.token_dispatcher import MoEAlltoAllTokenDispatcher
@@ -256,7 +254,7 @@ def patch_parallel_state():
     from ..core import destroy_model_parallel_decorator
     from mindspeed.core.parallel_state import (initialize_model_parallel, destroy_model_parallel_wrapper, \
                                                get_context_parallel_group_for_send_recv_overlap)
-
+    from ..core.transformer.transformer_block import get_layer_offset_wrapper
     # Bugfix for Megatron-LM core 0.6.0, to be removed for next version.
     PatchManager.register_patch('megatron.core.parallel_state.initialize_model_parallel', initialize_model_parallel)
     PatchManager.register_patch('megatron.core.parallel_state.initialize_model_parallel', initialize_model_parallel_decorator)
@@ -268,6 +266,7 @@ def patch_parallel_state():
     PatchManager.register_patch('megatron.core.parallel_state.destroy_model_parallel', destroy_model_parallel_wrapper)
     PatchManager.register_patch('megatron.core.parallel_state.get_context_parallel_group_for_send_recv_overlap', get_context_parallel_group_for_send_recv_overlap)
     PatchManager.register_patch('megatron.core.mpu', megatron.core.parallel_state)
+    PatchManager.register_patch('megatron.core.transformer.transformer_layer.TransformerLayer._get_layer_offset', get_layer_offset_wrapper)
 
 
 def patch_model():
@@ -308,7 +307,6 @@ def patch_model():
     PatchManager.register_patch('megatron.legacy.model.gpt_model.post_language_model_processing', post_language_model_processing)
     # patch language model
     PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.forward', transformer_language_model_forward_wrapper)
-    PatchManager.register_patch('megatron.legacy.model.language_model.TransformerLanguageModel.__init__', transformer_language_model_init)
     PatchManager.register_patch('megatron.training.checkpointing.load_args_from_checkpoint', load_args_from_checkpoint_wrapper)
 
 
@@ -329,12 +327,17 @@ def patch_training():
 def patch_miscellaneous():
     from ..utils import print_args_wrapper
     from ..arguments import validate_args_decorator
+    from ..arguments import core_transformer_config_from_args_wrapper
+
     PatchManager.register_patch('megatron.training.arguments.parse_args', parse_args_decorator)
     PatchManager.register_patch('megatron.training.arguments.validate_args', validate_args_decorator)
     # After validating arguments, do arguments printing.
     PatchManager.register_patch('megatron.training.arguments._print_args', print_args_wrapper)
     PatchManager.register_patch('megatron.training.global_vars.build_tokenizer', build_tokenizer)
     PatchManager.register_patch('megatron.training.checkpointing._load_base_checkpoint', _load_base_checkpoint_wrapper)
+
+    # For transformer layer configuration
+    PatchManager.register_patch('megatron.training.arguments.core_transformer_config_from_args', core_transformer_config_from_args_wrapper)
 
 
 def patch_datasets():
@@ -375,7 +378,7 @@ def patch_optimizer():
     if args.reuse_fp32_param:
         from mindspeed.optimizer.optimizer import mixed_precision_optimizer_step, reuse_fp32_param_init_wrapper, \
             optimizer_config_init_wrapper
-        from ..core.optimizer.distrib_optimizer import reuse_fp32_param_distrib_optimizer_init_wrapper
+        from mindspeed.optimizer.distrib_optimizer import reuse_fp32_param_distrib_optimizer_init_wrapper
         PatchManager.register_patch('megatron.core.optimizer.optimizer.MixedPrecisionOptimizer.step', mixed_precision_optimizer_step)
         PatchManager.register_patch('megatron.core.optimizer.optimizer.Float16OptimizerWithFloat16Params.__init__', reuse_fp32_param_init_wrapper)
         PatchManager.register_patch('megatron.core.optimizer.optimizer_config.OptimizerConfig.__init__', optimizer_config_init_wrapper)

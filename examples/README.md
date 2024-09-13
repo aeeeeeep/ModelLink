@@ -10,6 +10,7 @@
 - [权重下载及转换](#权重下载及转换)
 - [数据集准备及处理](#数据集准备及处理)
 - [大模型分布式预训练](#大模型分布式预训练)
+- [大模型分布式指令微调](#大模型分布式指令微调)
 - [大模型分布式推理](#大模型分布式推理)
 - [大模型分布式评估](#大模型分布式评估)
 - [社区BUG列表](#社区BUG列表)
@@ -17,7 +18,7 @@
 ---
 
 ## 环境安装
-    
+
 【模型开发时推荐使用配套的环境版本】
 
 |    软件     | [版本](https://www.hiascend.com/zh/) |
@@ -51,23 +52,24 @@
     # python3.8
     conda create -n test python=3.8
     conda activate test
-    
+
     # 安装 torch 和 torch_npu，注意要选择对应python版本、x86或arm的torch、torch_npu及apex包
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl 
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
-    
+
     # 修改 ascend-toolkit 路径
     source /usr/local/Ascend/ascend-toolkit/set_env.sh 
-    
+
     # 安装加速库
     git clone https://gitee.com/ascend/MindSpeed.git
     cd MindSpeed
-    git checkout core_r0.6.0
+    # checkout commit from MindSpeed core_r0.6.0
+    git checkout e6ea2117 
     pip install -r requirements.txt 
     pip3 install -e .
     cd ..
-    
+
     # 安装其余依赖库
     pip install -r requirements.txt 
 ```
@@ -105,7 +107,7 @@ cd ../../
 
 #### 2. 权重转换
 
-##### 2.1 Huggingface权重转换到Megatron-Legacy
+##### 2.1 Huggingface权重转换到Megatron
 
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
@@ -113,11 +115,12 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 python convert_ckpt.py \
     --model-type GPT \
-    --loader llama2_hf \
-    --saver megatron \
+    --load-model-type hf \
+    --save-model-type mg \
     --target-tensor-parallel-size 2 \
     --target-pipeline-parallel-size 4 \
     --num-layer-list 8,8,8,8 \
+    --model-type-hf llama2 \
     --load-dir ./model_from_hf/llama-2-7b-hf/ \
     --save-dir ./model_weights/llama-2-7b-legacy/ \
     --tokenizer-model ./model_from_hf/llama-2-7b-hf/tokenizer.model
@@ -139,6 +142,16 @@ python convert_ckpt.py \
 
 可选参数，支持VPP划分，指定VPP的每个Stage层数，默认为None
 
+注意：VPP和动态PP划分只能二选一
+
+【--use-mcore-models】
+
+设置是否转换为Megatron-Mcore权重，若不指定，则默认转换为Megatron-Legacy权重
+
+【--model-type-hf】
+
+huggingface模型类别，默认为llama2，目前支持的模型见 [model_cfg.json](https://gitee.com/ascend/ModelLink/blob/master/modellink/tasks/checkpoint/model_cfg.json)
+
 【--tokenizer-model】
 
 需要指明到具体的分词器模型文件，如 tokenizer.model、tokenizer.json、qwen.tiktoken、None等，具体取决于huggingface中词表文件的格式形式
@@ -157,8 +170,15 @@ ModelLink Huggingface到Megatron-Legacy权重转换脚本命名风格及启动�
 bash examples/llama2/ckpt_convert_llama2_hf2legacy.sh
 ```
 
+ModelLink Huggingface到Megatron-Mcore权重转换脚本命名风格及启动方法为：
+```shell
+# 命名及启动：bash examples/model_name/ckpt_convert_xxx_hf2mcore.sh
+# 需要配置并行参数以及权重词表加载保存等路径
 
-##### 2.2 Megatron-Legacy权重转换到Huggingface
+bash examples/llama2/ckpt_convert_llama2_hf2mcore.sh
+```
+
+##### 2.2 Megatron权重转换到Huggingface
 
 ```shell
 # 请按照您的真实环境修改 set_env.sh 路径
@@ -166,14 +186,15 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 python convert_ckpt.py \
     --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
+    --load-model-type mg \
+    --save-model-type hf \
+    --model-type-hf llama2 \
     --load-dir ./model_weights/llama-2-7b-legacy/ \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \
-    --save-dir ./model_from_hf/llama-2-7b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-7b-hf/mg2hg/
+    --save-dir ./model_from_hf/llama-2-7b-hf/     # <-- 需要填入原始HF模型路径，新权重会存于./model_from_hf/llama-2-7b-hf/mg2hf/
 ```
+参数意义参考2.1
 
 【启动脚本】
 
@@ -185,7 +206,78 @@ ModelLink Megatron-Legacy到Huggingface的权重转换脚本命名风格及启�
 bash examples/llama2/ckpt_convert_llama2_legacy2hf.sh
 ```
 
-##### 2.3 lora权重与base权重合并
+ModelLink Megatron-Mcore到Huggingface的权重转换脚本命名风格及启动方法为：
+```shell
+# 命名及启动：bash examples/model_name/ckpt_convert_xxx_mcore2hf.sh
+# 需要配置并行参数以及权重词表加载保存等路径
+
+bash examples/llama2/ckpt_convert_llama2_mcore2hf.sh
+```
+
+##### 2.3 Megatron权重互转
+
+```shell
+# 请按照您的真实环境修改 set_env.sh 路径
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+
+# legacy转legacy
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type mg \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 2 \
+    --load-dir ./model_weights/llama-2-7b-legacy/ \
+    --save-dir ./model_weights/llama-2-7b-legacy_tp2pp2/
+
+# legacy转mcore
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type mg \
+    --use-mcore-models \
+    --load-from-legacy \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 2 \
+    --load-dir ./model_weights/llama-2-7b-legacy/ \
+    --save-dir ./model_weights/llama-2-7b-mcore_tp2pp2/
+
+# mcore转mocre
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type mg \
+    --use-mcore-models \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 2 \
+    --load-dir ./model_weights/llama-2-7b-mcore/ \
+    --save-dir ./model_weights/llama-2-7b-mcore_tp2pp2/
+
+# mcore转legacy
+python tools/checkpoint/convert_ckpt.py \
+    --model-type GPT \
+    --load-model-type mg \
+    --save-model-type mg \
+    --use-mcore-models \
+    --save-to-legacy \
+    --target-tensor-parallel-size 2 \
+    --target-pipeline-parallel-size 2 \
+    --load-dir ./model_weights/llama-2-7b-mcore/ \
+    --save-dir ./model_weights/llama-2-7b-legacy_tp2pp2/
+```
+【load-from-legacy】 
+
+legacy转mcore时设置此参数以指定导入权重格式为legacy
+
+【save-to-legacy】 
+
+mcore转legacy时设置此参数以指定保存权重格式为legacy
+
+其余参数意义参考2.1
+
+注：上述权重legacy和mcore互转为高阶功能，modellink基于llama2提供基础能力，并进行版本迭代看护，其余模型的支持需要用户自行修改支持
+
+##### 2.4 lora权重与base权重合并
 
 在上述权重转换命令中，加入如下参数可以将训练的 lora 权重与base进行融合。
 
@@ -204,8 +296,8 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 python convert_ckpt.py \
     --model-type GPT \
-    --loader megatron \
-    --saver megatron \
+    --load-model-type mg \
+    --save-model-type mg \
     --load-dir ./model_weights/llama-2-7b-legacy/ \
     --lora-load ./ckpt/llama-2-7b-lora \
     --lora-r 16 \
@@ -229,9 +321,8 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 python convert_ckpt.py \
     --model-type GPT \
-    --loader megatron \
-    --saver megatron \
-    --save-model-type save_huggingface_llama \
+    --load-model-type mg \
+    --save-model-type hf \
     --load-dir ./model_weights/llama-2-7b-legacy/ \
     --lora-load ./ckpt/llama-2-7b-lora \
     --lora-r 16 \
@@ -416,7 +507,7 @@ Alpaca风格示例：
 
 目前支持的模板有：
 
-`['empty', 'default', 'chatglm3_system', 'chatml', 'qwen', llama2]`
+`['empty', 'default', 'chatglm3_system', 'chatml', 'qwen', 'llama2', 'llama3', 'alpaca']`
 
 【--handler-name】
 
@@ -628,7 +719,7 @@ data1_xxx_text_document.idx, data1_xxx_text_document.bin, data2_xxx_text_documen
 #### 2. 配置预训练参数
 
 legacy分支的预训练脚本保存在 example 中各模型文件夹下：pretrain_xxx_xx.sh
- 
+
 mcore分支的预训练脚本保存在 example/mcore 中各模型文件夹下：pretrain_xxx_xx.sh
 
 需根据实际情况修改路径和参数值：
@@ -636,6 +727,7 @@ mcore分支的预训练脚本保存在 example/mcore 中各模型文件夹下：
 **示例：** 
 
 examples/llama2/pretrain_llama2_7b_ptd.sh      *(legacy分支)*
+
 examples/mcore/llama2/pretrain_llama2_7b_ptd.sh *(mcore分支)*
 
 路径配置：包括**权重保存路径**、**权重加载路径**、**词表路径**、**数据集路径**
@@ -681,7 +773,7 @@ examples/mcore/llama2/pretrain_llama2_7b_ptd.sh *(mcore分支)*
     NODE_RANK="current node id"  #当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
     WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
 ```
-                      
+
 
 #### 3. 启动预训练
 
@@ -707,6 +799,112 @@ examples/mcore/llama2/pretrain_llama2_7b_ptd.sh *(mcore分支)*
 - 多机训练需在多个终端同时启动预训练脚本(每个终端的预训练脚本只有NODE_RANK参数不同，其他参数均相同)
 - 如果使用多机训练，且没有设置数据共享，需要在训练启动脚本中增加`--no-shared-storage`参数，设置此参数之后将会根据布式参数判断非主节点是否需要load数据，并检查相应缓存和生成数据
 
+---
+
+
+## 大模型分布式指令微调
+
+#### 1. 准备工作
+配置脚本前需要完成前置准备工作，包括：**环境安装**、**数据集准备及处理**、**Huggingface权重转换**，详情可查看对应章节
+
+#### 2. 配置微调参数
+
+legacy分支的全参微调脚本保存在 example 中各模型文件夹下：tune_xxx_xx_full_ptd.sh
+ 
+mcore分支的全参微调脚本保存在 example/mcore 中各模型文件夹下：tune_xxx_xx_full_ptd.sh
+
+需根据实际情况修改路径和参数值：
+
+**示例：** 
+
+examples/llama2/tune_llama2_7b_full_ptd.sh      *(legacy分支)*
+
+examples/mcore/llama2/tune_llama2_7b_full_ptd.sh *(mcore分支)*
+
+路径配置：包括**权重保存路径**、**权重加载路径**、**词表路径**、**数据集路径**
+ ```shell
+    # 根据实际情况配置权重保存、权重加载、词表、数据集路径
+    CKPT_SAVE_DIR="./ckpt/llama-2-7b"  #权重保存路径
+    CKPT_LOAD_DIR="./model_weights/llama-2-7b-legacy/"  #权重加载路径
+    TOKENIZER_MODEL="./model_from_hf/llama-2-7b-hf/"  #词表路径
+    DATA_PATH="./finetune_dataset/alpaca"  #数据集路径
+```
+【--tokenizer-type】 
+
+参数值为PretrainedFromHF时， 词表路径仅需要填到模型文件夹即可，不需要到tokenizer.model文件
+
+【--data-path】 
+
+目前不支持多数据集微调，支持把多个数据集合并为一个数据集处理，参考数据集合并章节
+
+需要指定前缀，与数据预处理时的"--output-prefix"保持一致
+
+**示例：**
+
+数据预处理时`output-prefix`为`"./finetune_dataset/alpaca"`
+ ```shell
+python ./preprocess_data.py \
+    --output-prefix ./finetune_dataset/alpaca \
+    ......
+```
+则指令微调`DATA_PATH`也应为`"./finetune_dataset/alpaca"`
+
+ ```shell
+DATA_PATH="./finetune_dataset/alpaca"  #数据集路径
+```
+
+【prompt-type】
+
+用于指定模型模板，能够让base模型微调后能具备更好的对话能力。
+
+【variable-seq-lengths】
+
+支持以动态的序列长度进行微调，默认padding到`8`的整数倍，可以通过`--pad-to-multiple-of`参数来修改padding的倍数。
+
+
+【单机运行】 
+```shell
+    GPUS_PER_NODE=8
+    MASTER_ADDR=locahost
+    MASTER_PORT=6000
+    NNODES=1  
+    NODE_RANK=0  
+    WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
+```
+【多机运行】 
+```shell
+    # 根据分布式集群实际情况配置分布式参数
+    GPUS_PER_NODE=8  #每个节点的卡数
+    MASTER_ADDR="your master node IP"  #都需要修改为主节点的IP地址（不能为localhost）
+    MASTER_PORT=6000
+    NNODES=2  #集群里的节点数，以实际情况填写,
+    NODE_RANK="current node id"  #当前节点的RANK，多个节点不能重复，主节点为0, 其他节点可以是1,2..
+    WORLD_SIZE=$(($GPUS_PER_NODE * $NNODES))
+```
+                      
+
+#### 3. 启动全参微调
+
+【legacy分支】 
+```shell
+    bash example/模型文件夹/tune_xxx_xxx_full_ptd.sh
+```
+**示例：** *(以llama2-7B为例)*
+```shell
+    bash examples/llama2/tune_llama2_7b_full_ptd.sh
+```
+
+【mcore分支】 
+```shell
+    bash example/mcore/模型文件夹/tune_xxx_xxx_full_ptd.sh
+```
+
+**示例：** 
+```shell
+    bash examples/mcore/llama2/tune_llama2_7b_full_ptd.sh
+```
+**注意**：
+- 多机微调需在多个终端同时启动全参微调脚本(每个终端的全参微调脚本只有NODE_RANK参数不同，其他参数均相同)
 
 ---
 
@@ -733,12 +931,45 @@ TOKENIZER_PATH="./model_from_hf/llama-2-hf/"
 # 启动任务
 bash examples/llama2/generate_llama2_7b_ptd.sh
 ```
+#### 2. Chat：指令微调后chat对话
 
+ModelLink 指令微调后chat对话脚本命名风格及启动方法为：
+```shell
+# Legacy
+# 命名及启动：examples/model_name/chat_xxx.sh
+bash examples/llama2/chat_llama2_7b_ptd.sh
+
+# Mcore
+# 命名及启动：examples/mcore/model_name/chat_xxx.sh
+bash examples/mcore/llama2/chat_llama2_7b_ptd.sh
+```
+
+```shell
+# 按实际情况修改启动脚本中模型权重路径和分词器路径
+CHECKPOINT="./model_weights/llama-2-7b-legacy"
+TOKENIZER_PATH="./model_from_hf/llama-2-hf/"
+
+# 启动任务
+bash examples/llama2/chat_llama2_7b_ptd.sh
+```
+
+【history-turns】
+
+在多轮对话中，可以指定参数`--history-turns`来改变历史对话记录轮数，默认为记录`3`轮
+
+【hf-chat-template】
+
+如果模型的tokenizer已经具备`chat_template`属性，则可以选择通过添加`--hf-chat-template`来使用模型内置的对话模板
+
+【prompt-type】
+
+模型对话模板，作用与`--hf-chat-template`一致，但不需要模型的tokenizer已经具备`chat_template`属性，微调后推理对话时应选择模型对应的对话模板
 
 ---
 
 ## 大模型分布式评估
 
+#### 1. 基准评估
 ModelLink 基准评估脚本命名风格及启动方法为：
 ```shell
 # Legacy
@@ -764,7 +995,31 @@ TASK="mmlu"
 # 启动评估脚本
 bash examples/llama2/evaluate_llama2_7B_ptd.sh
 ```
-【lora权重评估】
+
+#### 2. 指令微调评估
+
+使用指令微调后权重的评估脚本命名风格及启动方法为：
+
+```shell
+bash examples/llama2/evaluate_llama2_7B_full_ptd.sh
+```
+
+【prompt-type】
+
+模型对话模板，选择模型对应的对话模板进行评估
+
+
+【hf-chat-template】
+
+如果模型的tokenizer已经具备`chat_template`属性，则可以选择通过添加`--hf-chat-template`来使用模型内置的对话模板进行评估
+
+
+【eval-language】
+
+根据评估数据集语言来确定，默认为`en`，如果评估数据集为中文数据集，则应设置为`zh`
+
+
+#### 3. lora权重评估
 
 使用lora权重的评估脚本命名风格及启动方法为：
 
@@ -790,16 +1045,16 @@ ModelLink已支持模型评估分数如下：
 | LLaMA-7B      | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 74.6%     | [75.4](https://hub.opencompass.org.cn/dataset-detail/BoolQ)           | LLaMA-13B    | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 79.6%     | [78.7](https://hub.opencompass.org.cn/dataset-detail/BoolQ)         |
 | LLaMA-33B     | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 83.2%     | [83.1](https://paperswithcode.com/sota/question-answering-on-boolq)   | LLaMA-65B    | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 85.7%     | [86.6](https://paperswithcode.com/sota/question-answering-on-boolq) |
 | LLaMA2-7B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 45.7%     | 45.3%                                                                 | LLaMA2-13B   | [BoolQ](https://paperswithcode.com/dataset/boolq)                      | 82.2%     | [81.7](https://paperswithcode.com/sota/question-answering-on-boolq) |
-| LLaMA2-34B    | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 85.9%     | --                                                                    | LLaMA2-70B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 65.1%     | --                                                                  |
-| LLaMA3-8B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 65.3%     | 66.6%                                                                 | LLaMA3-70B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 78.3%     | 79.5%                                                               |
+| LLaMA2-34B    | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 82.0%     | --                                                                    | LLaMA2-70B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 86.4%     | --                                                                  |
+| LLaMA3-8B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 65.2%     | 66.6%                                                                 | LLaMA3-70B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 78.4%     | 79.5%                                                               |
 | LLaMA3.1-8B   | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 65.26%    | 66.7%                                                                 | LLaMA3.1-70B | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                | 81.8%     | 79.3%                                                               |
 | Mistral-7B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 56.3%     | 56.3%                                                                 | Mixtral-8x7B | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 69.9%     | [70.6%](https://paperswithcode.com/sota/multi-task-language-understanding-on-mmlu)                                                               |
-| Mistral-8x22B | [BoolQ](https://github.com/google-research-datasets/boolean-questions)    | 89.4%     | 89.3%                                                                 | --           | --                                                                     | --        | --                                                                  |
+| Mistral-8x22B | [MMLU](https://paperswithcode.com/dataset/mmlu)    | 77%       | [77.8%](https://mistral.ai/news/mixtral-8x22b/)                                                                 | --           | --                                                                     | --        | --                                                                  |
 | QWen-7B       | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 58.1%     | [58.2%](https://huggingface.co/Qwen/Qwen-7B)                          | Qwen-14B     | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 65.3%     | [66.3%](https://huggingface.co/Qwen/Qwen-14B)                       |
 | QWen-72B      | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 74.6%     | [77.4%](https://huggingface.co/Qwen/Qwen-72B)                         | QWen1.5-0.5B | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                   | 31.8%     | 31.8%                                                               |
 | QWen1.5-1.8b  | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                      | 46.2%     | [46.8%](https://qwenlm.github.io/zh/blog/qwen1.5/)                    | QWen1.5-4B   | [BoolQ](https://github.com/google-research-datasets/boolean-questions) | 55.0%     | [0.561](https://qwenlm.github.io/zh/blog/qwen1.5)                   |
 | QWen1.5-7B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 60.3%     | [61.0%](https://qwenlm.github.io/zh/blog/qwen1.5/)                    | QWen1.5-14B  | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 67.3%     | [67.6%](https://qwenlm.github.io/zh/blog/qwen1.5)                   |
-| QWen1.5-32B   | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 72.6%     | [73.4%](https://huggingface.co/Qwen/Qwen-72B)                         | QWen1.5-72B  | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 77.5%     | [77.5%](https://qwenlm.github.io/zh/blog/qwen1.5)                   |
+| QWen1.5-32B   | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                       | 72.6%     | [73.4%](https://huggingface.co/Qwen/Qwen-72B)                         | QWen1.5-72B  | [MMLU](https://paperswithcode.com/dataset/mmlu)                                                                    | 76.4%     | [77.5%](https://qwenlm.github.io/zh/blog/qwen1.5)                   |
 | Qwen1.5-110B  | [MMLU](https://paperswithcode.com/dataset/mmlu)                           | 80.4%     | [80.4%](https://qwenlm.github.io/zh/blog/qwen1.5-110b/)               | Yi-34B       | [MMLU](https://paperswithcode.com/dataset/mmlu)                         | 76.3%     | [75.8%](https://hub.opencompass.org.cn/dataset-detail/MMLU)         |
 | Qwen2-0.5B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                           | 44.6%     | [45.4%](https://qwenlm.github.io/zh/blog/qwen2/)                      | Qwen2-1.5B   | [MMLU](https://paperswithcode.com/dataset/mmlu)                         | 54.7%     | [56.5%](https://qwenlm.github.io/zh/blog/qwen2/)                    |
 | QWen2-7B      | [MMLU](https://paperswithcode.com/dataset/mmlu)                           | 70.3%     | [70.3%](https://qwenlm.github.io/zh/blog/qwen2/)                      | Qwen2-72B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                         | 83.6%     | [84.2%](https://qwenlm.github.io/zh/blog/qwen2/)                    |
@@ -839,7 +1094,7 @@ MiniCPM-2B    | [MMLU](https://paperswithcode.com/dataset/mmlu)                 
         --append-eod \
         --workers 4 \
         --log-interval 1000
-   
+
     # 请根据真实存放路径配置预训练脚本以下参数
     VOCAB_FILE="./vocab_file/gpt2-vocab.json"   # 词表
     MERGE_FILE="./vocab_file/gpt2-merges.txt"   # BPE 合并表

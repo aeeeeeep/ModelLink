@@ -5,7 +5,7 @@ mkdir ./dataset
 python ./preprocess_data.py \
    --input ./dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet \
    --tokenizer-name-or-path ./model_from_hf/gemma2_hf/ \
-   --tokenizer-type PretrainedFromHF
+   --tokenizer-type PretrainedFromHF \
    --output-prefix ./dataset/enwiki \
    --workers 4 \
    --log-interval 1000  \

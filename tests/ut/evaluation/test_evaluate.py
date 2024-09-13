@@ -23,8 +23,8 @@ import math
 import pytest
 import torch.distributed as dist
 from evaluation import main
-from tests.common import DistributedTest
-from test_tools.utils import build_args, create_testconfig, setup_logger
+from tests.test_tools.dist_test import DistributedTest
+from tests.test_tools.utils import build_args, create_testconfig, setup_logger
 
 
 PATTERN = r"acc = (.*)"

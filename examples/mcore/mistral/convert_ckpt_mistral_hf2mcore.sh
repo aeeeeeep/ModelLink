@@ -4,8 +4,8 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 # 设置你需要的并行参数
 python convert_ckpt.py \
    --model-type GPT \
-   --loader hf_mcore \
-   --saver mg_mcore \
+   --load-model-type hf \
+   --save-model-type mg \
    --load-dir ./model_from_hf/Mistral-hf/ \
    --save-dir ./model_weights/Mistral-mcore/ \
    --tokenizer-model ./model_from_hf/Mistral-hf/tokenizer.model \
