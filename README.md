@@ -600,10 +600,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-32B/tree/main">32B</a> </td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 4x8 </td>
       <td> BF16 </td>
-      <td> 751 </td>
+      <td> 768 </td>
       <td> -- </td>
       <td> 708 </td>
       <td>【GTS】</td>
