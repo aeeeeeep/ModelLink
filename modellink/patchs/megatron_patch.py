@@ -232,10 +232,16 @@ def patch_core_transformers(args):
     PatchManager.register_patch('megatron.core.transformer.moe.experts.GroupedMLP.__init__', groupedmlp_init_wrapper)
 
 
-
 def patch_pipeline_parallel():
     # solve send recv bug
     PatchManager.register_patch('megatron.core.pipeline_parallel.p2p_communication._batched_p2p_ops', _batched_p2p_ops)
+
+    # dpo relative, we need to change the recv/send shape when using PP, then deal with it by ourselves.
+    from modellink.tasks.rl.utils import get_tensor_shapes_decorator
+    PatchManager.register_patch(
+        'megatron.core.pipeline_parallel.schedules.get_tensor_shapes',
+        get_tensor_shapes_decorator
+    )
 
 
 def patch_tensor_parallel():

@@ -88,16 +88,28 @@ class BaseDatasetHandler(object):
 
         skip_num = 0
         for i, doc in enumerate(self.tokenized_dataset.iter(batch_size=iteration_batch_size), start=1):
+            # In post-training stage, we need to drop the data exceeded set sequence-length
+            skip_indices = set()
             for key in self.args.json_keys:
                 batch = [sentences for sentences in doc[key] if len(sentences) > 0]
 
                 if len(batch) == 0:
                     continue
 
-                for sentences in batch:
-                    for sentence in sentences:
+                for j, sentences in enumerate(batch):
+                    for k, sentence in enumerate(sentences):
                         if self.args.seq_length is not None and len(sentence) >= self.args.seq_length:
-                            skip_num += 1
+                            skip_indices.add((j, k))
+
+            for key in self.args.json_keys:
+                batch = [sentences for sentences in doc[key] if len(sentences) > 0]
+
+                if len(batch) == 0:
+                    continue
+
+                for j, sentences in enumerate(batch):
+                    for k, sentence in enumerate(sentences):
+                        if (j, k) in skip_indices:
                             continue
 
                         total_bytes_processed += len(sentence) * np.int32().itemsize
@@ -111,7 +123,7 @@ class BaseDatasetHandler(object):
                 mbs = total_bytes_processed / elapsed / 1024 / 1024
                 logger.info("Processed %s documents (%s docs/s, %s MB/s).", batch_id, batch_id / elapsed, mbs)
 
-        logger.info("Skip %s sample exceeded seq-length(%s)", skip_num // 3, self.args.seq_length)
+        logger.info("Skip %s sample exceeded seq-length(%s)", skip_num, self.args.seq_length)
         for key in self.args.json_keys:
             builders[key].finalize(output_idx_files[key])
 
@@ -280,6 +292,74 @@ class SharegptStyleInstructionHandler(LlamaFactoryInstructionHandler):
     """
     Handle sharegpt style dataset format
     a Llama-factory sharegpt style instruction dataset handler
+    """
+    def __init__(self, args, raw_datasets, tokenizer, splitter):
+        super().__init__(args, raw_datasets, tokenizer, splitter)
+
+
+class AlpacaStylePairwiseHandler(LlamaFactoryInstructionHandler):
+    """
+    Handle alpaca style dataset format in pairwise dataset used in RM | DPO training
+    """
+    def __init__(self, args, raw_datasets, tokenizer, splitter):
+        super().__init__(args, raw_datasets, tokenizer, splitter)
+        self.args.json_keys = [
+            "chosen_input_ids",
+            "chosen_attention_mask",
+            "chosen_labels",
+            "rejected_input_ids",
+            "rejected_attention_mask",
+            "rejected_labels"
+        ]
+
+    def _format_msg(self, sample):
+        chosen = {
+            "prompt": sample["prompt"],
+            "response": [sample["response"][0]],
+            "system": sample["system"],
+            "tools": sample["tools"]
+        }
+
+        rejected = {
+            "prompt": sample["prompt"],
+            "response": [sample["response"][1]],
+            "system": sample["system"],
+            "tools": sample["tools"]
+        }
+
+        return chosen, rejected
+
+    def _filter(self, sample):
+        chosen, rejected = self._format_msg(sample)
+
+        chosen_tokenized_full_prompt = self._tokenize_prompt(
+            chosen, self.llama_factory_template, self.tokenizer.tokenizer)
+        rejected_tokenized_full_prompt = self._tokenize_prompt(
+            rejected, self.llama_factory_template, self.tokenizer.tokenizer)
+
+        if self.args.append_eod:
+            chosen_tokenized_full_prompt.get("input_ids", []).append(self.tokenizer.eod)
+            chosen_tokenized_full_prompt.get("attention_mask", []).append(1)
+            chosen_tokenized_full_prompt.get("labels", []).append(self.tokenizer.eod)
+            rejected_tokenized_full_prompt.get("input_ids", []).append(self.tokenizer.eod)
+            rejected_tokenized_full_prompt.get("attention_mask", []).append(1)
+            rejected_tokenized_full_prompt.get("labels", []).append(self.tokenizer.eod)
+
+        concatenated_ids = {
+            "chosen_input_ids": [chosen_tokenized_full_prompt.get("input_ids", [])],
+            "chosen_attention_mask": [chosen_tokenized_full_prompt.get("attention_mask", [])],
+            "chosen_labels": [chosen_tokenized_full_prompt.get("labels", [])],
+            "rejected_input_ids": [rejected_tokenized_full_prompt.get("input_ids", [])],
+            "rejected_attention_mask": [rejected_tokenized_full_prompt.get("attention_mask", [])],
+            "rejected_labels": [rejected_tokenized_full_prompt.get("labels", [])]
+        }
+
+        return concatenated_ids
+
+
+class SharegptStylePairwiseHandler(AlpacaStylePairwiseHandler):
+    """
+    Handle ShareGPT Style dataset format in pairwise dataset used in RM | DPO training
     """
     def __init__(self, args, raw_datasets, tokenizer, splitter):
         super().__init__(args, raw_datasets, tokenizer, splitter)
@@ -620,10 +700,14 @@ def build_dataset(args):
         if raw_datasets is None:
             raise Exception("unknown data!")
 
-        if args.handler_name == "AlpacaStyleInstructionHandler" or args.handler_name == "SharegptStyleInstructionHandler":
+        if args.handler_name in [
+            "AlpacaStyleInstructionHandler",
+            "SharegptStyleInstructionHandler",
+            "AlpacaStylePairwiseHandler",
+            "SharegptStylePairwiseHandler"
+        ]:
             handler_dataset_attr = get_handler_dataset_attr(args, raw_datasets)
 
             return align_dataset(raw_datasets, handler_dataset_attr, args)
-
 
     return raw_datasets

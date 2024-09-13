@@ -59,13 +59,14 @@ def process_args(parser):
     parser = _add_mla_args(parser)
     parser = _add_yarn_args(parser)
     parser = _add_deepseek_moe_args(parser)
+    parser = _add_rl_args(parser)
 
     return parser
 
 
 def _add_mla_args(parser):
     group = parser.add_argument_group(title='multi-head latent attention')
-    
+
     group.add_argument('--multi-head-latent-attention', action='store_true', default=False,
                        help='Use Multi-head Latent Attention(MLA)')
     group.add_argument('--q-lora-rank', type=int, default=None, help='The low rank of q')
@@ -79,7 +80,7 @@ def _add_mla_args(parser):
 
 def _add_yarn_args(parser):
     group = parser.add_argument_group(title='yarn')
-    
+
     group.add_argument('--rope-scaling-beta-fast', type=int, default=32, help='Yarn rope: rope beta fast')
     group.add_argument('--rope-scaling-beta-slow', type=int, default=1, help='Yarn rope: rope beta slow')
     group.add_argument('--rope-scaling-factor', type=float, default=1.0, help='Yarn rope: rope factor')
@@ -267,7 +268,7 @@ def _add_moe_args(parser):
     group.add_argument('--output-multiplier-scale', type=float, default=None, help='Add scale for logits output.')
     group.add_argument("--moe-permutation-async-comm", action='store_true',
                        help="overlap moe permutation 3 all gather communications")
-                       
+
     return parser
 
 
@@ -321,7 +322,7 @@ def _add_network_size_args(parser):
                        action='store_true',
                        help='use custom partial rope in glm model.'
                        )
-    
+
     group.add_argument("--use-fused-rmsnorm", action='store_true',
                        help="Use fused rmsnorm.")
     group.add_argument("--use-fused-swiglu", action='store_true',
@@ -382,6 +383,58 @@ def _add_network_args(parser):
     group.add_argument('--query-pre-attn-scalar', type=int, help='attention scalar.')
     group.add_argument('--interleave-sliding-window', type=int,
                        help='Window size when use interleave sliding window attention.')
+    group.add_argument(
+        '--stage',
+        default=None,
+        choices=["dpo"],
+        help='Determine training mode'
+    )
+
+    return parser
+
+
+def _add_rl_args(parser):
+    group = parser.add_argument_group(title='reinforce learning in dpo')
+    group.add_argument(
+        '--dpo-beta',
+        default=0.1,
+        help='The beta parameter for the DPO loss.'
+    )
+    group.add_argument(
+        '--dpo-loss-type',
+        default="sigmoid",
+        choices=["sigmoid", "hinge", "ipo"],
+        help='The type of DPO loss to use.'
+    )
+    group.add_argument(
+        '--dpo-label-smoothing',
+        default=0.0,
+        help='The robust DPO label smoothing parameter in cDPO that should be between 0 and 0.5.'
+    )
+    group.add_argument(
+        '--dpo-ftx',
+        default=0.0,
+        help='The supervised fine-tuning loss coefficient in DPO training.'
+    )
+    group.add_argument(
+        '--ref-model',
+        default=None,
+        help='Path to the reference model used for the PPO or DPO training.'
+    )
+    group.add_argument(
+        '--dpo-label-smoothing',
+        default=0.0,
+        help="The robust DPO label smoothing parameter in cDPO that should be between 0 and 0.5.",
+    )
+    group.add_argument(
+        '--pref-ftx',
+        default=0.0,
+        help="The supervised fine-tuning loss coefficient in DPO training.",
+    )
+    group.add_argument(
+        "--is-pairwise-dataset", action='store_true',
+        help="Whether the dataset is pairwise format that has a chosen sequence and rejected "
+             "sequence, which usually used in reinforce learning.")
     return parser
 
 
@@ -624,8 +677,20 @@ def _validate_group_limited_greedy(args):
         elif args.routed_scaling_factor is None:
             raise AssertionError('The parameter routed_scaling_factor should be set when use multi_head_latent_attention.')
         elif args.topk_group >= args.expert_model_parallel_size:
-            raise AssertionError('The topk group ({}) should be less than n-group(EP)({}).'.format(args.topk_group, 
+            raise AssertionError('The topk group ({}) should be less than n-group(EP)({}).'.format(args.topk_group,
             args.expert_model_parallel_size))
+
+
+def _validate_rl_training(args):
+    if args.stage == "dpo":
+        if any(
+                [
+                    args.num_layers_per_virtual_pipeline_stage is not None,
+                    args.num_experts is not None,
+                    args.context_parallel_size > 1
+                ]
+        ):
+            raise AssertionError('VPP, EP, CP unsupported now.')
 
 
 def get_layer_offset(pp_size, num_layer_list):
@@ -750,6 +815,7 @@ def validate_args_decorator(megatron_validate_args):
         _validate_evaluation_args(args)
         _validate_output_layer_slice_num(args)
         _validate_optimizer(args)
+        _validate_rl_training(args)
 
         _add_dummy_args(args)
 
