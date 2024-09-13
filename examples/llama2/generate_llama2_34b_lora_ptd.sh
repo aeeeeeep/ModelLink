@@ -27,8 +27,8 @@ WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
 python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
-       --tensor-model-parallel-size 8  \
-       --pipeline-model-parallel-size 1  \
+       --tensor-model-parallel-size 1  \
+       --pipeline-model-parallel-size 2  \
        --num-layers 48  \
        --hidden-size 8192  \
        --ffn-hidden-size 22016 \
@@ -57,8 +57,9 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --exit-on-missing-checkpoint \
        --lora-load ${CHECKPOINT_LORA}  \
        --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
-       --lora-r 16 \
-       --lora-alpha 32 \
+       --lora-r 8 \
+       --lora-alpha 16 \
+       --lora-fusion \
        --make-vocab-size-divisible-by 1 \
        --group-query-attention \
        --num-query-groups 8 \

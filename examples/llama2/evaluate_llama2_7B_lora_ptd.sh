@@ -22,7 +22,7 @@ MASTER_ADDR=localhost
 MASTER_PORT=6011
 NNODES=1
 NODE_RANK=0
-NPUS_PER_NODE=1
+NPUS_PER_NODE=8
 DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 # configure generation parameters
 python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
@@ -53,8 +53,9 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py   \
        --no-load-rng \
        --no-load-optim \
        --lora-load ${LORA_CHECKPOINT} \
-       --lora-r 16 \
-       --lora-alpha 32 \
+       --lora-r 8 \
+       --lora-alpha 16 \
+       --lora-fusion \
        --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
        --untie-embeddings-and-output-weights \
        --no-masked-softmax-fusion \
