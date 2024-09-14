@@ -127,7 +127,7 @@ class DecoderPackedMTFDataset(torch.utils.data.Dataset):
         eos_token: int,
         seed,
     ):
-        args = get_args()
+        self.args = get_args()
         self.mtf_dataset = MTFDataset(name=name, data_prefix=data_prefix, documents=documents)
 
         self.pad_token = pad_token
@@ -141,11 +141,24 @@ class DecoderPackedMTFDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         doc_idx = self.shuffle_index[idx]
         item = self.mtf_dataset[doc_idx]
-        return {
-            "input_ids": self._cut_token(item["input_ids"], np.int64),
-            "attention_mask": self._cut_token(item["attention_mask"], np.int64),
-            "labels": self._cut_token(item["labels"], np.int64),
-        }
+
+        if self.args.is_pairwise_dataset:
+            res = {
+                "chosen_input_ids": self._cut_token(item["chosen_input_ids"], np.int64),
+                "chosen_attention_mask": self._cut_token(item["chosen_attention_mask"], np.int64),
+                "chosen_labels": self._cut_token(item["chosen_labels"], np.int64),
+                "rejected_input_ids": self._cut_token(item["rejected_input_ids"], np.int64),
+                "rejected_attention_mask": self._cut_token(item["rejected_attention_mask"], np.int64),
+                "rejected_labels": self._cut_token(item["rejected_labels"], np.int64)
+            }
+        else:
+            res = {
+                "input_ids": self._cut_token(item["input_ids"], np.int64),
+                "attention_mask": self._cut_token(item["attention_mask"], np.int64),
+                "labels": self._cut_token(item["labels"], np.int64),
+            }
+
+        return res
     
     def _cut_token(self, token, dtype):
         token_length = len(token)

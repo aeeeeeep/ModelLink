@@ -24,6 +24,7 @@ from megatron.training import get_args, get_tokenizer
 from megatron.core import parallel_state
 from megatron.legacy.data.data_samplers import MegatronPretrainingSampler, MegatronPretrainingRandomSampler
 from modellink.error_utils import check_divisible, ensure_valid
+from modellink.tasks.rl.collator import PairwiseDataCollatorWithPadding
 
 
 
@@ -57,7 +58,15 @@ def build_pretraining_data_loader(dataset, consumed_samples):
 
     tokenizer = get_tokenizer().tokenizer
 
-    if args.is_instruction_dataset:
+    if args.is_pairwise_dataset:
+        tokenizer.padding_side = args.tokenizer_padding_side
+        collator = PairwiseDataCollatorWithPadding(
+            tokenizer,
+            pad_to_multiple_of=args.pad_to_multiple_of if args.variable_seq_lengths else args.seq_length,
+            return_tensors='pt',
+            padding=True
+        )
+    elif args.is_instruction_dataset:
         tokenizer.padding_side = args.tokenizer_padding_side
         collator = DataCollatorForSeq2Seq(
             tokenizer,

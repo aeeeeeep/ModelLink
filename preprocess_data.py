@@ -196,9 +196,15 @@ def get_args():
 
 
 def validate_args(args):
-    support_prompt_type_handler = ["LlamaFactoryInstructionHandler", "AlpacaStyleInstructionHandler", "SharegptStyleInstructionHandler"]
+    support_prompt_type_handler = [
+        "LlamaFactoryInstructionHandler",
+        "AlpacaStyleInstructionHandler",
+        "SharegptStyleInstructionHandler",
+        "AlpacaStylePairwiseHandler",
+        "SharegptStylePairwiseHandler"
+    ]
     if args.prompt_type is not None and args.handler_name not in support_prompt_type_handler:
-        raise AssertionError('If specify prompt_type , handler name must be "LlamaFactoryInstructionHandler"、"AlpacaStyleInstructionHandler"、"SharegptStyleInstructionHandler".')
+        raise AssertionError(f'If specify prompt_type , handler name must be in:\n{support_prompt_type_handler}.')
 
 
 def cut_range_to_subs(n, gap):
