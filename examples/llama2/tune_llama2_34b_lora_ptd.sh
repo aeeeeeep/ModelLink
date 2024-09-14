@@ -1,9 +1,5 @@
 #!/bin/bash
 
-export HCCL_CONNECT_TIMEOUT=1200
-export COMBINED_ENABLE=1
-export AZUREML_EXPERIMENT_ID=0
-
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 GPUS_PER_NODE=8
@@ -19,8 +15,8 @@ TOKENIZER_MODEL="your tokenizer path"
 CKPT_LOAD_DIR="your model ckpt path"
 LORA_CHECKPOINT="your lora ckpt path"
 
-TP=8
-PP=1
+TP=1
+PP=2
 
 DISTRIBUTED_ARGS="
     --nproc_per_node $GPUS_PER_NODE \
@@ -29,57 +25,64 @@ DISTRIBUTED_ARGS="
     --master_addr $MASTER_ADDR \
     --master_port $MASTER_PORT
 "
+# 断点续训需要添加参数 --lora-load ${LORA_CHECKPOINT} \
 
 GPT_ARGS="
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
+    --variable-seq-lengths \
+    --load ${CKPT_LOAD_DIR} \
     --num-layers 48 \
     --hidden-size 8192 \
     --ffn-hidden-size 22016 \
-    --load ${CKPT_LOAD_DIR} \
-    --lora-load ${LORA_CHECKPOINT} \
     --num-attention-heads 64 \
     --tokenizer-type PretrainedFromHF \
     --tokenizer-name-or-path ${TOKENIZER_MODEL} \
     --tokenizer-not-use-fast \
     --seq-length 4096 \
     --max-position-embeddings 4096 \
-    --micro-batch-size 2 \
+    --micro-batch-size 4 \
     --global-batch-size 128 \
     --make-vocab-size-divisible-by 1 \
-    --lr 1.5e-4 \
-    --train-iters 2000 \
-    --lr-decay-style cosine \
-    --untie-embeddings-and-output-weights \
+    --train-iters 1000 \
     --disable-bias-linear \
     --attention-dropout 0.0 \
-    --init-method-std 0.01 \
     --hidden-dropout 0.0 \
     --position-embedding-type rope \
+    --untie-embeddings-and-output-weights \
     --normalization RMSNorm \
-    --use-fused-rmsnorm \
     --swiglu \
     --use-flash-attn \
+    --use-fused-rmsnorm \
     --group-query-attention \
     --num-query-groups 8 \
     --no-masked-softmax-fusion \
     --attention-softmax-in-fp32 \
-    --min-lr 1.0e-5 \
-    --weight-decay 1e-2 \
+    --lr 5.0e-5 \
+    --lr-decay-style cosine \
     --lr-warmup-fraction 0.01 \
+    --min-lr 1.0e-6 \
+    --weight-decay 1e-2 \
     --clip-grad 1.0 \
     --adam-beta1 0.9 \
-    --initial-loss-scale 524288 \
     --adam-beta2 0.95 \
+    --init-method-std 0.01 \
+    --initial-loss-scale 524288 \
     --no-gradient-accumulation-fusion \
     --no-load-optim \
     --no-load-rng \
     --finetune \
     --is-instruction-dataset \
-    --lora-r 16 \
-    --lora-alpha 32 \
+    --lora-r 8 \
+    --lora-alpha 16 \
+    --lora-fusion \
     --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
+    --rotary-base 10000 \
+    --norm-epsilon 1e-05 \
+    --vocab-size 32000 \
+    --log-throughput \
+    --prompt-type llama2 \
     --bf16
 "
 
@@ -90,7 +93,7 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --save-interval 10000 \
+    --save-interval 500 \
     --eval-interval 1000 \
     --eval-iters 0 \
 "
@@ -100,6 +103,5 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $DATA_ARGS \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
-    --jit-compile \
     --save $CKPT_SAVE_DIR \
     | tee logs/tune_llama2_34b.log
