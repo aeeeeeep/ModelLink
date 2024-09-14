@@ -16,6 +16,7 @@
 import sys
 import types
 import importlib
+from importlib.machinery import ModuleSpec
 from functools import wraps
 import torch
 import apex
@@ -82,8 +83,14 @@ def mock_amp_c():
 
 
 def mock_flash_attn():
-    sys.modules['flash_attn.flash_attn_interface'] = types.ModuleType('flash_attn_flash_attn_interface')
+    _mock_module('flash_attn')
+    _mock_module('flash_attn.flash_attn_interface')
     setattr(sys.modules['flash_attn.flash_attn_interface'], 'flash_attn_unpadded_func', torch.nn.Module)
+
+
+def _mock_module(module_path):
+    sys.modules[module_path] = types.ModuleType(module_path)
+    sys.modules[module_path].__spec__ = ModuleSpec(module_path, None)
 
 
 def mock_fused_layer_norm_cuda():
