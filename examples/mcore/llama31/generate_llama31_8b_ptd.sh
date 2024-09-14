@@ -1,5 +1,4 @@
 #!/bin/bash
-
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # please fill these path configurations
@@ -11,18 +10,21 @@ MASTER_ADDR=localhost
 MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
-NPUS_PER_NODE=8
+NPUS_PER_NODE=1
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
 torchrun $DISTRIBUTED_ARGS inference.py \
-       --tensor-model-parallel-size 8  \
+       --tensor-model-parallel-size 1  \
        --pipeline-model-parallel-size 1  \
        --use-mcore-models \
+       --use-kv-cache \
+       --use-flash-attn \
        --use-fused-swiglu \
-       --use-rotary-position-embeddings \
+       --use-fused-rmsnorm \
        --use-fused-rotary-pos-emb \
+       --use-rotary-position-embeddings \
        --load ${CHECKPOINT}  \
        --tokenizer-type PretrainedFromHF  \
        --tokenizer-name-or-path ${TOKENIZER_PATH} \
@@ -37,7 +39,8 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --max-new-tokens 256 \
        --group-query-attention \
        --num-query-groups 8 \
-       --micro-batch-size 1 \
+       --micro-batch-size 4 \
+       --global-batch-size 16 \
        --num-attention-heads 32  \
        --swiglu \
        --rope-scaling-type llama3 \
@@ -57,5 +60,5 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --padded-vocab-size 128256 \
        --bf16 \
        --seed 42 \
-       | tee logs/generate_llama31_8b.log
+       | tee logs/generate_mcore_llama31_8b.log
 

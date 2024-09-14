@@ -2,8 +2,8 @@
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # please fill these path configurations
-TOKENIZER_PATH="your tokenizer directory path"
 CHECKPOINT="your model directory path"
+TOKENIZER_PATH="your tokenizer directory path"
 
 # Change for multinode config
 MASTER_ADDR=localhost
@@ -38,14 +38,19 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --ffn-hidden-size 28672 \
        --position-embedding-type rope \
        --rotary-base 500000 \
-       --seq-length 8192 \
-       --max-position-embeddings 8192 \
+       --seq-length 131072 \
+       --max-position-embeddings 131072 \
        --max-new-tokens 256 \
        --group-query-attention \
        --num-query-groups 8 \
        --micro-batch-size 1 \
-       --num-attention-heads 64 \
+       --num-attention-heads 64  \
        --swiglu \
+       --rope-scaling-type llama3 \
+       --rope-scaling-factor 8.0 \
+       --low-freq-factor 1.0 \
+       --high-freq-factor 4.0 \
+       --original-max-position-embeddings 8192 \
        --normalization RMSNorm \
        --norm-epsilon 1e-5 \
        --hidden-dropout 0 \
@@ -54,8 +59,9 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --disable-bias-linear \
        --attention-softmax-in-fp32 \
        --exit-on-missing-checkpoint \
-       --make-vocab-size-divisible-by 16032 \
+       --make-vocab-size-divisible-by 1 \
+       --padded-vocab-size 128256 \
        --bf16 \
        --seed 42 \
-       | tee logs/chat_mcore_llama3_70b.log
+       | tee logs/chat_mcore_llama31_70b.log
 

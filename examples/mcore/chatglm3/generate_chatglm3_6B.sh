@@ -11,15 +11,19 @@ MASTER_ADDR=localhost
 MASTER_PORT=6001
 NNODES=1
 NODE_RANK=0
-NPUS_PER_NODE=2
+NPUS_PER_NODE=1
 WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
 
 DISTRIBUTED_ARGS="--nproc_per_node $NPUS_PER_NODE --nnodes $NNODES --node_rank $NODE_RANK --master_addr $MASTER_ADDR --master_port $MASTER_PORT"
 
 python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
-       --use-mcore-models \
        --tensor-model-parallel-size 1  \
-       --pipeline-model-parallel-size 2  \
+       --pipeline-model-parallel-size 1  \
+       --use-mcore-models \
+       --use-kv-cache \
+       --use-flash-attn \
+       --use-fused-swiglu \
+       --use-fused-rmsnorm \
        --num-layers 28  \
        --hidden-size 4096  \
        --ffn-hidden-size 13696 \
@@ -39,7 +43,7 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        --normalization RMSNorm \
        --max-new-tokens 256 \
        --micro-batch-size 1 \
-       --global-batch-size 16 \
+       --global-batch-size 1 \
        --load "${CHECKPOINT}"  \
        --tokenizer-type PretrainedFromHF  \
        --tokenizer-name-or-path "${TOKENIZER_PATH}" \
