@@ -218,15 +218,8 @@
 	<tr>
         <td rowspan="3">ProcessData</td>
         <td rowspan="3">Mcore</td>
-        <td>pretrain_data_handler, pretrain_merge_datasets</td>
-        <td><a href="ut/process_data/test_process_pretrain_data.py">test_process_process_pretrain_data.py</a></td>
-        <td>Y</td>
-        <td></td>
-        <td></td>
-    </tr>
-	<tr>
-        <td>instruction_data_handler, instruction_merge_datasets</td>
-        <td><a href="ut/process_data/test_process_instruction_data.py">test_process_instruction_data.py</a></td>
+        <td>pretrain_data_alpaca, pretrain_merge_datasets, instruction_data_alpaca, instruction_merge_datasets</td>
+        <td><a href="ut/process_data/test_preprocess_data.py">test_preprocess_data.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
