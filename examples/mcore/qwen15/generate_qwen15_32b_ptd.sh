@@ -51,4 +51,4 @@ torchrun $DISTRIBUTED_ARGS inference.py \
        --tokenizer-not-use-fast \
        --max-new-tokens 256 \
        --bf16 \
-       --seed 42 | tee logs/generate_qwen15_32b_mcore.log
+       --seed 42 | tee logs/generate_mcore_qwen15_32b.log

@@ -100,4 +100,4 @@ torchrun $DISTRIBUTED_ARGS pretrain_gpt.py \
     $OUTPUT_ARGS \
     --distributed-backend nccl \
     --save ${CKPT_SAVE_DIR} \
-    | tee logs/pretrain_qwen15_32b_mcore.log
+    | tee logs/pretrain_mcore_qwen15_32b.log

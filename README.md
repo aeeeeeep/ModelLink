@@ -503,9 +503,9 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td rowspan="8"><a href="https://huggingface.co/Qwen">Qwen1.5</a></td>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-0.5B/tree/main">0.5B</a> </td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 1x8 </td>
-      <td> 22834 </td>
+      <td> 23239 </td>
       <td> -- </td>
       <td> 25306 </td>
       <td>【GTS】</td>
@@ -513,9 +513,9 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-1.8B/tree/main">1.8B</a> </td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 1x8 </td>
-      <td> 13029 </td>
+      <td> 12603 </td>
       <td> -- </td>
       <td> 12181 </td>
       <td>【GTS】</td>
@@ -1481,7 +1481,7 @@ ModelLink已支持模型的评估数据统计如下：
 | Mistral-7B    | MMLU   | 56.3%     | --                                                                   | Mixtral-8x7B     | MMLU   | 69.9%     | [70.6%](https://paperswithcode.com/sota/multi-task-language-understanding-on-mmlu) |
 | Mistral-8x22B | MMLU   | 77%       | [77.8%](https://mistral.ai/news/mixtral-8x22b/)                      | MiniCPM-MoE-8x2B | BoolQ  | 83.9%     | --                                                                                |
 | QWen-7B       | MMLU   | 58.1%     | [58.2%](https://huggingface.co/Qwen/Qwen-7B)                         | Qwen-14B         | MMLU   | 65.3%     | [66.3%](https://huggingface.co/Qwen/Qwen-14B)                                     |
-| QWen-72B      | MMLU   | 74.6%     | [77.4%](https://huggingface.co/Qwen/Qwen-72B)                        | QWen1.5-0.5B     | MMLU   | 31.8%     | --                                                                                |
+| QWen-72B      | MMLU   | 74.6%     | [77.4%](https://huggingface.co/Qwen/Qwen-72B)                        | QWen1.5-0.5B     | MMLU   | 39.1%     | --                                                                                |
 | QWen1.5-1.8b  | MMLU   | 46.2%     | [46.8%](https://qwenlm.github.io/zh/blog/qwen1.5/)                   | QWen1.5-4B       | MMLU   | 59.0%     | [56.1%](https://qwenlm.github.io/zh/blog/qwen1.5)                                 |
 | QWen1.5-7B    | MMLU   | 60.3%     | [61.0%](https://qwenlm.github.io/zh/blog/qwen1.5/)                   | QWen1.5-14B      | MMLU   | 67.3%     | [67.6%](https://qwenlm.github.io/zh/blog/qwen1.5)                                 |
 | QWen1.5-32B   | MMLU   | 72.5%     | [73.4%](https://huggingface.co/Qwen/Qwen-72B)                        | QWen1.5-72B      | MMLU   | 76.4%     | [77.5%](https://qwenlm.github.io/zh/blog/qwen1.5)                                 |
