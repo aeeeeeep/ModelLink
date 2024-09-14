@@ -16,6 +16,7 @@
 import sys
 import types
 import importlib
+from importlib.machinery import ModuleSpec
 from functools import wraps
 import torch
 import apex
@@ -30,6 +31,14 @@ def mock_megatron_dependencies():
     mock_fused_layer_norm_cuda()
 
 
+def _mock_module(module_path):
+    """
+    Mock module and its spec by module path.
+    """
+    sys.modules[module_path] = types.ModuleType(module_path)
+    sys.modules[module_path].__spec__ = ModuleSpec(module_path, None)
+
+
 def mock_transformer_engine():
     def version_wrapper(fn):
         @wraps(fn)
@@ -41,8 +50,7 @@ def mock_transformer_engine():
 
         return wrapper
     importlib.metadata.version = version_wrapper(importlib.metadata.version)
-    sys.modules['transformer_engine'] = types.ModuleType('transformer_engine')
-    sys.modules['transformer_engine'].__spec__ = 'te'
+    _mock_module('transformer_engine')
     setattr(sys.modules['transformer_engine'], 'pytorch', torch.nn)
     setattr(sys.modules['transformer_engine'].pytorch, 'LayerNormLinear', torch.nn.Module)
     setattr(sys.modules['transformer_engine'].pytorch, 'DotProductAttention', torch.nn.Module)
@@ -64,7 +72,6 @@ def mock_amp_c():
             total_norm = grad_norm ** norm_type
         return total_norm ** (1 / norm_type), ret_per_tensor
 
-
     def multi_tensor_scale(overflow_buf, tensor_lists, scale):
         if len(tensor_lists) != 2:
             raise AssertionError('The size of tensor list must be 2, but got {}'.format(len(tensor_lists)))
@@ -76,18 +83,19 @@ def mock_amp_c():
             for i in range(len(tensor_lists[0])):
                 tensor_lists[1][i].copy_(tensor_lists[0][i] * scale)
 
-    sys.modules['amp_C'] = types.ModuleType('amp_C')
+    _mock_module('amp_C')
     setattr(sys.modules['amp_C'], 'multi_tensor_l2norm', multi_tensor_l2norm)
     setattr(sys.modules['amp_C'], 'multi_tensor_scale', multi_tensor_scale)
 
 
 def mock_flash_attn():
-    sys.modules['flash_attn.flash_attn_interface'] = types.ModuleType('flash_attn_flash_attn_interface')
+    _mock_module('flash_attn')
+    _mock_module('flash_attn.flash_attn_interface')
     setattr(sys.modules['flash_attn.flash_attn_interface'], 'flash_attn_unpadded_func', torch.nn.Module)
 
 
 def mock_fused_layer_norm_cuda():
-    sys.modules['fused_layer_norm_cuda'] = types.ModuleType('fused_layer_norm_cuda')
+    _mock_module('fused_layer_norm_cuda')
 
 
 def patch_npu_apex_torch():
