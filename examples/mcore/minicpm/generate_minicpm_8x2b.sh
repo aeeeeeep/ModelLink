@@ -36,7 +36,6 @@ python -m torch.distributed.launch $DISTRIBUTED_ARGS inference.py \
        $MOE_ARGS \
        --tensor-model-parallel-size ${TP}  \
        --pipeline-model-parallel-size ${PP}  \
-       --sequence-parallel \
        --num-layers 40 \
        --hidden-size 2304  \
        --ffn-hidden-size 5760 \

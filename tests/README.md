@@ -128,7 +128,7 @@
         <td>Y</td>
     </tr>
     <tr>
-        <td rowspan="14">UT</td>
+        <td rowspan="15">UT</td>
         <td>Inference</td>
         <td>Legacy</td>
         <td>greedy_search, lora_inference, deterministic_computation, chatglm3_inference</td>
@@ -216,8 +216,8 @@
         <td></td>
     </tr>
 	<tr>
-        <td rowspan="3">ProcessData</td>
-        <td rowspan="3">Mcore</td>
+        <td rowspan="4">ProcessData</td>
+        <td rowspan="4">Mcore</td>
         <td>pretrain_data_handler, pretrain_merge_datasets</td>
         <td><a href="ut/process_data/test_process_pretrain_data.py">test_process_process_pretrain_data.py</a></td>
         <td>Y</td>
@@ -241,6 +241,14 @@
         <td></td>
         <td></td>
     </tr>
+	<tr>
+        <td>instruction_data_handler</td>
+        <td><a href="ut/process_data/test_process_instruction_pack_data.py">test_process_instruction_data.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+
 </table>
 
 ### Pipline 二级流水看护列表

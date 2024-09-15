@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import bisect
 import os
 import json
 import logging
 from functools import partial
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 from datasets import load_dataset, concatenate_datasets, interleave_datasets
 
 from modellink.tasks.preprocess.templates import Role
@@ -521,3 +522,35 @@ def load_single_dataset(dataset_attr, data_args):
         dataset = dataset.select(range(num_samples))
 
     return align_dataset(dataset, dataset_attr, data_args)
+
+
+def search_for_fit(numbers: Sequence[int], capacity: int) -> int:
+    r"""
+    Finds the index of largest number that fits into the knapsack with the given capacity.
+    """
+    index = bisect.bisect(numbers, capacity)
+    return -1 if index == 0 else (index - 1)
+
+
+def greedy_knapsack(numbers: List[int], capacity: int) -> List[List[int]]:
+    r"""
+    An efficient greedy algorithm with binary search for the knapsack problem.
+    """
+    numbers.sort()  # sort numbers in ascending order for binary search
+    knapsacks = []
+
+    while numbers:
+        current_knapsack = []
+        remaining_capacity = capacity
+
+        while True:
+            index = search_for_fit(numbers, remaining_capacity)
+            if index == -1:
+                break  # no more numbers fit in this knapsack
+
+            remaining_capacity -= numbers[index]  # update the remaining capacity
+            current_knapsack.append(numbers.pop(index))  # add the number to knapsack
+
+        knapsacks.append(current_knapsack)
+
+    return knapsacks
