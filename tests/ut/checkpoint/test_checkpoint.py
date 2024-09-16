@@ -48,6 +48,22 @@ class TestCheckpoint(object):
         base_dir = '/data/Mixtral-8x7B-v0.1/base_mg2hf_tp1pp4ep2vpp2'
         save_dir = os.path.join(self.test_config['test_mixtral_mcore2hf_tp1pp4ep2vpp2'][0]['save-dir'], 'mg2hf')
         assert weight_compare(base_dir, save_dir, suffix="safetensors", use_md5=True)
+    
+    def test_deepseek2_hf2mcore_tp1pp4ep8(self):
+        os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
+        exit_code = run_cmd(["python3", CKPT_PYPATH] + self.test_config_cmd['test_deepseek2_hf2mcore_tp1pp4ep8'])
+        assert exit_code == 0
+        base_dir = '/data/ci/deepseek2/mg_base/deepseek2-l8-t1p4e8-gemm'
+        save_dir = self.test_config['test_deepseek2_hf2mcore_tp1pp4ep8'][0]['save-dir']
+        assert weight_compare(base_dir, save_dir)
+
+    def test_deepseek2_mcore2hf_tp1pp4ep8(self):
+        os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
+        exit_code = run_cmd(["python3", CKPT_PYPATH] + self.test_config_cmd['test_deepseek2_mcore2hf_tp1pp4ep8'])
+        assert exit_code == 0
+        base_dir = '/data/ci/deepseek2/hf_base/deepseek2_hf_base'
+        save_dir = os.path.join(self.test_config['test_deepseek2_mcore2hf_tp1pp4ep8'][0]['save-dir'], 'mg2hf')
+        assert weight_compare(base_dir, save_dir, suffix="safetensors", use_md5=True)
 
     def test_gemma2_hf2mcore_tp8pp1(self):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"

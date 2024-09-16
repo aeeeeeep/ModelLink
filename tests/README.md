@@ -187,7 +187,7 @@
     <tr>
         <td rowspan="4">Checkpoint</td>
         <td rowspan="2"> Mcore </td>
-        <td> hf2mcore, tp, pp, ep, dpp, vpp; hf2mcore, tp</td>
+        <td> hf2mcore, tp, pp, ep, dpp, vpp, deepseek2; hf2mcore, tp, deepseek2</td>
         <td><a href="ut/checkpoint/test_checkpoint.py">test_checkpoint.py</a></td>
         <td>Y</td>
         <td></td>
