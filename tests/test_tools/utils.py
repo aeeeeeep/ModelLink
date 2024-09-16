@@ -65,7 +65,8 @@ def weight_compare(dir_1, dir_2, suffix="pt", use_md5=False):
         print(f"Can't find any weight files in {dir_1}.")
         return False
     for path_1 in models_path:
-        path_2 = path_1.replace(dir_1, dir_2)
+        path_1 = os.path.normpath(path_1)
+        path_2 = path_1.replace(os.path.normpath(dir_1), os.path.normpath(dir_2))
         if use_md5:
             are_equal = (get_md5sum(path_1) == get_md5sum(path_2))
         else:
