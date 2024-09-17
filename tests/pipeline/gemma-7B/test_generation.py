@@ -21,7 +21,7 @@ class TestInference(DistributedTest):
     test_config = create_testconfig(json_file)
 
     
-    @pytest.mark.parametrize("params", test_config["test_qwen15_7B_greedy_search"])
+    @pytest.mark.parametrize("params", test_config["test_gemma_7B_greedy_search"])
     def test_greedy_search(self, build_args, params):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
         if dist.get_rank() == 0:
@@ -30,7 +30,7 @@ class TestInference(DistributedTest):
         main()
 
         if dist.get_rank() == 0:
-            print("=============== qwen15_7B greedy search =============")
+            print("=============== gemma_7B greedy search =============")
             print(log_capture)
             context = acquire_context(log_capture)
             assert [context] == [

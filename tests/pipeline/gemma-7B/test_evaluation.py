@@ -21,7 +21,7 @@ class TestEvaluate(DistributedTest):
     json_file = next(cur_dir.glob("*.json"), None)
     test_config = create_testconfig(json_file)
 
-    @pytest.mark.parametrize("params", test_config["test_qwen15_7B_mmlu_evaluate"])
+    @pytest.mark.parametrize("params", test_config["test_gemma_7B_mmlu_evaluate"])
     def test_baichuan2_mmlu_evaluate(self, build_args, params):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
         if dist.get_rank() == 0:
@@ -30,7 +30,7 @@ class TestEvaluate(DistributedTest):
         main()
         
         if dist.get_rank() == 0:
-            print("=================== qwen15_7B MMLU score ===============")
+            print("=================== gemma_7B MMLU score ===============")
             print(log_capture)
 
             expected_score = acquire_score(log_capture)
