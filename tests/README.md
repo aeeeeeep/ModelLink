@@ -291,6 +291,15 @@
         <td></td>
         <td></td>
     </tr>
+    <tr>
+        <td rowspan="1"><a href="pipeline/chatglm3-6B">Chatglm3-6B</a></td>
+        <td rowspan="1">Legacy</td>
+        <td>pretrain</td>
+        <td><a href="pipeline/chatglm3-6B/chatglm3_tp1_pp2_legacy.sh">chatglm3_tp1_pp2_legacy.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
 </table>
 
 
