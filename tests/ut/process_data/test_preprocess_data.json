@@ -38,7 +38,8 @@
         {
             "params": {
                 "input": "/data/process_dataset/test_merge_subs/",
-                "output-prefix": "/data/process_dataset/test_merge/merge"
+                "output-prefix": "/data/process_dataset/test_merge/merge",
+                "merge-group-keys": "text_document"
             }
         }
     ],
@@ -86,7 +87,7 @@
             "params": {
                 "input": "/data/process_dataset/test_ins_subs/",
                 "output-prefix": "/data/process_dataset/test_ins_merge/merge",
-                "keys": ["packed_attention_mask_document", "packed_input_ids_document", "packed_labels_document"]
+                "merge-group-keys": ["packed_attention_mask_document", "packed_input_ids_document", "packed_labels_document"]
             }
         }
     ]

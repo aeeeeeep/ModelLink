@@ -4,8 +4,7 @@ import pytest
 import pandas as pd
 import modellink
 from tests.test_tools.utils import build_args, create_testconfig, compare_file_md5_same
-from preprocess_data import main as preprocess_datasets_main
-from merge_datasets import main as merge_datasets_main
+from preprocess_data import main
 
 
 class TestProcessPretrainData:
@@ -39,7 +38,7 @@ class TestProcessPretrainData:
             print("=============== preprocess pretrain datasets part1 =============")
         elif slice_range == slice(25000, None):
             print("=============== preprocess pretrain datasets part2 =============")
-        preprocess_datasets_main()
+        main()
 
         # compare file MD5 hashes
         prefix_str = params["output-prefix"].split('/')[-1]
@@ -60,7 +59,7 @@ class TestProcessPretrainData:
 
         # merge pretrain dataset
         print("=============== merge pretrain datasets =============")
-        merge_datasets_main()
+        main()
 
         # compare file MD5 hashes
         prefix_str = params["output-prefix"].split('/')[-1]
@@ -103,11 +102,11 @@ class TestProcessInstructionData:
             print("=============== preprocess instruction datasets part1 =============")
         elif slice_range == slice(25000, None):
             print("=============== preprocess instruction datasets part2 =============")
-        preprocess_datasets_main()
+        main()
 
         # compare file MD5 hashes
         prefix_str = params["output-prefix"].split('/')[-1]
-        mid_strs = [merge_params["keys"][0], merge_params["keys"][1], merge_params["keys"][2]]
+        mid_strs = [merge_params["merge-group-keys"][0], merge_params["merge-group-keys"][1], merge_params["merge-group-keys"][2]]
         end_suffixes = [".bin", ".idx"]
         for mid_str in mid_strs:
             for end_suffix in end_suffixes:
@@ -126,11 +125,11 @@ class TestProcessInstructionData:
 
         # merge instruction dataset
         print("=============== merge instruction datasets =============")
-        merge_datasets_main()
+        main()
 
         # compare file MD5 hashes
         prefix_str = params["output-prefix"].split('/')[-1]
-        mid_strs = [params["keys"][0], params["keys"][1], params["keys"][2]]
+        mid_strs = [params["merge-group-keys"][0], params["merge-group-keys"][1], params["merge-group-keys"][2]]
         end_suffixs = [".bin", ".idx"]
         for mid_str in mid_strs:
             for end_suffix in end_suffixs:

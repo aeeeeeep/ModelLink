@@ -692,19 +692,19 @@ bash examples/llama2/data_convert_llama2_instruction.sh
 预训练：
 
 ```shell
-python ./merge_datasets.py \
+python ./preprocess_data.py \
     --input ./process_data/enwiki_subsets \
     --output-prefix ./process_data/merge_enwiki
-    # --keys text_document # 默认值，可不传
+    --merge-group-keys text_document
 ```
 
 微调：
 
 ```shell
-python ./merge_datasets.py \
+python ./preprocess_data.py \
     --input ./process_data/alpaca_tune_subsets \
     --output-prefix ./process_data/merge_tune_alpaca
-    --keys packed_attention_mask_document packed_input_ids_document packed_labels_document
+    --merge-group-keys packed_attention_mask_document packed_input_ids_document packed_labels_document
 ```
 
 【--input】
@@ -717,10 +717,10 @@ data1_xxx_text_document.idx, data1_xxx_text_document.bin, data2_xxx_text_documen
 
 参数值为合并之后数据集保存路径前缀
 
-【--keys】
+【--merge-group-keys】
 
-- 参数值为文件分类标识符列表，文件夹中文件名匹配到含有相同key的文件会被合并
-- 合并之后生成的数据集文件命名规则为：`output_prefix_key`。默认值为预训练场景的数据集文件后缀，即[`text_document`]。微调场景须手动指定keys，如上示例。
+- 参数值为文件分类标识符列表，文件夹中文件名匹配到含有相同key的文件会被合并。预处理时的keys一般为`text_document`，微调时keys一般为`packed_attention_mask_document packed_input_ids_document packed_labels_document`。
+- 合并之后生成的数据集文件命名规则为：`output_prefix_key`。key为merge-group-keys中传入的key名称，如上示例。
 
 
 ---
