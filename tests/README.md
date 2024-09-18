@@ -178,7 +178,7 @@
         <td></td>
     </tr>
     <tr>
-        <td>transformer_attention</td>
+        <td>transformer_attention, alibi</td>
         <td><a href="ut/model_module/transformer/test_attention.py">test_attention.py</a></td>
         <td>Y</td>
         <td></td>
