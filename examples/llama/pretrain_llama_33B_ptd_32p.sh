@@ -38,7 +38,7 @@ GPT_ARGS="
     --seq-length 2048 \
     --max-position-embeddings 2048 \
     --micro-batch-size 4 \
-    --global-batch-size 128 \
+    --global-batch-size 256 \
     --make-vocab-size-divisible-by 1 \
     --lr 1e-6 \
     --train-iters 5000 \
@@ -64,6 +64,7 @@ GPT_ARGS="
     --initial-loss-scale 524288.0 \
     --adam-beta2 0.95 \
     --no-gradient-accumulation-fusion \
+    --use-distributed-optimizer \
     --load ${CKPT_LOAD_DIR}  \
     --no-load-optim \
     --no-load-rng \
