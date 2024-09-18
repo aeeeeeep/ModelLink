@@ -49,6 +49,15 @@
     "llama2": {
       "__base__": "base"
     },
+    "baichuan": {
+      "__base__": "base",
+      "config_set_value": {
+        "qkv_type": "pack_gqa"
+      },
+      "model_hf_key_mapping": {
+        "layers_self_attention_linear_qkv_pack": "model.layers[layer_idx].self_attn.W_pack"
+      }
+    },
     "chatglm3": {
       "__base__": "base",
       "config_set_value": {
