@@ -24,7 +24,6 @@ from megatron.core.transformer.spec_utils import build_module
 from megatron.core.transformer.mlp import MLP
 from megatron.core.transformer.transformer_config import TransformerConfig
 from mindspeed.core.tensor_parallel.random import CheckpointWithoutOutput
-from mindspeed.model.transformer import should_recompute_activation
 
 
 def should_recompute_activation(self):

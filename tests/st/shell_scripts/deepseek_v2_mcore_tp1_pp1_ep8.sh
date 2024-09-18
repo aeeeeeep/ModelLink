@@ -38,6 +38,10 @@ MLA_ARGS="
     --qk-layernorm \
 "
 
+OPTIM_ARGS="
+    --recompute-activation-function \
+"
+
 MOE_ARGS="
     --moe-permutation-async-comm \
     --moe-grouped-gemm \
@@ -142,6 +146,7 @@ torchrun $DISTRIBUTED_ARGS $basepath/pretrain_gpt.py \
     $GPT_ARGS \
     $DATA_ARGS \
     $OUTPUT_ARGS \
+    $OPTIM_ARGS \
     $MLA_ARGS \
     $ROPE_ARGS \
     $MOE_ARGS \
