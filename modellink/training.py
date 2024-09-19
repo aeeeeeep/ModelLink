@@ -324,6 +324,9 @@ def pretrain(train_valid_test_dataset_provider,
                                                            model_provider,
                                                            model_type, forward_step_func, process_non_loss_data_func)
 
+    if not args.do_train and not args.do_valid and not args.do_test:
+        raise RuntimeError('no data loaded, you might give wrong data path.')
+
     if not args.skip_train:
         print_rank_0('training ...')
 
