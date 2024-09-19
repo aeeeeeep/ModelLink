@@ -19,6 +19,7 @@ from tests.test_tools.dist_test import DistributedTest
 from tests.test_tools.utils import initialize_model_parallel
 from modellink.core.transformer import get_attention_mask, MUST_COMPRESS
 from modellink.core.transformer.mask_generator import set_attention_mask
+from modellink.model.alibi import Alibi
 from modellink.utils import seed_all
 
 
@@ -46,13 +47,19 @@ def get_data_on_this_cp_rank(data, r_size, u_size, cp_rank, dim=0):
     return data
 
 
-def run_attention_module(test_args, use_mcore, use_cp, cp_size, u_size):
+def run_attention_module(test_args, use_mcore, use_cp, cp_size, u_size, use_alibi=False):
     bs, seq_len, dtype = test_args
     r_size = cp_size // u_size
     args = parse_args(None, True)
     args.use_cp_send_recv_overlap = True
     args.cp_attention_mask_type = 'causal'
 
+    if use_alibi:
+        args.position_embedding_type = 'alibi'
+        args.square_alibi_mask = True
+        args.fill_neg_inf = True
+        args.num_attention_heads = 32
+        args.params_dtype = dtype
     # currently we always use FA in context parallel.
     args.use_flash_attn = True
     if u_size == 1:
@@ -80,10 +87,21 @@ def run_attention_module(test_args, use_mcore, use_cp, cp_size, u_size):
     v = torch.randn(s, b, n * d, dtype=dtype, device='npu', requires_grad=True)
     dout = torch.randn(s, b, n * d, dtype=dtype, device='npu', requires_grad=True)
 
-    attn_mask = get_attention_mask(mode=MUST_COMPRESS)
+    if use_alibi:
+        _alibi = Alibi()
+        _alibi.alibi = _alibi._build_alibi_tensor(seq_len, n, True, True).to(torch.cuda.current_device(), dtype=dtype)
+        attn_mask = torch.triu(torch.ones(seq_len, seq_len), 1).bool().npu()
+        _alibi.get_alibi_pse(attn_mask, b, q.shape[0], k.shape[0])
+        pse = _alibi.alibi_pse.reshape(b, n, _alibi.alibi_pse.size(1), -1) * 1.0 / scale
+        sparse_mode = 0
+    else:
+        attn_mask = get_attention_mask(mode=MUST_COMPRESS)
+        pse = None
+        sparse_mode = 4 if attn_mask is not None else 0
+
     out = torch_npu.npu_fusion_attention( \
         q, k, v, n, 'SBH', \
-        pse=None, \
+        pse=pse, \
         padding_mask=None, \
         atten_mask=attn_mask, \
         scale=scale, \
@@ -91,7 +109,7 @@ def run_attention_module(test_args, use_mcore, use_cp, cp_size, u_size):
         next_tockens=0, \
         keep_prob=1., \
         inner_precise=0, \
-        sparse_mode=4 if attn_mask is not None else 0
+        sparse_mode=sparse_mode
     )[0]
     out.backward(dout)
 
@@ -162,6 +180,10 @@ class TestAttention(DistributedTest):
     @pytest.mark.parametrize("use_mcore", [True, False])
     def test_no_context_parallel_seq8192_bs2_bf16(self, use_mcore):
         run_attention_module((2, 8192, torch.bfloat16), use_mcore, False, 1, 1)
+
+    @pytest.mark.parametrize("use_mcore", [True])
+    def test_alibi_seq8192_bs2_bf16(self, use_mcore):
+        run_attention_module((2, 8192, torch.bfloat16), use_mcore, False, 1, 1, use_alibi=True)
 
     @pytest.mark.parametrize("use_mcore", [True])
     def test_hybrid_context_parallel_seq8192_bs2_bf16(self, use_mcore):
