@@ -784,6 +784,9 @@ class MegatronModel(ModelBase):
         if self.md and self.args_cmd.num_layer_list:
             self.args.num_layer_list = self.args_cmd.num_layer_list
 
+    def set_padded_vocab_size(self, padded_vocab_size):
+        self.args.padded_vocab_size = padded_vocab_size
+
     def set_megatron_parallel_state(self, saver_megatron):
         if saver_megatron:
             self.set_tensor_model_parallel_world_size(self.args_cmd.target_tensor_parallel_size)
