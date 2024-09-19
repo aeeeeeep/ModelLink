@@ -6,8 +6,9 @@ python convert_ckpt.py \
     --model-type GPT \
     --load-dir ./model_from_hf/Aquila2-hf/ \
     --save-dir ./model_weights/Aquila2-legacy/ \
-    --loader llama2_hf \
-    --saver megatron \
+    --load-model-type hf \
+    --save-model-type mg \
     --target-tensor-parallel-size 8 \
     --target-pipeline-parallel-size 1 \
-    --tokenizer-model ./model_from_hf/Aquila2-hf/tokenizer.json
+    --tokenizer-model ./model_from_hf/Aquila2-hf/tokenizer.json \
+    --model-type-hf llama2
