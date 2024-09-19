@@ -187,7 +187,7 @@
     <tr>
         <td rowspan="4">Checkpoint</td>
         <td rowspan="2"> Mcore </td>
-        <td> hf2mcore, tp, pp, ep, dpp, vpp; hf2mcore, tp</td>
+        <td> hf2mcore, tp, pp, ep, dpp, vpp, deepseek2; hf2mcore, tp, deepseek2</td>
         <td><a href="ut/checkpoint/test_checkpoint.py">test_checkpoint.py</a></td>
         <td>Y</td>
         <td></td>
@@ -216,17 +216,10 @@
         <td></td>
     </tr>
 	<tr>
-        <td rowspan="4">ProcessData</td>
-        <td rowspan="4">Mcore</td>
-        <td>pretrain_data_handler, pretrain_merge_datasets</td>
-        <td><a href="ut/process_data/test_process_pretrain_data.py">test_process_process_pretrain_data.py</a></td>
-        <td>Y</td>
-        <td></td>
-        <td></td>
-    </tr>
-	<tr>
-        <td>instruction_data_handler, instruction_merge_datasets</td>
-        <td><a href="ut/process_data/test_process_instruction_data.py">test_process_instruction_data.py</a></td>
+        <td rowspan="3">ProcessData</td>
+        <td rowspan="3">Mcore</td>
+        <td>pretrain_data_alpaca, pretrain_merge_datasets, instruction_data_alpaca, instruction_merge_datasets</td>
+        <td><a href="ut/process_data/test_preprocess_data.py">test_preprocess_data.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
@@ -243,7 +236,7 @@
     </tr>
 	<tr>
         <td>instruction_data_handler</td>
-        <td><a href="ut/process_data/test_process_instruction_pack_data.py">test_process_instruction_data.py</a></td>
+        <td><a href="ut/process_data/test_process_instruction_pack_data.py">test_process_instruction_pack_data.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
@@ -299,6 +292,15 @@
         <td></td>
         <td></td>
     </tr>
+    <tr>
+        <td rowspan="1"><a href="pipeline/chatglm3-6B">Chatglm3-6B</a></td>
+        <td rowspan="1">Legacy</td>
+        <td>pretrain</td>
+        <td><a href="pipeline/chatglm3-6B/chatglm3_tp1_pp2_legacy.sh">chatglm3_tp1_pp2_legacy.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
 </table>
 
 
@@ -310,7 +312,7 @@
 
 ① 贡献脚本用例请放置于 `st/shell_scripts` 文件夹下，命名规则为 **{模型名}_{切分策略}** 或者 **{模型名}_{特性名称}**， 如 `llama2_tp2_pp4_vpp2_ptd.sh`，请贡献者严格对齐；
 
-② 注意脚本用例中不需要单独重定向log，日志收集工作已在 `run.sh` 中统一管理；
+② 注意脚本用例中不需要单独重定向log，日志收集工作已在 `st_run.sh` 中统一管理；
 
 ③ 标杆数据请放置于 `st/baseline_results` 文件夹下，**命名保证完全与 shell 脚本对齐**，否则自动化脚本执行将扫描不到；
 

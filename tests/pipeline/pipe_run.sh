@@ -23,8 +23,8 @@ find "$BASE_DIR" -mindepth 1 -maxdepth 1 -type d | while read -r dir; do
             fi
 
             # begin to execute the logic of compare
-            echo "$(dirname "$BASE_DIR")/st/st_utils/test_ci_st.py"
-            pytest -x $(dirname "$BASE_DIR")/st/st_utils/test_ci_st.py \
+            echo "$(dirname "$BASE_DIR")/test_tools/test_ci_st.py"
+            pytest -x $(dirname "$BASE_DIR")/test_tools/test_ci_st.py \
                 --baseline-json $BASELINE_DIR/$name.json \
                 --generate-log $GENERATE_LOG_DIR/$name.log \
                 --generate-json $GENERATE_JSON_DIR/$name.json

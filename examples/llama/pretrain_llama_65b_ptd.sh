@@ -66,6 +66,7 @@ GPT_ARGS="
     --adam-beta2 0.999 \
     --untie-embeddings-and-output-weights \
     --disable-bias-linear \
+    --use-distributed-optimizer \
     --swiglu \
     --bf16
 "
