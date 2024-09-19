@@ -248,20 +248,13 @@
         <th>Memory</th>
     </tr>
     <tr>
-        <td rowspan="5"><a href="pipeline/baichuan2-13B">Baichuan2-13B</a></td>
-        <td rowspan="5">Legacy</td>
+        <td rowspan="4"><a href="pipeline/baichuan2-13B">Baichuan2-13B</a></td>
+        <td rowspan="4">Legacy</td>
         <td>pretrain</td>
         <td><a href="pipeline/baichuan2-13B/baichuan2_13B_tp8_pp1_ptd.sh">baichuan2_13B_tp8_pp1_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
-    </tr>
-    <tr>
-        <td>checkpoint_conversion</td>
-        <td><a href="pipeline/baichuan2-13B/test_convert_weight_from_huggingface.py">test_convert_weight_from_hf.py</a></td>
-        <td>Y</td>
-        <td></td>
-        <td></td>
     </tr>
     <tr>
         <td>data_process</td>
