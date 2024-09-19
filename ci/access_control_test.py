@@ -52,7 +52,8 @@ def choose_skip_ci(raw_txt_file):
 def filter_exec_ut(raw_txt_file):
     file_list = read_files_from_txt(raw_txt_file)
     filter_conds = [
-        is_ut
+        is_ut,
+        is_markdown
     ]
     for file in file_list:
         if not any(condition(file) for condition in filter_conds):
