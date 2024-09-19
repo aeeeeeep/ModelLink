@@ -47,7 +47,7 @@ GPT_ARGS="
     --make-vocab-size-divisible-by 32 \
     --lr 1e-5 \
     --load ${CKPT_LOAD_DIR} \
-    --train-iters 1000 \
+    --train-iters 20 \
     --lr-decay-style cosine \
     --attention-dropout 0.0 \
     --init-method-std 0.01 \
@@ -84,7 +84,6 @@ DATA_ARGS="
 
 OUTPUT_ARGS="
     --log-interval 1 \
-    --train-iters 20 \
     --save-interval 2000 \
     --eval-interval 1000 \
     --eval-iters 1 \
