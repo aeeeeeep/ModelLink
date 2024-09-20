@@ -22,7 +22,6 @@ import os
 import sys
 import copy
 import logging
-from typing import List
 
 try:
     import nltk
@@ -33,7 +32,7 @@ except ImportError:
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              os.path.pardir)))
 
-from modellink.tokenizer import build_tokenizer
+from modellink.training.tokenizer import build_tokenizer
 from modellink.tasks.preprocess.data_handler import build_dataset, get_dataset_handler
 from megatron.core.datasets.indexed_dataset import (
     IndexedDatasetBuilder,

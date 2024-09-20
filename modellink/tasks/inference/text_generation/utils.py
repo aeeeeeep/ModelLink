@@ -34,7 +34,7 @@ from megatron.core.utils import get_model_config
 
 from .communication import broadcast_tensor
 from ...finetune.lora.utils import is_enable_lora, get_lora_model_classes
-from ....error_utils import check_equal
+from ...error_utils import check_equal
 
 
 class InferenceParams:

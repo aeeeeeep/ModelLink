@@ -2,11 +2,11 @@
 from megatron.training import get_args
 from megatron.training import print_rank_0
 from megatron.training import get_tokenizer
-from megatron.core import mpu, tensor_parallel
+from megatron.core import mpu
 from megatron.core.datasets.blended_megatron_dataset_builder import BlendedMegatronDatasetBuilder
 from megatron.core.datasets.gpt_dataset import GPTDatasetConfig
 from megatron.core.datasets.gpt_dataset import MockGPTDataset, GPTDataset
-from modellink.data.decoder_packed_mtf_dataset import build_train_valid_test_datasets as build_instruction_dataset
+from modellink.tasks.preprocess.decoder_packed_mtf_dataset import build_train_valid_test_datasets as build_instruction_dataset
 
 
 def is_dataset_built_on_rank():

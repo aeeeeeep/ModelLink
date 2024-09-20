@@ -13,19 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import wraps
-
-from megatron.legacy.model.fused_layer_norm import MixedFusedLayerNorm
-from megatron.core import parallel_state
-from megatron.training import get_args
-
-
-def norm_wrapper(fn):
-    @wraps(fn)
-    def wrapper(self, *args, **kwargs):
-        fn(self, *args, **kwargs)
-        args = get_args()
-        if parallel_state.is_pipeline_first_stage() and args.embed_layernorm:
-            norm = MixedFusedLayerNorm(args.hidden_size)
-            self.norm = norm
-    return wrapper
+from .gpt_model import GPTModel, post_language_model_processing
+from .transformer import (
+    parallel_transformer_init, state_dict_for_save_checkpoint_wrapper,
+    core_attention_wrapper, FlashSelfAttention, core_attention_forward,
+    ParallelAttention_wrapper, ParallelAttentionForward,
+    parallel_transformer_forward, parallel_mlp_init_wrapper
+)
+from .language_model import transformer_language_model_forward_wrapper
+from .rms_norm import rms_norm_init_wrapper, rms_norm_forward

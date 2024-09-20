@@ -23,9 +23,7 @@ from transformers import DataCollatorForSeq2Seq
 from megatron.training import get_args, get_tokenizer
 from megatron.core import parallel_state
 from megatron.legacy.data.data_samplers import MegatronPretrainingSampler, MegatronPretrainingRandomSampler
-from modellink.error_utils import check_divisible, ensure_valid
 from modellink.tasks.rl.collator import PairwiseDataCollatorWithPadding
-
 
 
 def build_pretraining_data_loader(dataset, consumed_samples):
@@ -35,7 +33,6 @@ def build_pretraining_data_loader(dataset, consumed_samples):
         return None
     args = get_args()
 
-    # ascendspeed sampler
     if args.dataloader_type == 'single':
         batch_sampler = MegatronPretrainingSampler(
             total_samples=len(dataset),

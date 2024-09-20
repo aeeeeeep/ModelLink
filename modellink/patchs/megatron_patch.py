@@ -25,14 +25,15 @@ from mindspeed.core.tensor_parallel.random import _set_cuda_rng_state
 from mindspeed.core.tensor_parallel.cross_entropy import vocab_parallel_cross_entropy_forward
 from mindspeed.initialize import _compile_dependencies
 
-from ..model import (
+from ..legacy.model import (
     GPTModel, parallel_transformer_init, transformer_language_model_forward_wrapper,
-    norm_wrapper, state_dict_for_save_checkpoint_wrapper,
+    state_dict_for_save_checkpoint_wrapper,
     core_attention_wrapper, core_attention_forward, FlashSelfAttention,
     ParallelAttention_wrapper, ParallelAttentionForward,
     parallel_transformer_forward, parallel_mlp_init_wrapper,
     rms_norm_init_wrapper, rms_norm_forward, post_language_model_processing
 )
+from ..core.tensor_parallel.layers import vocab_embedding_init_wrapper
 from ..core import (initialize_model_parallel_decorator,
                    build_generic_dataset, _build_document_sample_shuffle_indices,
                    TransformerLayerSubmodules,
@@ -43,13 +44,11 @@ from ..core import (initialize_model_parallel_decorator,
                    transformer_block_init_wrapper, transformer_block_forward, core_mlp_init)
 
 from ..core.pipeline_parallel.p2p_communication import _batched_p2p_ops
-from ..data import build_pretraining_data_loader
-from ..tokenizer import build_tokenizer
-from ..arguments import parse_args_decorator
-from ..checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper, load_args_from_checkpoint_wrapper
-from ..initialize import initialize_megatron
-from ..utils import emit
-from ..arguments import process_args
+from ..legacy.data import build_pretraining_data_loader
+from ..training.arguments import parse_args_decorator, process_args
+from ..training.tokenizer import build_tokenizer
+from ..training.checkpointing import _load_base_checkpoint_wrapper, load_checkpoint_wrapper, load_args_from_checkpoint_wrapper
+from ..training.initialize import initialize_megatron
 from ..patchs.patch_utils import PatchManager
 
 _ARGS = None
@@ -128,7 +127,7 @@ def patch_fusions():
 def patch_core_models(args):
     from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec
     from mindspeed.core.models.common.embeddings.rotary_pos_embedding import get_pos_emb_on_this_cp_rank
-    from ..utils import get_batch_on_this_cp_rank, get_batch_on_this_tp_rank, get_device_wrapper
+    from ..training.utils import get_batch_on_this_cp_rank, get_batch_on_this_tp_rank, get_device_wrapper
     from ..core import rotary_embedding_forward, apply_rotary_pos_emb_bshd
     from ..core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper
     from ..core.transformer.dot_product_attention import dot_product_attention_init_wrapper, \
@@ -244,14 +243,14 @@ def patch_pipeline_parallel():
 
 def patch_tensor_parallel():
     from mindspeed.core.tensor_parallel.layers import vocab_parallel_embedding_forward
-    from ..core import vocab_embedding_wrapper
+    from ..core import vocab_embedding_forward_wrapper
     # default_generators need replace after set_device
     PatchManager.register_patch('megatron.core.tensor_parallel.random._set_cuda_rng_state', _set_cuda_rng_state)
     # change masked_target for better performance
     PatchManager.register_patch('megatron.core.tensor_parallel.cross_entropy._VocabParallelCrossEntropy.forward', vocab_parallel_cross_entropy_forward)
     PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward', vocab_parallel_embedding_forward)
-    PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward', vocab_embedding_wrapper)
-    PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__', norm_wrapper)
+    PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.forward', vocab_embedding_forward_wrapper)
+    PatchManager.register_patch('megatron.core.tensor_parallel.layers.VocabParallelEmbedding.__init__', vocab_embedding_init_wrapper)
 
 
 def patch_parallel_state():
@@ -274,8 +273,8 @@ def patch_parallel_state():
 
 
 def patch_model():
-    from ..model.transformer import parallel_transformer_layer_init_wrapper
-    from ..model.transformer import parallel_mlp_forward_wrapper
+    from ..legacy.model.transformer import parallel_transformer_layer_init_wrapper
+    from ..legacy.model.transformer import parallel_mlp_forward_wrapper
     # patch_fused_layer_norm
     PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.FusedLayerNormAffineFunction', FusedLayerNormAffineFunction)  # use torch-npu fused layer norm
     PatchManager.register_patch('megatron.legacy.model.fused_layer_norm.FastLayerNormFN', FastLayerNormFN)  # use torch-npu fused layer norm
@@ -329,9 +328,9 @@ def patch_training():
 
 
 def patch_miscellaneous():
-    from ..utils import print_args_wrapper
-    from ..arguments import validate_args_decorator
-    from ..arguments import core_transformer_config_from_args_wrapper
+    from modellink.training.utils import print_args_wrapper
+    from modellink.training.arguments import validate_args_decorator
+    from modellink.training.arguments import core_transformer_config_from_args_wrapper
 
     PatchManager.register_patch('megatron.training.arguments.parse_args', parse_args_decorator)
     PatchManager.register_patch('megatron.training.arguments.validate_args', validate_args_decorator)
@@ -357,11 +356,12 @@ def patch_datasets():
 
 def patch_log_handler():
     from megatron.training.log_handler import CustomHandler
+    from modellink.training.utils import emit
     CustomHandler.emit = emit
 
 
 def patch_utils():
-    from ..utils import unwrap_model_wrapper
+    from modellink.training.utils import unwrap_model_wrapper
     PatchManager.register_patch('megatron.training.checkpointing.unwrap_model', unwrap_model_wrapper)
     PatchManager.register_patch('megatron.training.training.unwrap_model', unwrap_model_wrapper)
 

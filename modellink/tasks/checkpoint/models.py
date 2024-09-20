@@ -8,7 +8,6 @@ import logging as logger
 from collections import OrderedDict
 from tqdm import tqdm
 import torch
-import torch.nn as nn
 from transformers import AutoModelForCausalLM
 from megatron.core import mpu
 from megatron.training.arguments import validate_args
@@ -18,9 +17,9 @@ from megatron.training.checkpointing import load_args_from_checkpoint
 from megatron.training.global_vars import set_args
 from megatron.training.checkpointing import load_checkpoint
 from megatron.core import tensor_parallel
-from modellink.utils import parse_args
+from modellink.training.utils import parse_args
 from modellink.training import model_provider_func_wrapper
-from modellink.checkpointing import load_checkpoint_wrapper
+from modellink.training.checkpointing import load_checkpoint_wrapper
 
 logger.basicConfig(format="")
 logger.getLogger().setLevel(logger.INFO)

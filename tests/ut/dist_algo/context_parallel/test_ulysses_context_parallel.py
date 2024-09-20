@@ -1,18 +1,16 @@
 import math
-import pytest
 
 import torch
 import torch_npu
 import torch.distributed as dist
 
 # To activate modellink.patches.__init__
-import modellink
 import megatron.core.parallel_state as ps
 from megatron.training.global_vars import set_args
 from megatron.training.arguments import parse_args
 from mindspeed.core.context_parallel.ulysses_context_parallel import UlyssesContextAttention
 
-from modellink.utils import seed_all
+from modellink.training.utils import seed_all
 
 from tests.test_tools.dist_test import DistributedTest
 from tests.test_tools.utils import initialize_model_parallel

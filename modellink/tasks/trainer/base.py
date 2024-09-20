@@ -34,10 +34,10 @@ from megatron.core.models.gpt.gpt_layer_specs import (
     get_gpt_layer_local_spec,
     get_gpt_layer_with_transformer_engine_spec,
 )
-from modellink.initialize import set_jit_fusion_options
+from modellink.training.initialize import set_jit_fusion_options
 from modellink.training import train
 from modellink.training import build_train_args
-from modellink.utils import get_tune_attention_mask, get_finetune_data_on_this_tp_rank, generate_actual_seq_len
+from modellink.training.utils import get_tune_attention_mask, get_finetune_data_on_this_tp_rank, generate_actual_seq_len
 from modellink.tasks.trainer.utils import train_valid_test_datasets_provider
 
 

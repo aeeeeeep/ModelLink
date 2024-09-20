@@ -27,8 +27,8 @@ from torch import distributed as dist
 from .template import CODE_TEST_LOG_DIR
 from ..eval_api.dataset_eval import DatasetEval
 from ..eval_api.chat import Chat
-from ....error_utils import check_divisible_by_zero
-from ....utils import WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES
+from ...error_utils import check_divisible_by_zero
+from ....training.utils import WRITE_FILE_DEFAULT_FLAGS, WRITE_FILE_DEFAULT_MODES
 
 logger = logging.getLogger(__name__)
 

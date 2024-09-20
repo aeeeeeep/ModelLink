@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .tensor_parallel.layers import vocab_embedding_wrapper
+from .tensor_parallel.layers import vocab_embedding_forward_wrapper
 from .parallel_state import (initialize_model_parallel_decorator, destroy_model_parallel_decorator,
                              get_expert_model_parallel_rank,
                              get_expert_model_parallel_world_size, get_expert_parallel_group,

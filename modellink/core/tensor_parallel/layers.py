@@ -21,9 +21,23 @@ from typing import Optional
 from megatron.training import get_args
 from megatron.core.tensor_parallel import copy_to_tensor_model_parallel_region, gather_from_tensor_model_parallel_region
 from megatron.core.tensor_parallel.layers import linear_with_frozen_weight, linear_with_grad_accumulation_and_async_allreduce, ColumnParallelLinear
+from megatron.legacy.model.fused_layer_norm import MixedFusedLayerNorm
+from megatron.core import parallel_state
 
 
-def vocab_embedding_wrapper(fn):
+def vocab_embedding_init_wrapper(fn):
+    """Patch for legacy norm."""
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        fn(self, *args, **kwargs)
+        args = get_args()
+        if parallel_state.is_pipeline_first_stage() and args.embed_layernorm:
+            norm = MixedFusedLayerNorm(args.hidden_size)
+            self.norm = norm
+    return wrapper
+
+
+def vocab_embedding_forward_wrapper(fn):
     @wraps(fn)
     def wrapper(self, *args, **kwargs):
         output = fn(self, *args, **kwargs)
