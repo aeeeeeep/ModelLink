@@ -102,16 +102,25 @@ def get_batch(data_iterator):
     args = get_args()
 
     if args.is_instruction_dataset:
+        # Items and their type.
+        keys = ['input_ids', 'attention_mask', 'labels']
+        if args.reset_position_ids:
+            keys += ['position_ids']
+        data_type = torch.int64
+
         if (not mpu.is_pipeline_first_stage()) and (not mpu.is_pipeline_last_stage()):
             if args.variable_seq_lengths and args.pipeline_model_parallel_size > 2:
                 tokens, attention_mask = get_finetune_data_on_this_tp_rank(data_iterator)
 
                 return tokens, None, None, attention_mask, None
             else:
+                if args.reset_position_ids:
+                    # Broadcast data.
+                    data_b = tensor_parallel.broadcast_data(keys, next(data_iterator), data_type)
+                    generate_actual_seq_len(data_b)
+
                 return None, None, None, None, None
-        # Items and their type.
-        keys = ['input_ids', 'attention_mask', 'labels']
-        data_type = torch.int64
+
 
         # Broadcast data.
         data_b = tensor_parallel.broadcast_data(keys, next(data_iterator), data_type)
@@ -123,8 +132,11 @@ def get_batch(data_iterator):
         # ignored label -100
         loss_mask = torch.where(labels == -100, 0, 1)
 
-        attention_mask = get_tune_attention_mask(attention_mask_1d)
+        if args.reset_position_ids:
+            generate_actual_seq_len(data_b)
+            return tokens, labels, loss_mask, None, position_ids
 
+        attention_mask = get_tune_attention_mask(attention_mask_1d)
         return tokens, labels, loss_mask, attention_mask, None
 
     # get batches based on the TP rank you are on

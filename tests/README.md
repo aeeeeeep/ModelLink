@@ -128,7 +128,7 @@
         <td>Y</td>
     </tr>
     <tr>
-        <td rowspan="14">UT</td>
+        <td rowspan="15">UT</td>
         <td>Inference</td>
         <td>Legacy</td>
         <td>greedy_search, lora_inference, deterministic_computation, chatglm3_inference</td>
@@ -178,7 +178,7 @@
         <td></td>
     </tr>
     <tr>
-        <td>transformer_attention</td>
+        <td>transformer_attention, alibi</td>
         <td><a href="ut/model_module/transformer/test_attention.py">test_attention.py</a></td>
         <td>Y</td>
         <td></td>
@@ -218,15 +218,8 @@
 	<tr>
         <td rowspan="3">ProcessData</td>
         <td rowspan="3">Mcore</td>
-        <td>pretrain_data_handler, pretrain_merge_datasets</td>
-        <td><a href="ut/process_data/test_process_pretrain_data.py">test_process_process_pretrain_data.py</a></td>
-        <td>Y</td>
-        <td></td>
-        <td></td>
-    </tr>
-	<tr>
-        <td>instruction_data_handler, instruction_merge_datasets</td>
-        <td><a href="ut/process_data/test_process_instruction_data.py">test_process_instruction_data.py</a></td>
+        <td>pretrain_data_alpaca, pretrain_merge_datasets, instruction_data_alpaca, instruction_merge_datasets</td>
+        <td><a href="ut/process_data/test_preprocess_data.py">test_preprocess_data.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
@@ -241,6 +234,14 @@
         <td></td>
         <td></td>
     </tr>
+	<tr>
+        <td>instruction_data_handler</td>
+        <td><a href="ut/process_data/test_process_instruction_pack_data.py">test_process_instruction_pack_data.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+
 </table>
 
 ### Pipline 二级流水看护列表
@@ -255,20 +256,13 @@
         <th>Memory</th>
     </tr>
     <tr>
-        <td rowspan="5"><a href="pipeline/baichuan2-13B">Baichuan2-13B</a></td>
-        <td rowspan="5">Legacy</td>
+        <td rowspan="4"><a href="pipeline/baichuan2-13B">Baichuan2-13B</a></td>
+        <td rowspan="4">Legacy</td>
         <td>pretrain</td>
         <td><a href="pipeline/baichuan2-13B/baichuan2_13B_tp8_pp1_ptd.sh">baichuan2_13B_tp8_pp1_ptd.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
-    </tr>
-    <tr>
-        <td>checkpoint_conversion</td>
-        <td><a href="pipeline/baichuan2-13B/test_convert_weight_from_huggingface.py">test_convert_weight_from_hf.py</a></td>
-        <td>Y</td>
-        <td></td>
-        <td></td>
     </tr>
     <tr>
         <td>data_process</td>
@@ -292,13 +286,124 @@
         <td></td>
     </tr>
     <tr>
-        <td rowspan="1"><a href="pipeline/chatglm3-6B">Chatglm3-6B</a></td>
-        <td rowspan="1">Legacy</td>
+        <td rowspan="4"><a href="pipeline/chatglm3-6B">Chatglm3-6B</a></td>
+        <td rowspan="4">Legacy</td>
         <td>pretrain</td>
         <td><a href="pipeline/chatglm3-6B/chatglm3_tp1_pp2_legacy.sh">chatglm3_tp1_pp2_legacy.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
+    </tr>
+    <tr>
+        <td>data_process</td>
+        <td><a href="pipeline/chatglm3-6B/test_process_pretrain_data.py">test_process_pretrain_data.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>inference</td>
+        <td><a href="pipeline/chatglm3-6B/test_generation.py">test_generation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>evaluation</td>
+        <td><a href="pipeline/chatglm3-6B/test_evaluation.py">test_evaluation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td rowspan="4"><a href="pipeline/bloom-7B">Bloom-7B</a></td>
+        <td rowspan="4">Legacy</td>
+        <td>pretrain</td>
+        <td><a href="pipeline/bloom-7B/bloom_7B_legacy_tp8_pp1_ptd.sh">bloom_7B_legacy_tp8_pp1_ptd.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>data_process</td>
+        <td><a href="pipeline/bloom-7B/test_process_pretrain_data.py">test_process_pretrain_data.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>inference</td>
+        <td><a href="pipeline/bloom-7B/test_generation.py">test_generation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>evaluation</td>
+        <td><a href="pipeline/bloom-7B/test_evaluation.py">test_evaluation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td rowspan="4"><a href="pipeline/gemma-7B">Gemma-7B</a></td>
+        <td rowspan="4">Legacy</td>
+        <td>pretrain</td>
+        <td><a href="pipeline/gemma-7B/gemma_7B_legacy_tp8_pp1_ptd.sh">gemma_7B_legacy_tp8_pp1_ptd.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>data_process</td>
+        <td><a href="pipeline/gemma-7B/test_process_pretrain_data.py">test_process_pretrain_data.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>inference</td>
+        <td><a href="pipeline/gemma-7B/test_generation.py">test_generation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>evaluation</td>
+        <td><a href="pipeline/gemma-7B/test_evaluation.py">test_evaluation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td rowspan="4"><a href="pipeline/qwen15-7B">Qwen15-7B</a></td>
+        <td rowspan="4">Legacy</td>
+        <td>pretrain</td>
+        <td><a href="pipeline/qwen15-7B/qwen15_7b_legacy_tp8_pp1_ptd.sh">qwen15_7b_legacy_tp8_pp1_ptd.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>data_process</td>
+        <td><a href="pipeline/qwen15-7B/test_process_pretrain_data.py">test_process_pretrain_data.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>inference</td>
+        <td><a href="pipeline/qwen15-7B/test_generation.py">test_generation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>evaluation</td>
+        <td><a href="pipeline/qwen15-7B/test_evaluation.py">test_evaluation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
     </tr>
 </table>
 
@@ -311,7 +416,7 @@
 
 ① 贡献脚本用例请放置于 `st/shell_scripts` 文件夹下，命名规则为 **{模型名}_{切分策略}** 或者 **{模型名}_{特性名称}**， 如 `llama2_tp2_pp4_vpp2_ptd.sh`，请贡献者严格对齐；
 
-② 注意脚本用例中不需要单独重定向log，日志收集工作已在 `run.sh` 中统一管理；
+② 注意脚本用例中不需要单独重定向log，日志收集工作已在 `st_run.sh` 中统一管理；
 
 ③ 标杆数据请放置于 `st/baseline_results` 文件夹下，**命名保证完全与 shell 脚本对齐**，否则自动化脚本执行将扫描不到；
 

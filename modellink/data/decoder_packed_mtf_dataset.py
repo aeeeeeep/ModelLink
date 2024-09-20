@@ -132,11 +132,32 @@ class DecoderPackedMTFDataset(torch.utils.data.Dataset):
 
         self.pad_token = pad_token
         self.seq_length = seq_length
-
+        self.eos_token = eos_token
         self.shuffle_index = _build_index_mappings(name=name, data_prefix=data_prefix, start_index=documents[0], nb_documents=len(documents), mtf_dataset=self.mtf_dataset, num_samples=num_samples, seq_length=seq_length, seed=seed)
 
     def __len__(self):
         return len(self.shuffle_index)
+
+    def _get_reset_position_ids(self, data: torch.Tensor):
+        seq_length = data.numel()
+        # Position ids.
+        position_ids = torch.arange(seq_length, dtype=torch.long, device=data.device)
+
+        # Find indices where EOD token is.
+        eod_index = position_ids[data == self.eos_token]
+        # Detach indices from positions if going to modify positions.
+
+        eod_index = eod_index.clone()
+
+        # Loop through EOD indices:
+        prev_index = 0
+        for j in range(eod_index.numel()):
+            i = eod_index[j]
+            # Reset positions.
+            position_ids[(i + 1):] -= i + 1 - prev_index
+            prev_index = i + 1
+
+        return position_ids.clone()
 
     def __getitem__(self, idx):
         doc_idx = self.shuffle_index[idx]
@@ -150,6 +171,14 @@ class DecoderPackedMTFDataset(torch.utils.data.Dataset):
                 "rejected_input_ids": self._cut_token(item["rejected_input_ids"], np.int64),
                 "rejected_attention_mask": self._cut_token(item["rejected_attention_mask"], np.int64),
                 "rejected_labels": self._cut_token(item["rejected_labels"], np.int64)
+            }
+        elif self.args.reset_position_ids:
+            position_ids = self._get_reset_position_ids(torch.from_numpy(item['input_ids']))
+            return {
+                "input_ids": self._cut_token(item['input_ids'], np.int64),
+                "attention_mask": self._cut_token(item["attention_mask"], np.int64),
+                "labels": self._cut_token(item["labels"], np.int64),
+                "position_ids": self._cut_token(position_ids.numpy(), np.int64)
             }
         else:
             res = {
@@ -216,6 +245,7 @@ def _build_index_mappings(
     # This should be a barrier but nccl barrier assumes
     # device_index=rank which is not the case for model
     # parallel case
+    torch.distributed.barrier()
     counts = torch.cuda.LongTensor([1])
     torch.distributed.all_reduce(counts, group=parallel_state.get_data_parallel_group())
     torch.distributed.all_reduce(counts, group=parallel_state.get_pipeline_model_parallel_group())
@@ -227,7 +257,7 @@ def _build_index_mappings(
     start_time = time.time()
     print_rank_0(' > loading shuffle-idx mapping from {}'.format(
         shuffle_idx_filename))
-    shuffle_idx = np.load(shuffle_idx_filename, allow_pickle=True, mmap_mode='r')
+    shuffle_idx = np.load(shuffle_idx_filename, allow_pickle=True, mmap_mode='r+')
     print_rank_0('    loaded indexed file in {:3.3f} seconds'.format(
         time.time() - start_time))
 

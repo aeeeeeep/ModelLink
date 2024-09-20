@@ -8,7 +8,7 @@ def read_files_from_txt(txt_file):
 
 
 def is_examples(file):
-    return file.startswith("example/")
+    return file.startswith("examples/")
 
 
 def is_pipecase(file):
@@ -19,17 +19,22 @@ def is_markdown(file):
     return file.endswith(".md")
 
 
-def skip_ci_file(files, skip_cond):
+def is_image(file):
+    return file.endswith(".jpg") or file.endswith(".png")
+
+
+def is_ut(file):
+    return file.startswith("tests/ut")
+
+
+def skip_ci(files, skip_conds):
     for file in files:
-        if not any(condition(file) for condition in skip_cond):
+        if not any(condition(file) for condition in skip_conds):
             return False
     return True
 
 
-def alter_skip_ci():
-    parent_dir = Path(__file__).absolute().parents[2]
-    raw_txt_file = os.path.join(parent_dir, "modify.txt")
-
+def choose_skip_ci(raw_txt_file):
     if not os.path.exists(raw_txt_file):
         return False
     
@@ -37,10 +42,23 @@ def alter_skip_ci():
     skip_conds = [
         is_examples,
         is_pipecase,
-        is_markdown
+        is_markdown,
+        is_image
     ]
 
-    return skip_ci_file(file_list, skip_conds)
+    return skip_ci(file_list, skip_conds)
+
+
+def filter_exec_ut(raw_txt_file):
+    file_list = read_files_from_txt(raw_txt_file)
+    filter_conds = [
+        is_ut,
+        is_markdown
+    ]
+    for file in file_list:
+        if not any(condition(file) for condition in filter_conds):
+            return False, None
+    return True, file_list
 
 
 def acquire_exitcode(command):
@@ -53,16 +71,25 @@ def acquire_exitcode(command):
 # UT test, run with pytest
 # =============================
 
-class UT_Test:
-
+class UTTest:
     def __init__(self):
-
-        base_dir = Path(__file__).absolute().parent.parent
-        test_dir = os.path.join(base_dir, 'tests')
-        self.ut_file = os.path.join(test_dir, "ut")
+        self.base_dir = Path(__file__).absolute().parents[1]
+        self.test_dir = os.path.join(self.base_dir, 'tests')
+        self.ut_files = os.path.join(
+            self.base_dir, self.test_dir, "ut"
+        )
     
-    def run_ut(self):
-        command = f"pytest -x {self.ut_file}"
+    def run_ut(self, raw_txt_file=None):
+        if raw_txt_file is not None and os.path.exists(raw_txt_file):
+            filtered_results = filter_exec_ut(raw_txt_file)
+
+            if filtered_results[0]:
+                filtered_files = filtered_results[1]
+                full_path = [os.path.join(self.base_dir, file) for file in filtered_files]
+                exsit_ut_files = [file for file in full_path if os.path.exists(file) and file.endswith(".py")]
+                self.ut_files = " ".join(exsit_ut_files)
+
+        command = f"pytest -x {self.ut_files}"
         code = acquire_exitcode(command)
         if code == 0:
             print("UT test success")
@@ -75,16 +102,14 @@ class UT_Test:
 # ST test, run with sh.
 # ===============================================
 
-class ST_Test:
-    
+class STTest:
     def __init__(self):
+        self.base_dir = Path(__file__).absolute().parents[1]
+        self.test_dir = os.path.join(self.base_dir, 'tests')
 
-        base_dir = Path(__file__).absolute().parent.parent
-        test_dir = os.path.join(base_dir, 'tests')
-
-        st_dir = "st"
+        self.st_dir = "st"
         self.st_shell = os.path.join(
-            test_dir, st_dir, "st_run.sh"
+            self.test_dir, self.st_dir, "st_run.sh"
         )
 
     def run_st(self):
@@ -95,19 +120,25 @@ class ST_Test:
             exit(1)
 
 
-def run_tests():
-    ut = UT_Test()
-    st = ST_Test()
-
-    ut.run_ut()
-    st.run_st()
+def run_tests(raw_txt_file):
+    ut = UTTest()
+    st = STTest()
+    if filter_exec_ut(raw_txt_file)[0]:
+        ut.run_ut(raw_txt_file)
+    else:
+        ut.run_ut()
+        st.run_st()
 
 
 def main():
-    if alter_skip_ci():
+    parent_dir = Path(__file__).absolute().parents[2]
+    raw_txt_file = os.path.join(parent_dir, "modify.txt")
+
+    skip_signal = choose_skip_ci(raw_txt_file)
+    if skip_signal:
         print("Skipping CI")
     else:
-        run_tests()
+        run_tests(raw_txt_file)
 
 if __name__ == "__main__":
     main()
