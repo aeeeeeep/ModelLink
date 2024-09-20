@@ -13,4 +13,4 @@ python convert_ckpt.py \
    --target-pipeline-parallel-size 1 \
    --load-dir ./model_from_hf/llama31-hf/ \
    --save-dir ./model_weights/llama31-mcore/ \
-   --tokenizer-model ./model_from_hf/llama31-hf/tokenizer.json
+   --tokenizer-model ./model_from_hf/llama31-hf/tokenizer.json  # --num-layer-list 17,20,22,21 等参数根据模型需求添加
