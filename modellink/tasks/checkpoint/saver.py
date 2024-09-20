@@ -59,18 +59,16 @@ def add_arguments(parser):
 
 def update_padded_vocab_size(md, model_mg, orig_vocab_size):
     # figure out what our padded vocab size is
-    if md.true_vocab_size is not None:
-        from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
-        margs = model_mg.get_args()
-        padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
-        model_mg.set_padded_vocab_size(padded_vocab_size)
-    else:
-        logger.warning("Original vocab size not specified, leaving embedding table as-is. "
-              "If you've changed the tensor parallel size this could cause problems.")
-        model_mg.set_padded_vocab_size(orig_vocab_size)
-    margs = model_mg.get_args()
-    padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
-    model_mg.set_padded_vocab_size(padded_vocab_size)
+    if orig_vocab_size is not None:
+        if md.true_vocab_size is not None:
+            from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
+            margs = model_mg.get_args()
+            padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
+            model_mg.set_padded_vocab_size(padded_vocab_size)
+        else:
+            logger.warning("Original vocab size not specified, leaving embedding table as-is. "
+                  "If you've changed the tensor parallel size this could cause problems.")
+            model_mg.set_padded_vocab_size(orig_vocab_size)
 
 
 def vocab_padding(orig_vocab_size, padded_vocab_size, orig_tensor):

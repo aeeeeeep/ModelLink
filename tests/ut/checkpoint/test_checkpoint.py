@@ -16,6 +16,7 @@
 
 import sys
 import os
+import shutil
 from pathlib import Path
 import logging
 import re
@@ -40,6 +41,7 @@ class TestCheckpoint(object):
         base_dir = '/data/wttest/base/hf2mc_mixtral_tp2pp2ep2dypp'
         save_dir = self.test_config['test_mixtral_hf2mcore_tp2pp2ep2dypp'][0]['save-dir']
         assert weight_compare(base_dir, save_dir)
+        shutil.rmtree(save_dir)
 
     def test_mixtral_mcore2hf_tp1pp4ep2vpp2(self):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
@@ -48,6 +50,7 @@ class TestCheckpoint(object):
         base_dir = '/data/Mixtral-8x7B-v0.1/base_mg2hf_tp1pp4ep2vpp2'
         save_dir = os.path.join(self.test_config['test_mixtral_mcore2hf_tp1pp4ep2vpp2'][0]['save-dir'], 'mg2hf')
         assert weight_compare(base_dir, save_dir, suffix="safetensors", use_md5=True)
+        shutil.rmtree(save_dir)
     
     def test_deepseek2_hf2mcore_tp1pp4ep8(self):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
@@ -56,6 +59,7 @@ class TestCheckpoint(object):
         base_dir = '/data/ci/deepseek2/mg_base/deepseek2-l8-t1p4e8-gemm'
         save_dir = self.test_config['test_deepseek2_hf2mcore_tp1pp4ep8'][0]['save-dir']
         assert weight_compare(base_dir, save_dir)
+        shutil.rmtree(save_dir)
 
     def test_deepseek2_mcore2hf_tp1pp4ep8(self):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
@@ -64,6 +68,7 @@ class TestCheckpoint(object):
         base_dir = '/data/ci/deepseek2/hf_base/deepseek2_hf_base'
         save_dir = os.path.join(self.test_config['test_deepseek2_mcore2hf_tp1pp4ep8'][0]['save-dir'], 'mg2hf')
         assert weight_compare(base_dir, save_dir, suffix="safetensors", use_md5=True)
+        shutil.rmtree(save_dir)
 
     def test_gemma2_hf2mcore_tp8pp1(self):
         os.environ["CUDA_DEVICE_MAX_CONNECTIONS"] = "1"
@@ -72,3 +77,4 @@ class TestCheckpoint(object):
         base_dir = '/data/gemma2-9b-mg-tp8pp1-mcore-base/'
         save_dir = self.test_config['test_gemma2_hf2mcore_tp8pp1'][0]['save-dir']
         assert weight_compare(base_dir, save_dir)
+        shutil.rmtree(save_dir)
