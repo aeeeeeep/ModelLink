@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
-from functools import wraps
 import torch
 import torch.nn.functional as F
 
@@ -23,7 +22,6 @@ from megatron.core import parallel_state
 from megatron.core.transformer.spec_utils import build_module
 from megatron.core.transformer.mlp import MLP
 from megatron.core.transformer.transformer_config import TransformerConfig
-from mindspeed.core.tensor_parallel.random import CheckpointWithoutOutput
 
 
 def should_recompute_activation(self):
@@ -123,52 +121,3 @@ def core_mlp_init(self, config, submodules, is_expert=False, input_size=None):
         is_expert=is_expert,
         tp_comm_buffer_name='fc2',
     )
-
-
-def core_mlp_forward_wrapper(fn):
-    """
-    For mcore mlp re-computation.
-    """
-    @wraps(fn)
-    def wrapper(self, *args, **kwargs):
-        is_recompute_activation = should_recompute_activation(self)
-
-        def activation_function(*function_args):
-            intermediate, bias = function_args
-            if bias is not None:
-                intermediate = intermediate + bias
-            if self.config.gated_linear_unit:
-                def glu(x):
-                    x = torch.chunk(x, 2, dim=-1)
-                    return self.config.activation_func(x[0]) * x[1]
-
-                intermediate = glu(intermediate)
-            else:
-                intermediate = self.activation_func(intermediate)
-
-            return intermediate
-
-        if not is_recompute_activation:
-            output, output_bias = fn(self, *args, **kwargs)
-        else:
-            hidden_states = args[0]
-            intermediate_parallel, bias_parallel = self.linear_fc1(hidden_states)
-            self.activation_checkpoint_manager = CheckpointWithoutOutput()
-            intermediate_parallel = self.activation_checkpoint_manager.checkpoint(activation_function,
-                                                                                  False,
-                                                                                  intermediate_parallel,
-                                                                                  bias_parallel)
-            # [s, b, h]
-            output, output_bias = self.linear_fc2(intermediate_parallel)
-
-            # discard the output of the activation function,
-            # which will be restored by re-computation during backward.
-            self.activation_checkpoint_manager.discard_output()
-
-            # when backward to output of dense_4h_to_h,
-            # recompute and restore the output of activation function.
-            if output.requires_grad:
-                output.register_hook(self.activation_checkpoint_manager.recompute)
-        return output, output_bias
-
-    return wrapper
