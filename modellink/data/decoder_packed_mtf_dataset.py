@@ -216,6 +216,7 @@ def _build_index_mappings(
     # This should be a barrier but nccl barrier assumes
     # device_index=rank which is not the case for model
     # parallel case
+    torch.distributed.barrier()
     counts = torch.cuda.LongTensor([1])
     torch.distributed.all_reduce(counts, group=parallel_state.get_data_parallel_group())
     torch.distributed.all_reduce(counts, group=parallel_state.get_pipeline_model_parallel_group())
@@ -227,7 +228,7 @@ def _build_index_mappings(
     start_time = time.time()
     print_rank_0(' > loading shuffle-idx mapping from {}'.format(
         shuffle_idx_filename))
-    shuffle_idx = np.load(shuffle_idx_filename, allow_pickle=True, mmap_mode='r')
+    shuffle_idx = np.load(shuffle_idx_filename, allow_pickle=True, mmap_mode='r+')
     print_rank_0('    loaded indexed file in {:3.3f} seconds'.format(
         time.time() - start_time))
 
