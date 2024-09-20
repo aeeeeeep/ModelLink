@@ -1393,7 +1393,7 @@ My soul is full and my heart does soep.</th>
         <td colspan="2">Alpaca风格、Sharegpt风格</td>
     </tr>
     <tr>
-        <td rowspan="3">微调数据预处理特性</td>
+        <td rowspan="4">微调数据预处理特性</td>
         <td>数据集字段映射</td>
         <td>--map-keys</td>
     </tr>
@@ -1406,13 +1406,21 @@ My soul is full and my heart does soep.</th>
         <td>--handler-name</td>
     </tr>
     <tr>
-        <td rowspan="2">微调特性</td>
+        <td>多样本pack</td>
+        <td>--pack</td>
+    </tr>
+    <tr>
+        <td rowspan="3">微调特性</td>
         <td>动态padding</td>
         <td>--variable-seq-lengths</td>
     </tr>
     <tr>
         <td>prompt模板</td>
         <td>--prompt-type</td>
+    </tr>
+    <tr>
+        <td>多样本pack</td>
+        <td>--reset-position-ids</td>
     </tr>
     <tr>
         <td rowspan="3">微调后推理对话特性</td>

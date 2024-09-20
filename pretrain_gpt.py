@@ -133,6 +133,7 @@ def get_batch(data_iterator):
         loss_mask = torch.where(labels == -100, 0, 1)
 
         if args.reset_position_ids:
+            position_ids = data_b.get('position_ids').long()
             generate_actual_seq_len(data_b)
             return tokens, labels, loss_mask, None, position_ids
 
