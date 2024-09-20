@@ -278,13 +278,124 @@
         <td></td>
     </tr>
     <tr>
-        <td rowspan="1"><a href="pipeline/chatglm3-6B">Chatglm3-6B</a></td>
-        <td rowspan="1">Legacy</td>
+        <td rowspan="4"><a href="pipeline/chatglm3-6B">Chatglm3-6B</a></td>
+        <td rowspan="4">Legacy</td>
         <td>pretrain</td>
         <td><a href="pipeline/chatglm3-6B/chatglm3_tp1_pp2_legacy.sh">chatglm3_tp1_pp2_legacy.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
+    </tr>
+    <tr>
+        <td>data_process</td>
+        <td><a href="pipeline/chatglm3-6B/test_process_pretrain_data.py">test_process_pretrain_data.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>inference</td>
+        <td><a href="pipeline/chatglm3-6B/test_generation.py">test_generation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>evaluation</td>
+        <td><a href="pipeline/chatglm3-6B/test_evaluation.py">test_evaluation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td rowspan="4"><a href="pipeline/bloom-7B">Bloom-7B</a></td>
+        <td rowspan="4">Legacy</td>
+        <td>pretrain</td>
+        <td><a href="pipeline/bloom-7B/bloom_7B_legacy_tp8_pp1_ptd.sh">bloom_7B_legacy_tp8_pp1_ptd.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>data_process</td>
+        <td><a href="pipeline/bloom-7B/test_process_pretrain_data.py">test_process_pretrain_data.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>inference</td>
+        <td><a href="pipeline/bloom-7B/test_generation.py">test_generation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>evaluation</td>
+        <td><a href="pipeline/bloom-7B/test_evaluation.py">test_evaluation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td rowspan="4"><a href="pipeline/gemma-7B">Gemma-7B</a></td>
+        <td rowspan="4">Legacy</td>
+        <td>pretrain</td>
+        <td><a href="pipeline/gemma-7B/gemma_7B_legacy_tp8_pp1_ptd.sh">gemma_7B_legacy_tp8_pp1_ptd.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>data_process</td>
+        <td><a href="pipeline/gemma-7B/test_process_pretrain_data.py">test_process_pretrain_data.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>inference</td>
+        <td><a href="pipeline/gemma-7B/test_generation.py">test_generation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>evaluation</td>
+        <td><a href="pipeline/gemma-7B/test_evaluation.py">test_evaluation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td rowspan="4"><a href="pipeline/qwen15-7B">Qwen15-7B</a></td>
+        <td rowspan="4">Legacy</td>
+        <td>pretrain</td>
+        <td><a href="pipeline/qwen15-7B/qwen15_7b_legacy_tp8_pp1_ptd.sh">qwen15_7b_legacy_tp8_pp1_ptd.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
+        <td>data_process</td>
+        <td><a href="pipeline/qwen15-7B/test_process_pretrain_data.py">test_process_pretrain_data.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>inference</td>
+        <td><a href="pipeline/qwen15-7B/test_generation.py">test_generation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>evaluation</td>
+        <td><a href="pipeline/qwen15-7B/test_evaluation.py">test_evaluation.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
     </tr>
 </table>
 
