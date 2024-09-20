@@ -855,7 +855,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2981 </td>
       <td> -- </td>
       <td> 3172 </td>
-      <td>【昇腾】</td>
+      <td>【NAIE】</td>
       <td>【Test】</td>
     </tr>
   </tbody>

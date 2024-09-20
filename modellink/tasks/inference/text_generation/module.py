@@ -239,7 +239,7 @@ class MegatronModuleForCausalLM(MegatronModuleForCausalLMABC):
     def generate(self, input_ids=None, **kwargs):
         args = get_args()
 
-        if parallel_state.get_data_parallel_world_size() > 1:
+        if parallel_state.get_data_parallel_world_size() // parallel_state.get_expert_model_parallel_world_size() > 1:
             raise ValueError("In this inference mode data parallel is forbidden.")
 
         super(MegatronModuleForCausalLM, self).generate(input_ids=input_ids, **kwargs)
