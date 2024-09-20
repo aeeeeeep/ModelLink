@@ -241,7 +241,7 @@ bash examples/llama2/ckpt_convert_llama2_mcore2hf.sh
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
 # legacy转legacy
-python tools/checkpoint/convert_ckpt.py \
+python convert_ckpt.py \
     --model-type GPT \
     --load-model-type mg \
     --save-model-type mg \
@@ -251,7 +251,7 @@ python tools/checkpoint/convert_ckpt.py \
     --save-dir ./model_weights/llama-2-7b-legacy_tp2pp2/
 
 # legacy转mcore
-python tools/checkpoint/convert_ckpt.py \
+python convert_ckpt.py \
     --model-type GPT \
     --load-model-type mg \
     --save-model-type mg \
@@ -263,7 +263,7 @@ python tools/checkpoint/convert_ckpt.py \
     --save-dir ./model_weights/llama-2-7b-mcore_tp2pp2/
 
 # mcore转mocre
-python tools/checkpoint/convert_ckpt.py \
+python convert_ckpt.py \
     --model-type GPT \
     --load-model-type mg \
     --save-model-type mg \
@@ -274,7 +274,7 @@ python tools/checkpoint/convert_ckpt.py \
     --save-dir ./model_weights/llama-2-7b-mcore_tp2pp2/
 
 # mcore转legacy
-python tools/checkpoint/convert_ckpt.py \
+python convert_ckpt.py \
     --model-type GPT \
     --load-model-type mg \
     --save-model-type mg \
@@ -694,7 +694,7 @@ bash examples/llama2/data_convert_llama2_instruction.sh
 ```shell
 python ./preprocess_data.py \
     --input ./process_data/enwiki_subsets \
-    --output-prefix ./process_data/merge_enwiki
+    --output-prefix ./process_data/merge_enwiki \
     --merge-group-keys text_document
 ```
 
@@ -703,7 +703,7 @@ python ./preprocess_data.py \
 ```shell
 python ./preprocess_data.py \
     --input ./process_data/alpaca_tune_subsets \
-    --output-prefix ./process_data/merge_tune_alpaca
+    --output-prefix ./process_data/merge_tune_alpaca \
     --merge-group-keys packed_attention_mask_document packed_input_ids_document packed_labels_document
 ```
 
@@ -756,6 +756,20 @@ examples/mcore/llama2/pretrain_llama2_7b_ptd.sh *(mcore分支)*
 【--tokenizer-type】 
 
 参数值为PretrainedFromHF时， 词表路径仅需要填到模型文件夹即可，不需要到tokenizer.model文件
+
+**示例：**
+```shell 
+    TOKENIZER_PATH="./model_from_hf/llama-2-7b-hf/"
+    --tokenizer-name-or-path ${TOKENIZER_PATH}
+```
+参数值不为PretrainedFromHF时，例如Llama2Tokenizer，需要指定到tokenizer.model文件
+
+**示例：**
+```shell 
+    TOKENIZER_MODEL="./model_from_hf/llama-2-7b-hf/tokenizer.model"
+    --tokenizer-model ${TOKENIZER_MODEL} \
+```
+
 
 【--data-path】 
 
