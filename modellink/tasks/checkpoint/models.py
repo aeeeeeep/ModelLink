@@ -84,43 +84,51 @@ class ModelBase(abc.ABC):
         def _func_generator_get_module(value):
             def func(self, **kwargs):
                 return _get_obj(self, value, **kwargs)
+
             return func
 
         def _func_generator_get_weight(value):
             def func(self, **kwargs):
                 return _get_obj(self, value, **kwargs).weight.data
+
             return func
 
         def _func_generator_get_bias(value):
             def func(self, **kwargs):
                 return _get_obj(self, value, **kwargs).bias.data
+
             return func
 
         def _func_generator_set_weight(value):
             def func(self, **kwargs):
                 return _get_obj(self, value, **kwargs).weight.data.copy_(kwargs.get('data'))
+
             return func
 
         def _func_generator_set_module(value):
             def func(self, **kwargs):
                 return _get_obj(self, value, **kwargs).data.copy_(kwargs.get('data'))
+
             return func
 
         def _func_generator_set_bias(value):
             def func(self, **kwargs):
                 return _get_obj(self, value, **kwargs).bias.data.copy_(kwargs.get('data'))
+
             return func
 
         def _func_generator_has_module(value):
             def func(self, **kwargs):
                 obj = _get_obj(self, value, **kwargs)
                 return True if obj else False
+
             return func
-        
+
         def _func_generator_has_bias(value):
             def func(self, **kwargs):
                 bias = getattr(_get_obj(self, value, **kwargs), 'bias', None)
                 return bias is not None
+
             return func
 
         if self.module_mapping:
@@ -189,13 +197,13 @@ class ModelBase(abc.ABC):
             k_layernorm = src_model.get_layers_self_attention_k_layernorm_weight(layer_idx=layer_idx)
             self.set_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx, data=q_layernorm)
             self.set_layers_self_attention_k_layernorm_weight(layer_idx=layer_idx, data=k_layernorm)
-        
+
         if getattr(src_model.get_args(), "multi_head_latent_attention", False):
             linear_qb = src_model.get_layers_self_attention_linear_qb_weight(layer_idx=layer_idx)
             linear_kvb = src_model.get_layers_self_attention_linear_kvb_weight(layer_idx=layer_idx)
             self.set_layers_self_attention_linear_qb_weight(layer_idx=layer_idx, data=linear_qb)
             self.set_layers_self_attention_linear_kvb_weight(layer_idx=layer_idx, data=linear_kvb)
-        
+
         qkv_weight = src_model.get_layers_self_attention_linear_qkv_weight(layer_idx=layer_idx)
         proj_weight = src_model.get_layers_self_attention_linear_proj_weight(layer_idx=layer_idx)
         self.set_layers_self_attention_linear_qkv_weight(layer_idx=layer_idx, data=qkv_weight)
@@ -224,7 +232,7 @@ class ModelBase(abc.ABC):
             post_mlp_layernorm_weight = src_model.get_layers_self_attention_post_mlp_layernorm_weight(**kwargs)
             self.set_layers_self_attention_pre_mlp_layernorm_weight(data=pre_mlp_layernorm_weight, **kwargs)
             self.set_layers_self_attention_post_mlp_layernorm_weight(data=post_mlp_layernorm_weight, **kwargs)
-    
+
     def _set_mlp_experts_state(self, src_model, **kwargs):
         '''Set MLP experts params.'''
         fc1_weight = src_model.get_layers_mlp_experts_linear_fc1_weight(**kwargs)
@@ -252,6 +260,7 @@ class ModelBase(abc.ABC):
         num_experts = getattr(args, 'num_experts', None) or getattr(args, 'num_local_experts', None)
         first_k_dense_replace = getattr(args, 'first_k_dense_replace', None)
         moe_layer_freq = getattr(args, 'moe_layer_freq', None)
+        shared_expert_gate = getattr(args, 'shared_expert_gate', False)
         if (num_experts
                 and first_k_dense_replace is not None
                 and moe_layer_freq is not None
@@ -259,6 +268,11 @@ class ModelBase(abc.ABC):
             if layer_idx >= first_k_dense_replace and layer_idx % moe_layer_freq == 0:
                 router_weight = src_model.get_layers_mlp_router_weight(**kwargs)
                 self.set_layers_mlp_router_weight(**kwargs, data=router_weight)
+
+                if shared_expert_gate:
+                    shared_expert_gate_weight = src_model.get_layers_mlp_shared_expert_gate_weight(**kwargs)
+                    self.set_layers_mlp_shared_expert_gate_weight(**kwargs, data=shared_expert_gate_weight)
+
                 if getattr(self.args, "n_shared_experts", None) is not None:
                     self._set_mlp_shared_experts_state(src_model, **kwargs)
                 if args.moe_grouped_gemm:
@@ -278,7 +292,6 @@ class ModelBase(abc.ABC):
                 self._set_mlp_state(src_model, **kwargs)
         else:
             self._set_mlp_state(src_model, **kwargs)
-
 
     def get_args(self):
         return self.args
@@ -377,7 +390,8 @@ class HuggingfaceModel(ModelBase):
             load_dir = self.args_cmd.save_dir
         else:
             load_dir = self.args_cmd.load_dir
-        self.module = [AutoModelForCausalLM.from_pretrained(load_dir, device_map=device_map, trust_remote_code=trust_remote_code)]
+        self.module = [
+            AutoModelForCausalLM.from_pretrained(load_dir, device_map=device_map, trust_remote_code=trust_remote_code)]
         if hasattr(self.args, "torch_dtype") and self.args.torch_dtype in ["float16", "bfloat16"]:
             self.module[0] = self.module[0].to(eval(f'torch.{self.args.torch_dtype}'))
 
@@ -391,7 +405,8 @@ class HuggingfaceModel(ModelBase):
         # Reshape loaded weights.
         nh = self.args.num_attention_heads
         ng = (self.args.num_key_value_heads if self.args.group_query_attention else self.args.num_attention_heads)
-        dim = self.args.kv_channels if hasattr(self.args, "kv_channels") else self.args.hidden_size // self.args.num_attention_heads
+        dim = self.args.kv_channels if hasattr(self.args,
+                                               "kv_channels") else self.args.hidden_size // self.args.num_attention_heads
         if not nh % ng == 0:
             raise ValueError("nh % ng should equal 0")
 
@@ -457,10 +472,10 @@ class HuggingfaceModel(ModelBase):
                 k_bias = qkv_pack_bias[full_q:end_k, :]
                 v_bias = qkv_pack_bias[end_k:, :]
                 query_key_value_bias = [q_bias, k_bias, v_bias]
-                self.layers_self_attention_linear_qkv_caches["bias"] = (qkv_concatenate_bias(query_key_value_bias))        
+                self.layers_self_attention_linear_qkv_caches["bias"] = (qkv_concatenate_bias(query_key_value_bias))
         else:
             raise ValueError(f"Unsupported types. {qkv_type}")
-            
+
     def has_layers_mlp_linear_fc1_bias(self, **kwargs):
         return False
 
@@ -675,7 +690,8 @@ class MegatronModel(ModelBase):
                 'recompute_num_layers', 'recompute_method', 'encoder_num_layers', 'encoder_seq_length',
                 'distribute_saved_activations', 'train_iters', 'lr_decay_iters', 'lr_warmup_iters',
                 'lr_warmup_fraction', 'start_weight_decay', 'end_weight_decay', 'make_vocab_size_divisible_by',
-                'masked_softmax_fusion', 'num_layer_list', 'lora_target_modules', 'expert_model_parallel_size', 'use_mcore_models'
+                'masked_softmax_fusion', 'num_layer_list', 'lora_target_modules', 'expert_model_parallel_size',
+                'use_mcore_models'
             ]
 
             for arg, value in vars(self.md.checkpoint_args).items():
@@ -729,6 +745,7 @@ class MegatronModel(ModelBase):
         self.args.moe_intermediate_size = getattr(hf_args, "moe_intermediate_size", None)
         self.args.first_k_dense_replace = getattr(hf_args, "first_k_dense_replace", None)
         self.args.moe_layer_freq = getattr(hf_args, "moe_layer_freq", None)
+        self.args.shared_expert_gate = getattr(hf_args, "shared_expert_gate", None)
         self.args.multi_head_latent_attention = getattr(hf_args, "multi_head_latent_attention", False)
         if self.args.multi_head_latent_attention:
             self.args.qk_rope_head_dim = getattr(hf_args, "qk_rope_head_dim", None)
@@ -870,20 +887,21 @@ class MegatronModel(ModelBase):
                         models[vp_rank][ep_rank][tp_rank].merge_and_unload()
 
         self.module = models
+        print(f"============__get_modules : {self.module[0]}")
 
         if pp_stage_cache_flag:
             self.pp_stage_cache.append(models)
 
-
     def check_for_args(self, queue, saver_megatron):
         if saver_megatron:
-            return 
+            return
         check_args_list = {
             'tensor_model_parallel_size': None, 'pipeline_model_parallel_size': None, 'num_layers': None,
             'hidden_size': None, 'seq_length': None, 'num_attention_heads': None, 'max_position_embeddings': None,
             'position_embedding_type': None, 'tokenizer_type': None, 'iteration': 1, 'bert_binary_head': None,
             'disable_bias_linear': False, 'params_dtype': None, 'swiglu': False
         }
+
         # if hasattr(self.args, 'add_bias_linear'):
         #     check_args_list['disable_bias_linear'] = self.args.add_bias_linear
 
@@ -919,7 +937,7 @@ class MegatronModel(ModelBase):
             '--load', self.args_cmd.load_dir,
             '--finetune'
         ]
-        
+
         if hasattr(self.args_cmd, 'add_bias_linear') and not self.args_cmd.add_bias_linear:
             sys_argv.append('--disable-bias-linear')
 
@@ -1073,8 +1091,10 @@ class MegatronMCoreModel(MegatronModel):
         config_value = self.model_cfg.get(self.args_cmd.model_type_hf).get('config_set_value')
         if config_value.get('moe_flag', False):
             self.module_mapping["layers_mlp_router"] = module_layer + "mlp.router"
-            self.module_mapping["layers_mlp_linear_fc1"] = module_layer + "mlp.experts.local_experts[expert_idx].linear_fc1"
-            self.module_mapping["layers_mlp_linear_fc2"] = module_layer + "mlp.experts.local_experts[expert_idx].linear_fc2"
+            self.module_mapping[
+                "layers_mlp_linear_fc1"] = module_layer + "mlp.experts.local_experts[expert_idx].linear_fc1"
+            self.module_mapping[
+                "layers_mlp_linear_fc2"] = module_layer + "mlp.experts.local_experts[expert_idx].linear_fc2"
 
         if config_value.get('mlp_experts_flag', False):
             self.module_mapping["layers_mlp_router"] = module_layer + "mlp.router"
@@ -1082,17 +1102,20 @@ class MegatronMCoreModel(MegatronModel):
                 "layers_mlp_experts_linear_fc1"] = module_layer + "mlp.experts.local_experts[expert_idx].linear_fc1"
             self.module_mapping[
                 "layers_mlp_experts_linear_fc2"] = module_layer + "mlp.experts.local_experts[expert_idx].linear_fc2"
-        
+
         # MLP
         self.module_mapping["layers_self_attention_linear_qb"] = module_layer + "self_attention.linear_qb"
         self.module_mapping["layers_self_attention_linear_kvb"] = module_layer + "self_attention.linear_kvb"
-        
+
         # shared experts
+        if config_value.get('shared_expert_gate', False):
+            self.module_mapping["layers_mlp_shared_expert_gate"] = module_layer + "mlp.shared_expert_gate"
+
         self.module_mapping[
             "layers_mlp_shared_experts_linear_fc1"] = module_layer + "mlp.shared_experts.linear_fc1"
         self.module_mapping[
             "layers_mlp_shared_experts_linear_fc2"] = module_layer + "mlp.shared_experts.linear_fc2"
-        
+
         # moe grouped gemm
         self.module_mapping[
             "layers_mlp_experts_weight1"] = module_layer + "mlp.experts.weight1"

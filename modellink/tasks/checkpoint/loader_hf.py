@@ -102,14 +102,14 @@ def build_metadata(args, margs):
     md.first_k_dense_replace = getattr(margs, "first_k_dense_replace", None)
     md.moe_layer_freq = getattr(margs, "moe_layer_freq", None)
     md.multi_head_latent_attention = getattr(margs, "multi_head_latent_attention", False)
-    
+
     if md.multi_head_latent_attention:
         md.qk_rope_head_dim = getattr(margs, "qk_rope_head_dim", None)
         md.qk_nope_head_dim = getattr(margs, "qk_nope_head_dim", None)
         md.q_lora_rank = getattr(margs, "q_lora_rank", None)
         md.kv_lora_rank = getattr(margs, "kv_lora_rank", None)
         md.v_head_dim = getattr(margs, "v_head_dim", None)
-    
+
     if hasattr(margs, 'normalization'):
         md.norm_has_bias = margs.normalization == "LayerNorm"
 
@@ -141,7 +141,8 @@ def get_message_layer_norm(message, model, layer_idx, md, args=None):
     message["input norm weight"] = model.get_layers_input_layernorm_weight(layer_idx=layer_idx)
 
     if args.post_norm:
-        message["post norm weight"] = model.get_layers_self_attention_post_attention_layernorm_weight(layer_idx=layer_idx)
+        message["post norm weight"] = model.get_layers_self_attention_post_attention_layernorm_weight(
+            layer_idx=layer_idx)
         message["pre mlp norm weight"] = model.get_layers_self_attention_pre_mlp_layernorm_weight(layer_idx=layer_idx)
         message["post mlp norm weight"] = model.get_layers_self_attention_post_mlp_layernorm_weight(layer_idx=layer_idx)
     else:
@@ -190,7 +191,7 @@ def _get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1, is_moe
     mlp_l0_weight = []
     mlp_l0_bias = []
     mlp_l1_weight = []
- 
+
     if is_moe_mlp:
         mlp_l0_weight.append(model.get_layers_mlp_experts_linear_fc1_weight(layer_idx=layer_idx, **kwargs))
         mlp_l1_weight.append(model.get_layers_mlp_experts_linear_fc2_weight(layer_idx=layer_idx, **kwargs))
@@ -237,6 +238,7 @@ def get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1):
     margs = model.get_args()
     first_k_dense_replace = getattr(margs, 'first_k_dense_replace', None)
     moe_layer_freq = getattr(margs, 'moe_layer_freq', None)
+    shared_expert_gate = getattr(margs, 'shared_expert_gate', None)
     if (
             margs.num_experts
             and first_k_dense_replace is not None
@@ -246,6 +248,9 @@ def get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1):
             message["mlp_moe"] = {}
             mlp_router_weight = model.get_layers_mlp_router_weight(layer_idx=layer_idx)
             message["mlp_moe"]["mlp router weight"] = mlp_router_weight
+            if shared_expert_gate:
+                shared_expert_gate = model.get_layers_mlp_shared_expert_gate_weight(layer_idx=layer_idx)
+                message["mlp_moe"]["mlp shared_expert_gate weight"] = shared_expert_gate
             if getattr(margs, "n_shared_experts", None) is not None:
                 fc1_weight = model.get_layers_mlp_shared_experts_linear_fc1_weight(layer_idx=layer_idx)
                 fc2_weight = model.get_layers_mlp_shared_experts_linear_fc2_weight(layer_idx=layer_idx)
@@ -259,7 +264,8 @@ def get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1):
             else:
                 for expert_idx in range(margs.num_experts):
                     kwargs = {'expert_idx': expert_idx}
-                    expert = _get_message_layer_mlp({}, model, layer_idx, md=md, tp_size=tp_size, is_moe_mlp=True, **kwargs)
+                    expert = _get_message_layer_mlp({}, model, layer_idx, md=md, tp_size=tp_size, is_moe_mlp=True,
+                                                    **kwargs)
                     message["mlp_moe"][f"expert {expert_idx}"] = expert
             return message
         else:

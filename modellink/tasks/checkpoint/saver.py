@@ -59,16 +59,18 @@ def add_arguments(parser):
 
 def update_padded_vocab_size(md, model_mg, orig_vocab_size):
     # figure out what our padded vocab size is
-    if orig_vocab_size is not None:
-        if md.true_vocab_size is not None:
-            from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
-            margs = model_mg.get_args()
-            padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
-            model_mg.set_padded_vocab_size(padded_vocab_size)
-        else:
-            logger.warning("Original vocab size not specified, leaving embedding table as-is. "
-                  "If you've changed the tensor parallel size this could cause problems.")
-            model_mg.set_padded_vocab_size(orig_vocab_size)
+    if md.true_vocab_size is not None:
+        from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
+        margs = model_mg.get_args()
+        padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
+        model_mg.set_padded_vocab_size(padded_vocab_size)
+    else:
+        logger.warning("Original vocab size not specified, leaving embedding table as-is. "
+              "If you've changed the tensor parallel size this could cause problems.")
+        model_mg.set_padded_vocab_size(orig_vocab_size)
+    margs = model_mg.get_args()
+    padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
+    model_mg.set_padded_vocab_size(padded_vocab_size)
 
 
 def vocab_padding(orig_vocab_size, padded_vocab_size, orig_tensor):
@@ -216,7 +218,7 @@ def set_model_layer_attn(model_mg, msg, md, **kwargs):
             kwargs["tp_rank"] = tp_rank
             model_mg.set_layers_self_attention_linear_qkv_weight(**kwargs, data=qkv_weight[tp_rank])
             model_mg.set_layers_self_attention_linear_proj_weight(**kwargs, data=dense_weight[tp_rank])
-            
+
             if getattr(md, "qk_layernorm", False):
                 model_mg.set_layers_self_attention_q_layernorm_weight(**kwargs, data=q_layernorm)
                 model_mg.set_layers_self_attention_k_layernorm_weight(**kwargs, data=k_layernorm)
@@ -286,6 +288,7 @@ def set_model_layer_mlp(model_mg, msg, md, total_layer_num, **kwargs):
     margs = model_mg.get_args()
     first_k_dense_replace = getattr(margs, 'first_k_dense_replace', None)
     moe_layer_freq = getattr(margs, 'moe_layer_freq', None)
+    shared_expert_gate = getattr(margs, 'shared_expert_gate', None)
     if (
             margs.num_experts
             and first_k_dense_replace is not None
@@ -295,9 +298,13 @@ def set_model_layer_mlp(model_mg, msg, md, total_layer_num, **kwargs):
             num_experts_local = margs.num_experts // margs.expert_model_parallel_size
             mlp_moe = msg.pop("mlp_moe")
             mlp_router_weight = mlp_moe.pop("mlp router weight")
+            if shared_expert_gate:
+                mlp_shared_expert_gate_weights = mlp_moe.pop("mlp shared_expert_gate weight")
             if getattr(margs, "n_shared_experts", None) is not None:
-                shared_experts_linear_fc1_weight = mlp_moe.pop("mlp shared experts linear fc1 weight")
-                shared_experts_linear_fc2_weight = mlp_moe.pop("mlp shared experts linear fc2 weight")
+                shared_experts_linear_fc1_weight = torch.chunk(
+                    mlp_moe.pop("mlp shared experts linear fc1 weight"), margs.tensor_model_parallel_size, dim=0)
+                shared_experts_linear_fc2_weight = torch.chunk(
+                    mlp_moe.pop("mlp shared experts linear fc2 weight"), margs.tensor_model_parallel_size, dim=1)
             if margs.moe_grouped_gemm:
                 # TODO: check TP
                 weight1 = torch.chunk(mlp_moe.pop("mlp experts weight1 module").view(margs.hidden_size, -1),
@@ -309,11 +316,14 @@ def set_model_layer_mlp(model_mg, msg, md, total_layer_num, **kwargs):
                 for tp_rank in range(margs.tensor_model_parallel_size):
                     kwargs['tp_rank'] = tp_rank
                     model_mg.set_layers_mlp_router_weight(**kwargs, data=mlp_router_weight)
+                    if shared_expert_gate:
+                        model_mg.set_layers_mlp_shared_expert_gate_weight(**kwargs,
+                                                                          data=mlp_shared_expert_gate_weights)
                     if getattr(margs, "n_shared_experts", None) is not None:
-                        model_mg.set_layers_mlp_shared_experts_linear_fc1_weight(**kwargs,
-                                                                                 data=shared_experts_linear_fc1_weight)
-                        model_mg.set_layers_mlp_shared_experts_linear_fc2_weight(**kwargs,
-                                                                                 data=shared_experts_linear_fc2_weight)
+                        model_mg.set_layers_mlp_shared_experts_linear_fc1_weight(
+                            **kwargs, data=shared_experts_linear_fc1_weight[tp_rank])
+                        model_mg.set_layers_mlp_shared_experts_linear_fc2_weight(
+                            **kwargs, data=shared_experts_linear_fc2_weight[tp_rank])
                 if margs.moe_grouped_gemm:
                     # TODO: check TP
                     model_mg.set_layers_mlp_experts_weight1_module(**kwargs,
