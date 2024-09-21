@@ -62,8 +62,12 @@ def apply_yarn_scaling(freqs: torch.Tensor):
 def rotary_embedding_init_wrapper(fn):
     @wraps(fn)
     def wrapper(self, *args, **kwargs):
-        fn(self, *args, **kwargs)
         _args = get_args()
+        if _args.rotary_base:
+            kwargs["rotary_base"] = _args.rotary_base
+
+        fn(self, *args, **kwargs)
+
         if hasattr(_args, "rope_scaling_type") and _args.rope_scaling_type == "llama3":
             self.inv_freq = apply_llama3_scaling(self.inv_freq)
         elif hasattr(_args, "rope_scaling_type") and _args.rope_scaling_type == "yarn":
