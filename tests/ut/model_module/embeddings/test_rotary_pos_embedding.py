@@ -32,7 +32,7 @@ class TestRotaryPosEmbedding:
                             lambda : SimpleNamespace(use_glm_rope=request.getfixturevalue("chatglm"),
                             rope_scaling_type = None,
                             ))
-        monkeypatch.setattr(mindspeed.core.fusions.rotary_pos_embedding, "get_args",
+        monkeypatch.setattr(modellink.core.models.common.embeddings.rotary_pos_embedding, "get_args",
                             lambda : SimpleNamespace(rotary_base = request.getfixturevalue("rotary_base")))
 
     @pytest.mark.parametrize("rotary_param, chatglm, rotary_base, seq, expected", test_config["test_rotary_pos_embedding"])
