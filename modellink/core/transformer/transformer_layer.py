@@ -106,7 +106,8 @@ def transformer_layer_forward(self, hidden_states, attention_mask, context=None,
 
     # Optional Input Layer norm
     input_layernorm_output = self.input_layernorm(hidden_states)
-
+    if args.input_layernorm_in_fp32:
+        input_layernorm_output = input_layernorm_output.float()
     # Self attention.
     attention_output_with_bias = self.self_attention(
         input_layernorm_output,

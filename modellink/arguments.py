@@ -268,7 +268,10 @@ def _add_moe_args(parser):
     group.add_argument('--output-multiplier-scale', type=float, default=None, help='Add scale for logits output.')
     group.add_argument("--moe-permutation-async-comm", action='store_true',
                        help="overlap moe permutation 3 all gather communications")
-
+    group.add_argument("--shared-expert-gate", action='store_true',
+                       help="moe model has shared expert gate")
+    group.add_argument("--shared-expert-gate-output-dimension", type=int, default=1,
+                       help="moe model shared expert gate output dimension")
     return parser
 
 
@@ -295,7 +298,8 @@ def _add_data_args(parser):
                        help="Name or path of the huggingface tokenizer.")
     group.add_argument("--tokenizer-not-use-fast", action='store_false',
                        help="HuggingFace tokenizer not use the fast version.")
-
+    group.add_argument("--input-layernorm-in-fp32", action='store_true',
+                       help="weather input layernorm to fp32")
     return parser
 
 
