@@ -44,7 +44,7 @@
                 "load-model-type":"hf",
                 "save-model-type":"mg",
                 "target-tensor-parallel-size": "1",
-                "target-pipeline-parallel-size": "4", 
+                "target-pipeline-parallel-size": "4",
                 "target-expert-parallel-size": "8",
                 "load-dir":"/data/ci/deepseek2/hf/deepseek2_hf",
                 "save-dir":"/data/ci/deepseek2/mg/deepseek2_mg",
@@ -71,6 +71,43 @@
                 "use-mcore-models": null,
                 "moe-grouped-gemm": null,
                 "model-type-hf": "deepseek2",
+                "params-dtype": "bf16"
+            }
+        }
+    ],
+
+    "test_deepseek2_lite_hf2mcore_tp1pp1ep8": [
+        {
+            "param": {
+                "model-type":"GPT",
+                "load-model-type":"hf",
+                "save-model-type":"mg",
+                "target-tensor-parallel-size": "1",
+                "target-pipeline-parallel-size": "1",
+                "target-expert-parallel-size": "8",
+                "load-dir":"/data/ci/deepseek2_lite/hf/deepseek2_lite_hf",
+                "save-dir":"/data/ci/deepseek2_lite/mg/deepseek2_lite_mg",
+                "use-mcore-models": null,
+                "model-type-hf": "deepseek2-lite",
+                "params-dtype": "bf16",
+                "tokenizer-model":"/data/ci/deepseek2_lite/hf/deepseek2_lite_hf"
+            }
+        }
+    ],
+
+    "test_deepseek2_lite_mcore2hf_tp1pp1ep8": [
+        {
+            "param": {
+                "model-type":"GPT",
+                "load-model-type":"mg",
+                "save-model-type": "hf",
+                "target-tensor-parallel-size": "1",
+                "target-pipeline-parallel-size": "1",
+                "target-expert-parallel-size": "1",
+                "save-dir":"/data/ci/deepseek2_lite/hf/deepseek2_lite_hf",
+                "load-dir":"/data/ci/deepseek2_lite/mg_base/deepseek2_lite_l3_t1p1e8",
+                "use-mcore-models": null,
+                "model-type-hf": "deepseek2-lite",
                 "params-dtype": "bf16"
             }
         }

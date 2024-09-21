@@ -199,11 +199,13 @@ def set_model_layer_attn(model_mg, msg, md, **kwargs):
     qkv_weight = torch.chunk(qkv_org, margs.tensor_model_parallel_size, dim=0)
 
     if getattr(md, "qk_layernorm", False):
-        q_layernorm = msg.pop("q layernorm")
+        if getattr(md, "q_lora_rank", None):
+            q_layernorm = msg.pop("q layernorm")
         k_layernorm = msg.pop("k layernorm")
 
     if getattr(md, "multi_head_latent_attention", False):
-        linear_qb = msg.pop("linear qb weight")
+        if getattr(md, "q_lora_rank", None):
+            linear_qb = msg.pop("linear qb weight")
         linear_kvb = msg.pop("linear kvb weight")
 
     # Split up the parallel tensors
@@ -218,11 +220,13 @@ def set_model_layer_attn(model_mg, msg, md, **kwargs):
             model_mg.set_layers_self_attention_linear_proj_weight(**kwargs, data=dense_weight[tp_rank])
             
             if getattr(md, "qk_layernorm", False):
-                model_mg.set_layers_self_attention_q_layernorm_weight(**kwargs, data=q_layernorm)
+                if getattr(md, "q_lora_rank", None):
+                    model_mg.set_layers_self_attention_q_layernorm_weight(**kwargs, data=q_layernorm)
                 model_mg.set_layers_self_attention_k_layernorm_weight(**kwargs, data=k_layernorm)
 
             if getattr(md, "multi_head_latent_attention", False):
-                model_mg.set_layers_self_attention_linear_qb_weight(**kwargs, data=linear_qb)
+                if getattr(md, "q_lora_rank", None):
+                    model_mg.set_layers_self_attention_linear_qb_weight(**kwargs, data=linear_qb)
                 model_mg.set_layers_self_attention_linear_kvb_weight(**kwargs, data=linear_kvb)
 
             if md.linear_bias:

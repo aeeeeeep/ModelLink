@@ -839,6 +839,18 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite">DeepSeek-V2-Lite</a></td>
+      <td> 16B </td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td> 1x8 </td>
+      <td> 2830 </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td>【昇腾】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
       <td rowspan="2"><a href="https://github.com/OpenBMB/MiniCPM">MiniCPM</a></td>
       <td> <a href="https://huggingface.co/openbmb/MiniCPM-2B-sft-bf16/tree/main">2B</a> </td>
       <td> 4K </td>
@@ -1449,7 +1461,7 @@ My soul is full and my heart does soep.</th>
     </tr>
     <tr>
         <td>指令微调模板支持列表</td>
-        <td  colspan="2">['empty', 'default', 'chatglm3_system', 'chatml', 'qwen', 'llama2', 'llama3', 'mixtral', 'alpaca']</td>
+        <td  colspan="2">['empty', 'default', 'chatglm3_system', 'chatml', 'qwen', 'llama2', 'llama3', 'mixtral', 'alpaca', 'deepseek2', 'deepseek2-lite']</td>
     </tr>
 
 </table>
@@ -1472,14 +1484,14 @@ ModelLink支持大模型在公开基准数据集上进行准确率评估，当�
 
 ModelLink已支持模型的评估数据统计如下：
 
-| 模型            | 任务     | ModelLink | 社区                                                                   | 模型               | 任务     | ModelLink | 社区                                                                                |
-|---------------|--------|-----------|----------------------------------------------------------------------|------------------|--------|-----------|-----------------------------------------------------------------------------------|
-| Aquila-7B     | BoolQ  | 77.3%     | --                                                                   | Aquila2-7B       | BoolQ  | 77.8%     | --                                                                                |
-| Aquila2-34B   | BoolQ  | 88.0%     | --                                                                   | Baichuan-7B      | BoolQ  | 69.0%     | [67.0%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)                      |
-| Baichuan-13B  | BoolQ  | 74.7%     | [73.6%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)         | Baichuan2-7B     | BoolQ  | 70.0%     | [63.2%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)                      |
-| Baichuan2-13B | BoolQ  | 78.0%     | [67.0%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)         | Bloom-7B         | MMLU   | 25.1%     | --                                                                                |
-| Bloom-176B    | BoolQ  | 64.5%     | --                                                                   | ChatGLM3-6B      | MMLU   | 61.5%     | --                                                                                |
-| GLM4-9B       | MMLU   | 74.5%     | [74.7%](https://huggingface.co/THUDM/glm-4-9b)                       | CodeQwen1.5-7B   | Human. | 54.8%     | [51.8%](https://qwenlm.github.io/zh/blog/codeqwen1.5/)                            |
+| 模型            | 任务     | ModelLink | 社区                                                                    | 模型               | 任务     | ModelLink | 社区                                                                                |
+|---------------|--------|-----------|-----------------------------------------------------------------------|------------------|--------|-----------|-----------------------------------------------------------------------------------|
+| Aquila-7B     | BoolQ  | 77.3%     | --                                                                    | Aquila2-7B       | BoolQ  | 77.8%     | --                                                                                |
+| Aquila2-34B   | BoolQ  | 88.0%     | --                                                                    | Baichuan-7B      | BoolQ  | 69.0%     | [67.0%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)                      |
+| Baichuan-13B  | BoolQ  | 74.7%     | [73.6%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)          | Baichuan2-7B     | BoolQ  | 70.0%     | [63.2%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)                      |
+| Baichuan2-13B | BoolQ  | 78.0%     | [67.0%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)          | Bloom-7B         | MMLU   | 25.1%     | --                                                                                |
+| Bloom-176B    | BoolQ  | 64.5%     | --                                                                    | ChatGLM3-6B      | MMLU   | 61.5%     | --                                                                                |
+| GLM4-9B       | MMLU   | 74.5%     | [74.7%](https://huggingface.co/THUDM/glm-4-9b)                        | CodeQwen1.5-7B   | Human. | 54.8%     | [51.8%](https://qwenlm.github.io/zh/blog/codeqwen1.5/)                            |
 | CodeLLaMA-34B | Human. | 48.8%     | [48.8%](https://paperswithcode.com/sota/code-generation-on-humaneval) | Gemma-2B         | MMLU   | 39.6%     | --                                                                                |
 | Gemma-7B      | MMLU   | 52.2%     | --                                                                   | InternLM-7B      | MMLU   | 48.7%     | [51.0%](https://huggingface.co/internlm/internlm-7b)                              |
 | Gemma2-9B     | MMLU   | 70.7%     | [71.3%](https://huggingface.co/google/gemma-2-9b)                    | Gemma2-27B       | MMLU   | 75.5%     | [75.2%](https://huggingface.co/google/gemma-2-27b)                                |
@@ -1499,7 +1511,9 @@ ModelLink已支持模型的评估数据统计如下：
 | Qwen1.5-110B  | MMLU   | 80.4%     | [80.4%](https://qwenlm.github.io/zh/blog/qwen1.5-110b/)              | Yi-34B           | MMLU   | 76.3%     | [75.8%](https://hub.opencompass.org.cn/dataset-detail/MMLU)                       |
 | Qwen2-0.5B    | MMLU   | 44.6%     | [45.4%](https://qwenlm.github.io/zh/blog/qwen2/)                     | Qwen2-1.5B       | MMLU   | 54.7%     | [56.5%](https://qwenlm.github.io/zh/blog/qwen2/)                                  |
 | QWen2-7B      | MMLU   | 70.3%     | [70.3%](https://qwenlm.github.io/zh/blog/qwen2/)                     | Qwen2-72B        | MMLU   | 83.6%     | [84.2%](https://qwenlm.github.io/zh/blog/qwen2/)                                  |
-MiniCPM-2B    | MMLU   | 51.6%     | [53.4%](https://github.com/OpenBMB/MiniCPM?tab=readme-ov-file#3)     | --               | --     | --        | --                                                                                |
+| MiniCPM-2B    | MMLU   | 51.6%     | [53.4%](https://github.com/OpenBMB/MiniCPM?tab=readme-ov-file#3)     | --               | --     | --        | --   
+| DeepSeek-V2-Lite-16B   | MMLU   | 57.4%     | [58.3%](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite)      | --               | --     | --        | --                                                                               |
+
 
 具体的评估功能命令介绍见[examples/README.md](./examples/README.md)
 

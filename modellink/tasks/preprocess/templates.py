@@ -645,3 +645,18 @@ _register_template(
         "Write a response that appropriately completes the request.\n\n"
     ),
 )
+
+
+_register_template(
+    name="deepseek2",
+    format_user=StringFormatter(slots=["User: {{content}}\n\nAssistant:"]),
+    format_system=StringFormatter(slots=["{{content}}\n\n"]),
+    format_prefix=EmptyFormatter(slots=[{"bos_token"}]),
+)
+
+_register_template(
+    name="deepseek2-lite",
+    format_user=StringFormatter(slots=["User: {{content}}\n\nAssistant:"]),
+    format_system=StringFormatter(slots=["{{content}}\n\n"]),
+    format_prefix=EmptyFormatter(slots=[{"bos_token"}]),
+)
