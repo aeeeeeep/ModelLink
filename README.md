@@ -54,6 +54,7 @@ ModelLink已发布版本维护策略：
 | bk_origin_23    |  Demo     | EOL    | 2023       | 生命周期终止           | 2024/6/30 |
 | 1.0             |  常规版本  | 维护   | 2024/03/30 | 预计2024/9/30起无维护  |           |
 | 1.1             |  常规版本  | 维护   | 2024/06/30 | 预计2024/12/30起无维护 |           |
+| 1.2             |  常规版本  | 维护   | 2024/09/30 | 预计2025/03/30起无维护 |           |
 
 ---
 
@@ -78,15 +79,17 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
 
 图中呈现了对应集群规模下的 `MFU` 值与集群整体的 `线性度`情况. 计算公式已经放到社区，点击链接可进行参考：[MFU计算公式](https://gitee.com/ascend/ModelLink/wikis/%E6%9C%AF%E8%AF%AD%E5%AE%9A%E4%B9%89/%E5%A4%A7%E6%A8%A1%E5%9E%8B%20MFU%20%E8%AE%A1%E7%AE%97%E5%85%AC%E5%BC%8F)，[线性度计算公式](https://gitee.com/ascend/ModelLink/wikis/%E6%9C%AF%E8%AF%AD%E5%AE%9A%E4%B9%89/%E7%BA%BF%E6%80%A7%E5%BA%A6%E5%85%AC%E5%BC%8F)
 
-【现版本实测性能（硬件信息：Atlas 900 A2 PODc）】
-
 下述列表中支持的模型，我们在[examples/README.md](./examples/README.md)中提供了相应的使用说明，里面有详细的模型训练、推理、评估流程
 
 `参数`列中的超链接指向模型的预训练文件下载地址，`模型`列中的超链接指向更多的社区资源地址，包括Chat/Instruct权重等
 
-`性能`的单位是tokens/p/s即每张卡每秒处理的token数，`认证`【Pass】表示经过昇腾官方版本测试的模型，【Test】表示待测试模型
+`性能`的单位是tokens/p/s即每张卡每秒处理的token数【现版本实测性能（硬件信息：Atlas 900 A2 PODc）】
 
-表中为开启 mc2 特性后预训练实测性能，该特性只在24RC2以上版本支持，本仓库代码层面默认关闭，若要使用，请参考[加速算法与融合算子](#jump2)章节
+`性能2`的单位是tokens/p/s即每张卡每秒处理的token数【现版本实测性能（硬件信息：内部在研）】
+
+`认证`【Pass】表示经过昇腾官方版本测试的模型，【Test】表示待测试模型
+
+表中为开启 mc2 特性【内部在研特性】后预训练实测性能，该特性只在24RC2以上版本支持，本仓库代码层面默认关闭，若要使用，请参考[加速算法与融合算子](#jump2)章节
 
 <table>
   <thead>
@@ -424,7 +427,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td><a href="https://huggingface.co/v2ray/Llama-3-70B/tree/main">70B</a></td>
       <td> 8K </td>
       <th>Mcore</th>
-      <td>4x8</td>
+      <td>8x8</td>
       <td> 353 </td>
       <td> -- </td>
       <td> 355 </td>
@@ -1391,7 +1394,7 @@ My soul is full and my heart does soep.</th>
         <td colspan="2">Alpaca风格、Sharegpt风格</td>
     </tr>
     <tr>
-        <td rowspan="3">微调数据预处理特性</td>
+        <td rowspan="4">微调数据预处理特性</td>
         <td>数据集字段映射</td>
         <td>--map-keys</td>
     </tr>
@@ -1404,13 +1407,21 @@ My soul is full and my heart does soep.</th>
         <td>--handler-name</td>
     </tr>
     <tr>
-        <td rowspan="2">微调特性</td>
+        <td>多样本pack</td>
+        <td>--pack</td>
+    </tr>
+    <tr>
+        <td rowspan="3">微调特性</td>
         <td>动态padding</td>
         <td>--variable-seq-lengths</td>
     </tr>
     <tr>
         <td>prompt模板</td>
         <td>--prompt-type</td>
+    </tr>
+    <tr>
+        <td>多样本pack</td>
+        <td>--reset-position-ids</td>
     </tr>
     <tr>
         <td rowspan="3">微调后推理对话特性</td>
