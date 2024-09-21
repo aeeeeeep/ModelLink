@@ -1449,7 +1449,7 @@ My soul is full and my heart does soep.</th>
     </tr>
     <tr>
         <td>指令微调模板支持列表</td>
-        <td  colspan="2">['empty', 'default', 'chatglm3_system', 'chatml', 'qwen', 'llama2', 'llama3', 'alpaca']</td>
+        <td  colspan="2">['empty', 'default', 'chatglm3_system', 'chatml', 'qwen', 'llama2', 'llama3', 'mixtral', 'alpaca']</td>
     </tr>
 
 </table>
