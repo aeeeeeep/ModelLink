@@ -24,6 +24,7 @@ from megatron.core.transformer.spec_utils import build_module
 from megatron.core.transformer.mlp import MLP
 from megatron.core.transformer.transformer_config import TransformerConfig
 from mindspeed.core.tensor_parallel.random import CheckpointWithoutOutput
+from mindspeed.core.fusions.fused_bias_swiglu import fused_swiglu
 
 
 def should_recompute_activation(self):
@@ -138,11 +139,18 @@ def core_mlp_forward_wrapper(fn):
             if bias is not None:
                 intermediate = intermediate + bias
             if self.config.gated_linear_unit:
-                def glu(x):
-                    x = torch.chunk(x, 2, dim=-1)
-                    return self.config.activation_func(x[0]) * x[1]
+                global_args = get_args()
+                if global_args.use_fused_swiglu:
+                    if self.config.activation_func != F.silu:
+                        raise ValueError('Activation function must be silu when using fused_swiglu')
+                    self.activation_func = fused_swiglu
+                    intermediate = self.activation_func(intermediate)
+                else:
+                    def glu(x):
+                        x = torch.chunk(x, 2, dim=-1)
+                        return self.config.activation_func(x[0]) * x[1]
 
-                intermediate = glu(intermediate)
+                    intermediate = glu(intermediate)
             else:
                 intermediate = self.activation_func(intermediate)
 
