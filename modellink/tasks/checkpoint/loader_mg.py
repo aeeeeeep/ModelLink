@@ -158,16 +158,19 @@ def get_message_layer_attn(message, model, md=None, **kwargs):
         if md.linear_bias or margs.add_qkv_bias:
             qkv_bias.append(model.get_layers_self_attention_linear_qkv_bias(**kwargs))
         if getattr(model.get_args(), "multi_head_latent_attention", False):
-            qb_weight.append(model.get_layers_self_attention_linear_qb_weight(**kwargs))
+            if getattr(model.get_args(), "q_lora_rank", None):
+                qb_weight.append(model.get_layers_self_attention_linear_qb_weight(**kwargs))
             kvb_weight.append(model.get_layers_self_attention_linear_kvb_weight(**kwargs))
 
     # Handle gated linear units
     # simple concat of the rest
     if getattr(model.get_args(), "qk_layernorm", False):
-        message["q layernorm"] = model.get_layers_self_attention_q_layernorm_weight(**kwargs)
+        if getattr(model.get_args(), "q_lora_rank", None):
+            message["q layernorm"] = model.get_layers_self_attention_q_layernorm_weight(**kwargs)
         message["k layernorm"] = model.get_layers_self_attention_k_layernorm_weight(**kwargs)
     if getattr(model.get_args(), "multi_head_latent_attention", False):
-        message["linear qb weight"] = torch.cat(qb_weight, dim=0)
+        if getattr(model.get_args(), "q_lora_rank", None):
+            message["linear qb weight"] = torch.cat(qb_weight, dim=0)
         message["linear kvb weight"] = torch.cat(kvb_weight, dim=0)
     message["qkv weight"] = torch.cat(qkv_weight, dim=0)
     message["dense weight"] = torch.cat(dense_weight, dim=1)

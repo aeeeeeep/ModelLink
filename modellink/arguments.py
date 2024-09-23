@@ -471,10 +471,9 @@ def _add_training_args(parser):
     group.add_argument('--jit-compile', action='store_true', default=False,
                        help='Setting jit compile mode to True')
     group.add_argument('--prompt-type', type=str, default=None,
-                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'glm4',
-                       'chatml', 'chatml_de', 'qwen', 'llama3', 'llama2', 'mistral', 'mixtral', 'gemma', 'alpaca', 'llama3'],
-                       help='Which template to use for constructing prompts in training/inference.'
-                            'e.g., "qwen"')
+                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'glm4', 'chatml',
+                                'chatml_de', 'qwen', 'llama3', 'llama2', 'mistral', 'mixtral', 'gemma', 'alpaca', 'deepseek2', 'deepseek2-lite'],
+                       help='Which template to use for constructing prompts in training/inference.'  'e.g., "qwen"')
     group.add_argument('--pad-to-multiple-of', type=int, default=8,
                        help='Used for Padding multiple in finetune. The default is 8.')
     group.add_argument('--scale-emb', type=float, default=None,
@@ -599,6 +598,8 @@ def _validate_instruction_finetune(args):
     if args.variable_seq_lengths:
         if args.context_parallel_size > 1:
             raise AssertionError('Context parallelism is forbidden when use variable seq lengths.')
+        if args.num_experts is not None and args.moe_token_dispatcher_type == "allgather":
+            raise AssertionError('moe_token_dispatcher_type "allgather" is forbidden when use variable seq lengths. you can choose "alltoall"')
 
 
 def _validate_inference_args(args):

@@ -185,15 +185,17 @@ class ModelBase(abc.ABC):
         '''Set self-attention params.'''
         # Get attention layer & state.
         if getattr(src_model.get_args(), "qk_layernorm", False):
-            q_layernorm = src_model.get_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx)
+            if getattr(src_model.get_args(), "q_lora_rank", None):
+                q_layernorm = src_model.get_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx)
+                self.set_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx, data=q_layernorm)
             k_layernorm = src_model.get_layers_self_attention_k_layernorm_weight(layer_idx=layer_idx)
-            self.set_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx, data=q_layernorm)
             self.set_layers_self_attention_k_layernorm_weight(layer_idx=layer_idx, data=k_layernorm)
         
         if getattr(src_model.get_args(), "multi_head_latent_attention", False):
-            linear_qb = src_model.get_layers_self_attention_linear_qb_weight(layer_idx=layer_idx)
+            if getattr(src_model.get_args(), "q_lora_rank", None):
+                linear_qb = src_model.get_layers_self_attention_linear_qb_weight(layer_idx=layer_idx)
+                self.set_layers_self_attention_linear_qb_weight(layer_idx=layer_idx, data=linear_qb)
             linear_kvb = src_model.get_layers_self_attention_linear_kvb_weight(layer_idx=layer_idx)
-            self.set_layers_self_attention_linear_qb_weight(layer_idx=layer_idx, data=linear_qb)
             self.set_layers_self_attention_linear_kvb_weight(layer_idx=layer_idx, data=linear_kvb)
         
         qkv_weight = src_model.get_layers_self_attention_linear_qkv_weight(layer_idx=layer_idx)
@@ -590,8 +592,9 @@ class HuggingfaceModel(ModelBase):
             self.set_layers_self_attention_linear_qkv_pack_weight(layer_idx=layer_idx, data=qkv)
         elif qkv_type == "pack_mla":
             if self.args.q_lora_rank is None:
-                q_proj = data[:self.args.num_attention_heads * self.args.q_head_dim, :]
-                kv_proj = data[self.args.num_attention_heads * self.args.q_head_dim:, :]
+                q_head_dim = self.args.qk_nope_head_dim + self.args.qk_rope_head_dim
+                q_proj = data[:self.args.num_attention_heads * q_head_dim, :]
+                kv_proj = data[self.args.num_attention_heads * q_head_dim:, :]
             else:
                 q_proj = data[:self.args.q_lora_rank, :]
                 kv_proj = data[self.args.q_lora_rank:, :]
