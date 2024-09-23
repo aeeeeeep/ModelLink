@@ -1,4 +1,4 @@
-# Alpaca数据集下载链接: https://huggingface.co/datasets/tatsu-lab/alpaca
+# 请根据 examples/README.md 下 “数据集准备及处理” 章节下载 Alpaca 数据集
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 mkdir ./finetune_dataset
