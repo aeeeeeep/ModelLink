@@ -128,7 +128,6 @@ def patch_fusions():
 def patch_core_models(args):
     from megatron.core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec
     from mindspeed.core.models.common.embeddings.rotary_pos_embedding import get_pos_emb_on_this_cp_rank
-    from mindspeed.core.fusions.rotary_pos_embedding import rotary_embedding_init_wrapper
     from ..utils import get_batch_on_this_cp_rank, get_batch_on_this_tp_rank, get_device_wrapper
     from ..core import rotary_embedding_forward, apply_rotary_pos_emb_bshd
     from ..core.models.gpt.gpt_layer_specs import get_gpt_layer_local_spec_wrapper
@@ -136,6 +135,7 @@ def patch_core_models(args):
         dot_product_attention_forward_wrapper
     from ..core.transformer.attention import attention_init_wrapper
     from ..core.models.gpt.gpt_model import gpt_model_init_wrapper
+    from ..core import rotary_embedding_init_wrapper
 
     # Embedding
     PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.get_pos_emb_on_this_cp_rank', get_pos_emb_on_this_cp_rank)
@@ -169,7 +169,7 @@ def patch_core_models(args):
 
 def patch_core_transformers(args):
     from mindspeed.core.transformer.moe.router import aux_loss_load_balancing
-    from ..core import (PTNorm, topk_router_forward, topk_router_routing, z_loss_func, rotary_embedding_init_wrapper)
+    from ..core import (PTNorm, topk_router_forward, topk_router_routing, z_loss_func)
     from mindspeed.core.transformer.moe.token_dispatcher import allgather_token_permutation, allgather_token_unpermutation
     from mindspeed.core.transformer.moe.grouped_gemm_util import Ops, grouped_gemm_is_available, get_device_capability
 
@@ -179,8 +179,6 @@ def patch_core_transformers(args):
     from ..core.transformer.transformer_layer import transformer_layer_init_wrapper
 
     PatchManager.register_patch('torch.cuda.get_device_capability', get_device_capability)
-    PatchManager.register_patch('megatron.core.models.common.embeddings.rotary_pos_embedding.RotaryEmbedding.__init__',
-                                rotary_embedding_init_wrapper)
     PatchManager.register_patch('megatron.core.transformer.transformer_block.TENorm', PTNorm)
     PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.routing', topk_router_routing)
     PatchManager.register_patch('megatron.core.transformer.moe.router.TopKRouter.forward', topk_router_forward)

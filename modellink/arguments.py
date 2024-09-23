@@ -487,6 +487,8 @@ def _add_training_args(parser):
     group.add_argument('--swap-attention', action='store_true', default=False,
                        help='switch to open swap-attention feature.'
                             'The default is False.')
+    group.add_argument('--swap-modules', type=str, default=None,
+                       help='Swap modules for model. Should be used together with "--swap-attention."')
     return parser
 
 
@@ -586,6 +588,12 @@ def _validate_recompute_args(args):
             raise AssertionError('uniform recomputation is not compatible with activation function recomputation.')
         if args.recompute_granularity == "selective":
             raise AssertionError('--recompute-activation-function is not compatible with selective recomputation.')
+
+    if args.swap_attention and args.swap_modules is None:
+        if args.use_mcore_models:
+            args.swap_modules = "input_layernorm,self_attention,pre_cross_attn_layernorm"
+        else:
+            args.swap_modules = "input_norm,self_attention,post_attention_norm"
 
 
 def _validate_high_availability(args):
@@ -791,6 +799,10 @@ def _add_dummy_args(args):
     args.moe_tp_extend_ep = False
     args.recompute_in_bubble = False
     args.recompute_in_advance = False
+
+    args.moe_alltoall_overlap_comm = False
+    args.moe_allgather_overlap_comm = False
+    args.noop_layers = None
 
 
 def validate_args_decorator(megatron_validate_args):
