@@ -71,9 +71,13 @@
     conda create -n test python=3.8
     conda activate test
 
-    # 安装 torch 和 torch_npu，注意要选择对应python版本、x86或arm的torch、torch_npu及apex包
+    # 安装所需版本的 torch 和 torch_npu，注意要选择对应python版本、x86或arm的torch、torch_npu及apex包
+    # 以安装 torch-2.1.0 和 torch_npu-2.1.0为例
     pip install torch-2.1.0-cp38-cp38m-manylinux2014_aarch64.whl 
     pip install torch_npu-2.1.0*-cp38-cp38m-linux_aarch64.whl
+
+    # 安装对应版本的torchvision
+    pip install torchvision==0.16.0
     
     # apex for Ascend 参考 https://gitee.com/ascend/apex
     pip install apex-0.1_ascend*-cp38-cp38m-linux_aarch64.whl
