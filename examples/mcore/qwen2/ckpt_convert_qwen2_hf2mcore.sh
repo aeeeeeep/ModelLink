@@ -14,4 +14,4 @@ python convert_ckpt.py \
        --save-dir ./model_weights/qwen2_mcore/ \
        --tokenizer-model ./model_from_hf/qwen2_hf/tokenizer.json \
        --model-type-hf llama2 \
-       --params-dtype bf16
+       --params-dtype bf16 #  --num-layers-per-virtual-pipeline-stage 2 等参数根据模型需要添加

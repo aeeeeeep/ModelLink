@@ -596,8 +596,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【GTS】</td>    
       <td>【Test】</td>
     </tr>
-    <tr>
-      <td rowspan="7"><a href="https://huggingface.co/Qwen">Qwen2</a></td>
+       <td rowspan="8"><a href="https://huggingface.co/Qwen">Qwen2</a></td>
       <td rowspan="2"> <a href="https://huggingface.co/Qwen/Qwen2-0.5B/tree/main">0.5B</a> </td>
       <td> 4K </td>
       <th> Mcore </th>
@@ -655,6 +654,16 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
+      <td><a href="https://huggingface.co/Qwen/Qwen2-57B-A14B/tree/main">57B-A14B</a></td>
+      <td> 4K</td>
+      <th>Mcore</th>
+      <td>8x8</td>
+      <td> 3380 </td>
+      <td> -- </td>
+      <td>-- </td>
+      <td>【GTS】</td>
+      <td>【Test】</td>
+      <tr>
       <td><a href="https://huggingface.co/Qwen/Qwen2-72B/tree/main">72B</a></td>
       <td> 4K</td>
       <th>Mcore</th>
@@ -664,7 +673,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>-- </td>
       <td>【GTS】</td>
       <td>【Test】</td>
-    </tr> 
+    </tr>
     <tr>
       <td rowspan="1"><a href="https://huggingface.co/01-ai">Yi</a></td>
       <td><a href="https://huggingface.co/01-ai/Yi-34B/tree/main">34B</a></td>
@@ -1509,9 +1518,9 @@ ModelLink已支持模型的评估数据统计如下：
 | QWen1.5-7B    | MMLU   | 60.3%     | [61.0%](https://qwenlm.github.io/zh/blog/qwen1.5/)                   | QWen1.5-14B      | MMLU   | 67.3%     | [67.6%](https://qwenlm.github.io/zh/blog/qwen1.5)                                 |
 | QWen1.5-32B   | MMLU   | 72.5%     | [73.4%](https://huggingface.co/Qwen/Qwen-72B)                        | QWen1.5-72B      | MMLU   | 76.4%     | [77.5%](https://qwenlm.github.io/zh/blog/qwen1.5)                                 |
 | Qwen1.5-110B  | MMLU   | 80.4%     | [80.4%](https://qwenlm.github.io/zh/blog/qwen1.5-110b/)              | Yi-34B           | MMLU   | 76.3%     | [75.8%](https://hub.opencompass.org.cn/dataset-detail/MMLU)                       |
-| Qwen2-0.5B    | MMLU   | 44.6%     | [45.4%](https://qwenlm.github.io/zh/blog/qwen2/)                     | Qwen2-1.5B       | MMLU   | 54.7%     | [56.5%](https://qwenlm.github.io/zh/blog/qwen2/)                                  |
-| QWen2-7B      | MMLU   | 70.3%     | [70.3%](https://qwenlm.github.io/zh/blog/qwen2/)                     | Qwen2-72B        | MMLU   | 83.6%     | [84.2%](https://qwenlm.github.io/zh/blog/qwen2/)                                  |
-| MiniCPM-2B    | MMLU   | 51.6%     | [53.4%](https://github.com/OpenBMB/MiniCPM?tab=readme-ov-file#3)     | --               | --     | --        | --   
+| QWen2-0.5B    | MMLU   | 44.6%     | [45.4%](https://qwenlm.github.io/zh/blog/qwen2/)                     | QWen2-1.5B       | MMLU   | 54.7%     | [56.5%](https://qwenlm.github.io/zh/blog/qwen2/)                                  |
+| QWen2-7B      | MMLU   | 70.3%     | [70.3%](https://qwenlm.github.io/zh/blog/qwen2/)                     | QWen2-57B-A14B   |MMLU|75.6% | [76.5%](https://qwenlm.github.io/zh/blog/qwen2/)|
+| QWen2-72B     | MMLU   | 83.6%     | [84.2%](https://qwenlm.github.io/zh/blog/qwen2/)| MiniCPM-2B       | MMLU   | 51.6%     | [53.4%](https://github.com/OpenBMB/MiniCPM?tab=readme-ov-file#3)     |                                                                               
 | DeepSeek-V2-Lite-16B   | MMLU   | 57.4%     | [58.3%](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite)      | --               | --     | --        | --                                                                               |
 
 

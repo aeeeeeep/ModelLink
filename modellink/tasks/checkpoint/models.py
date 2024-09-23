@@ -254,6 +254,7 @@ class ModelBase(abc.ABC):
         num_experts = getattr(args, 'num_experts', None) or getattr(args, 'num_local_experts', None)
         first_k_dense_replace = getattr(args, 'first_k_dense_replace', None)
         moe_layer_freq = getattr(args, 'moe_layer_freq', None)
+        shared_expert_gate = getattr(args, 'shared_expert_gate', False)
         if (num_experts
                 and first_k_dense_replace is not None
                 and moe_layer_freq is not None
@@ -261,6 +262,9 @@ class ModelBase(abc.ABC):
             if layer_idx >= first_k_dense_replace and layer_idx % moe_layer_freq == 0:
                 router_weight = src_model.get_layers_mlp_router_weight(**kwargs)
                 self.set_layers_mlp_router_weight(**kwargs, data=router_weight)
+                if shared_expert_gate:
+                    shared_expert_gate_weight = src_model.get_layers_mlp_shared_expert_gate_weight(**kwargs)
+                    self.set_layers_mlp_shared_expert_gate_weight(**kwargs, data=shared_expert_gate_weight)
                 if getattr(self.args, "n_shared_experts", None) is not None:
                     self._set_mlp_shared_experts_state(src_model, **kwargs)
                 if args.moe_grouped_gemm:
@@ -728,6 +732,7 @@ class MegatronModel(ModelBase):
         self.args.moe_grouped_gemm = hf_args.moe_grouped_gemm
         self.args.num_experts = getattr(hf_args, "num_experts", None)
         self.args.n_shared_experts = getattr(hf_args, "n_shared_experts", None)
+        self.args.shared_expert_gate = getattr(hf_args, "shared_expert_gate", None)
         self.args.qk_layernorm = getattr(hf_args, "qk_layernorm", False)
         self.args.moe_intermediate_size = getattr(hf_args, "moe_intermediate_size", None)
         self.args.first_k_dense_replace = getattr(hf_args, "first_k_dense_replace", None)
@@ -1095,7 +1100,11 @@ class MegatronMCoreModel(MegatronModel):
             "layers_mlp_shared_experts_linear_fc1"] = module_layer + "mlp.shared_experts.linear_fc1"
         self.module_mapping[
             "layers_mlp_shared_experts_linear_fc2"] = module_layer + "mlp.shared_experts.linear_fc2"
-        
+
+        # shared experts gate
+        if config_value.get('shared_expert_gate', False):
+            self.module_mapping["layers_mlp_shared_expert_gate"] = module_layer + "mlp.shared_expert_gate"
+
         # moe grouped gemm
         self.module_mapping[
             "layers_mlp_experts_weight1"] = module_layer + "mlp.experts.weight1"

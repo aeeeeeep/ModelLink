@@ -268,7 +268,11 @@ def _add_moe_args(parser):
     group.add_argument('--output-multiplier-scale', type=float, default=None, help='Add scale for logits output.')
     group.add_argument("--moe-permutation-async-comm", action='store_true',
                        help="overlap moe permutation 3 all gather communications")
-
+    group.add_argument("--shared-expert-gate", action='store_true',
+                       help="moe model has shared expert gate")
+    group.add_argument("--shared-expert-gate-output-dimension", type=int, default=1,
+                       help="moe model shared expert gate output dimension for qwen2 moe, this parameter can only configured with"
+                            "1 or hidden_state")
     return parser
 
 
@@ -295,7 +299,8 @@ def _add_data_args(parser):
                        help="Name or path of the huggingface tokenizer.")
     group.add_argument("--tokenizer-not-use-fast", action='store_false',
                        help="HuggingFace tokenizer not use the fast version.")
-
+    group.add_argument("--input-layernorm-in-fp32", action='store_true',
+                       help="Convert input-layernorm to fp32")
     return parser
 
 
@@ -486,6 +491,8 @@ def _add_training_args(parser):
     group.add_argument('--swap-attention', action='store_true', default=False,
                        help='switch to open swap-attention feature.'
                             'The default is False.')
+    group.add_argument('--swap-modules', type=str, default=None,
+                       help='Swap modules for model. Should be used together with "--swap-attention."')
     return parser
 
 
@@ -586,6 +593,12 @@ def _validate_recompute_args(args):
         if args.recompute_granularity == "selective":
             raise AssertionError('--recompute-activation-function is not compatible with selective recomputation.')
 
+    if args.swap_attention and args.swap_modules is None:
+        if args.use_mcore_models:
+            args.swap_modules = "input_layernorm,self_attention,pre_cross_attn_layernorm"
+        else:
+            args.swap_modules = "input_norm,self_attention,post_attention_norm"
+
 
 def _validate_high_availability(args):
     if args.enable_optimizer_state_local_copy and not args.enable_high_availability:
@@ -631,6 +644,8 @@ def _validate_moe_args(args):
             raise ValueError(f'moe_expert_capacity_factor only works with aux_loss or none load balancing')
         if args.moe_expert_capacity_factor is None and args.moe_pad_expert_input_to_capacity:
             raise ValueError(f'moe_expert_capacity_factor must be set to use moe_pad_expert_input_to_capacity')
+        if args.shared_expert_gate_output_dimension != 1 and args.shared_expert_gate_output_dimension != args.hidden_size:
+            raise AssertionError('shared expert gate output dimension can only be configured with 1 or hidden_size')
 
 
 def _validate_mla(args):
@@ -792,6 +807,10 @@ def _add_dummy_args(args):
     args.moe_tp_extend_ep = False
     args.recompute_in_bubble = False
     args.recompute_in_advance = False
+
+    args.moe_alltoall_overlap_comm = False
+    args.moe_allgather_overlap_comm = False
+    args.noop_layers = None
 
 
 def validate_args_decorator(megatron_validate_args):
