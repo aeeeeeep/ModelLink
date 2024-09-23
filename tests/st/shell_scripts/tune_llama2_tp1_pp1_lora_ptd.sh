@@ -15,7 +15,7 @@ WORLD_SIZE=$(($GPUS_PER_NODE*$NNODES))
 basepath=$(cd `dirname $0`; cd ../../../; pwd)
 
 CKPT_SAVE_DIR=/data/ckpt
-CKPT_LOAD_DIR=/data/llama2-7B-tp1-pp1
+CKPT_LOAD_DIR=/data/llama-2-7b-mcore-tp1pp1
 DATA_PATH=/data/tune_dataset/alpaca
 TOKENIZER_MODEL=/data/llama-2-7b-hf/
 TP=1
@@ -44,6 +44,7 @@ MODEL_ARGS=(
 )
 
 TRAINING_ARGS=(
+    --use-mcore-models
     --tokenizer-type PretrainedFromHF
     --tokenizer-name-or-path ${TOKENIZER_MODEL}
     --micro-batch-size 4
@@ -79,7 +80,7 @@ TRAINING_ARGS=(
     --lora-r 16
     --lora-alpha 32
     --lora-fusion
-    --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h
+    --lora-target-modules linear_qkv linear_proj linear_fc1 linear_fc2
     --variable-seq-lengths
     --bf16
 )
