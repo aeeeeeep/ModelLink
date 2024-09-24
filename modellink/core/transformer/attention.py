@@ -5,7 +5,6 @@
 from functools import wraps
 from megatron.training import get_args
 from megatron.core import mpu
-from megatron.core.models.common.embeddings.rotary_pos_embedding import apply_rotary_pos_emb
 from mindspeed.core.context_parallel.ulysses_context_parallel import UlyssesContextAttention
 from mindspeed.core.parallel_state import get_context_parallel_group_for_hybrid_ulysses
 
