@@ -17,7 +17,6 @@ from types import SimpleNamespace
 from pathlib import Path
 import pytest
 import torch
-import mindspeed
 import modellink
 from tests.test_tools.dist_test import create_testconfig
 from megatron.core.models.common.embeddings.rotary_pos_embedding import RotaryEmbedding
@@ -27,13 +26,16 @@ class TestRotaryPosEmbedding:
     test_config = create_testconfig(Path(__file__).with_suffix(".json"))
 
     @pytest.fixture
-    def mock_dependency(self, request, monkeypatch):
-        monkeypatch.setattr(modellink.core.models.common.embeddings.rotary_pos_embedding, "get_args",
-                            lambda : SimpleNamespace(use_glm_rope=request.getfixturevalue("chatglm"),
-                            rope_scaling_type = None,
-                            ))
-        monkeypatch.setattr(mindspeed.core.fusions.rotary_pos_embedding, "get_args",
-                            lambda : SimpleNamespace(rotary_base = request.getfixturevalue("rotary_base")))
+    def mock_dependency(self, request):
+        # init test name space
+        def get_test_namespace():
+            test_name_space = SimpleNamespace()
+            test_name_space.use_glm_rope = request.getfixturevalue("chatglm")
+            test_name_space.rope_scaling_type = None
+            test_name_space.rotary_base = request.getfixturevalue("rotary_base")
+            return test_name_space
+        # set up name space function
+        setattr(modellink.core.models.common.embeddings.rotary_pos_embedding, "get_args", get_test_namespace)
 
     @pytest.mark.parametrize("rotary_param, chatglm, rotary_base, seq, expected", test_config["test_rotary_pos_embedding"])
     def test_rotary_pos_embedding(self, mock_dependency, rotary_param, chatglm, rotary_base, seq, expected):
