@@ -289,6 +289,7 @@ def _set_set_model_layer_mlp(model_mg, msg, md, pop_flag=True, is_moe_mlp=False,
 def set_model_layer_mlp(model_mg, msg, md, total_layer_num, **kwargs):
     margs = model_mg.get_args()
     first_k_dense_replace = getattr(margs, 'first_k_dense_replace', None)
+    shared_expert_gate = getattr(margs, 'shared_expert_gate', None)
     moe_layer_freq = getattr(margs, 'moe_layer_freq', None)
     if (
             margs.num_experts
@@ -299,6 +300,8 @@ def set_model_layer_mlp(model_mg, msg, md, total_layer_num, **kwargs):
             num_experts_local = margs.num_experts // margs.expert_model_parallel_size
             mlp_moe = msg.pop("mlp_moe")
             mlp_router_weight = mlp_moe.pop("mlp router weight")
+            if shared_expert_gate:
+                mlp_shared_expert_gate_weights = mlp_moe.pop("mlp shared_expert_gate weight")
             if getattr(margs, "n_shared_experts", None) is not None:
                 shared_experts_linear_fc1_weight = mlp_moe.pop("mlp shared experts linear fc1 weight")
                 shared_experts_linear_fc2_weight = mlp_moe.pop("mlp shared experts linear fc2 weight")
@@ -313,6 +316,8 @@ def set_model_layer_mlp(model_mg, msg, md, total_layer_num, **kwargs):
                 for tp_rank in range(margs.tensor_model_parallel_size):
                     kwargs['tp_rank'] = tp_rank
                     model_mg.set_layers_mlp_router_weight(**kwargs, data=mlp_router_weight)
+                    if shared_expert_gate:
+                        model_mg.set_layers_mlp_shared_expert_gate_weight(**kwargs, data=mlp_shared_expert_gate_weights)
                     if getattr(margs, "n_shared_experts", None) is not None:
                         model_mg.set_layers_mlp_shared_experts_linear_fc1_weight(**kwargs,
                                                                                  data=shared_experts_linear_fc1_weight)

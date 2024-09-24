@@ -4,9 +4,11 @@ import types
 from copy import deepcopy
 from functools import wraps
 import torch
+import torch.nn.functional as F
 from mindspeed.moe.utils import MoEAuxLossAutoScaler
 
 from megatron.core.tensor_parallel import ColumnParallelLinear, RowParallelLinear
+from megatron.core.transformer import build_module
 from megatron.core.transformer.mlp import MLPSubmodules, MLP
 from megatron.core.transformer.moe.experts import GroupedMLP, SequentialMLP
 from megatron.core.transformer.moe.moe_utils import save_to_aux_losses_tracker
@@ -36,6 +38,17 @@ def moe_layer_init_wrapper(init_func):
                                                                  linear_fc2=RowParallelLinear,))
             # For using layer_number when recompute activation function is enabled.
             self.shared_experts.layer_number = self.layer_number
+            if global_args.shared_expert_gate:
+                self.shared_expert_gate = build_module(
+                    RowParallelLinear,
+                    config.hidden_size,
+                    global_args.shared_expert_gate_output_dimension,
+                    config=config,
+                    init_method=config.output_layer_init_method,
+                    bias=None,
+                    input_is_parallel=True,
+                    skip_bias_add=True
+                )
     return moe_layer_init
 
 
@@ -83,6 +96,8 @@ def moe_layer_forward(self, hidden_states: torch.Tensor):
     
     if args.n_shared_experts:
         share_experts_output, share_experts_bias = self.shared_experts(hidden_states)
+        if args.shared_expert_gate:
+            share_experts_output = F.sigmoid(self.shared_expert_gate(hidden_states)[0]) * share_experts_output
         output = output + share_experts_output
         
         if self.token_dispatcher.add_bias:

@@ -231,6 +231,7 @@ def get_message_layer_mlp(message, model, md=None, **kwargs):
     layer_idx = kwargs["layer_idx"] + kwargs["pp_rank"] * len(model.get_layers_module(**kwargs))
     first_k_dense_replace = getattr(margs, 'first_k_dense_replace', None)
     moe_layer_freq = getattr(margs, 'moe_layer_freq', None)
+    shared_expert_gate = getattr(margs, 'shared_expert_gate', None)
     if (
             margs.num_experts
             and first_k_dense_replace is not None
@@ -241,6 +242,9 @@ def get_message_layer_mlp(message, model, md=None, **kwargs):
             mlp_router_weight = model.get_layers_mlp_router_weight(**kwargs)
             num_experts_local = margs.num_experts // margs.expert_model_parallel_size
             message["mlp_moe"]["mlp router weight"] = mlp_router_weight
+            if shared_expert_gate:
+                shared_expert_gate = model.get_layers_mlp_shared_expert_gate_weight(**kwargs)
+                message["mlp_moe"]["mlp shared_expert_gate weight"] = shared_expert_gate
             weight1 = []
             weight2 = []
             for ep_rank in range(margs.expert_model_parallel_size):

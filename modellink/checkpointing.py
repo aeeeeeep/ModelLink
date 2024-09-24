@@ -94,7 +94,8 @@ def load_args_from_checkpoint_wrapper(fn):
         _set_arg('q_lora_rank', force=True)
         _set_arg('kv_lora_rank', force=True)
         _set_arg('v_head_dim', force=True)
-        
+        _set_arg('shared_expert_gate', force=True)
+
         state_dict, checkpoint_name, release = _load_base_checkpoint(
             getattr(args, kwargs.get('load_arg', 'load')),
             rank0=True,

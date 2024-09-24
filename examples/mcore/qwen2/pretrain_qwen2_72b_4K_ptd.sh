@@ -30,6 +30,7 @@ GPT_ARGS="
     --use-mcore-models \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
+    --num-layers-per-virtual-pipeline-stage 2
     --sequence-parallel \
     --num-layers 80 \
     --hidden-size 8192 \
