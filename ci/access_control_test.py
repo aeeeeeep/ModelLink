@@ -23,6 +23,18 @@ def is_image(file):
     return file.endswith(".jpg") or file.endswith(".png")
 
 
+def is_txt(file):
+    return file.endswith(".txt")
+
+
+def is_owners(file):
+    return file.startswith("OWNERS")
+
+
+def is_license(file):
+    return file.startswith("LICENSE")
+
+
 def is_ut(file):
     return file.startswith("tests/ut")
 
@@ -43,7 +55,10 @@ def choose_skip_ci(raw_txt_file):
         is_examples,
         is_pipecase,
         is_markdown,
-        is_image
+        is_image,
+        is_txt,
+        is_owners,
+        is_license
     ]
 
     return skip_ci(file_list, skip_conds)
