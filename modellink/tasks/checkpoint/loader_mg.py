@@ -177,7 +177,7 @@ def get_message_layer_attn(message, model, md=None, **kwargs):
     if md.linear_bias or margs.add_qkv_bias:
         message["qkv bias"] = torch.cat(qkv_bias, dim=0)
 
-    if md.linear_bias:
+    if md.linear_bias or margs.add_dense_bias:
         message["dense bias"] = model.get_layers_self_attention_linear_proj_bias(**kwargs)
 
     return message
