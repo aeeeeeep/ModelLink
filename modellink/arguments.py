@@ -579,7 +579,10 @@ def _validate_recompute_args(args):
     validate re-computation arguments.
     """
     enable_pp_vpp = args.num_layers_per_virtual_pipeline_stage
-    enable_recomputation = args.recompute_granularity is not None and args.recompute_method == 'block'
+    enable_vanilla_recomputation = args.recompute_granularity is not None and args.recompute_method == 'block'
+    enable_swap = args.swap_attention
+    enable_recompute_activation = args.recompute_activation_function
+    enable_recomputation = enable_vanilla_recomputation or enable_swap or enable_recompute_activation
     if args.enable_recompute_layers_per_pp_rank and not (enable_pp_vpp and enable_recomputation):
         raise AssertionError("enable-recompute-layers-per-pp-rank should be works with pipeline and virtual pipeline, when enabling re-computation.")
 
