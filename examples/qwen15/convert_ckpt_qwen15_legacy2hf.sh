@@ -3,9 +3,9 @@
 
  python convert_ckpt.py \
      --model-type GPT \
-     --loader megatron \
-     --saver megatron \
-     --save-model-type save_huggingface_llama \
+     --load-model-type mg \
+     --save-model-type hf \
+     --model-type-hf llama2 \
      --load-dir ./model_weights/qwen15-legacy/ \
      --target-tensor-parallel-size 1 \
      --target-pipeline-parallel-size 1 \
