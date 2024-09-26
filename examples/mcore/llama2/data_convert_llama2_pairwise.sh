@@ -13,4 +13,4 @@ python ./preprocess_data.py \
         --handler-name AlpacaStylePairwiseHandler \
         --prompt-type llama2 \
         --seq-length 4096 \
-        --map-keys '{"prompt":"question"}'
+        --map-keys '{"prompt":"question", "query":"", "system":"system"}'

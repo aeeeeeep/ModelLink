@@ -391,62 +391,45 @@ class SharegptStyleInstructionHandler(LlamaFactoryInstructionHandler):
         super().__init__(args, raw_datasets, tokenizer, splitter)
 
 
-class AlpacaStylePairwiseHandler(LlamaFactoryInstructionHandler):
+class AlpacaStylePairwiseHandler(BaseDatasetHandler):
     """
     Handle alpaca style dataset format in pairwise dataset used in RM | DPO training
     """
 
     def __init__(self, args, raw_datasets, tokenizer, splitter):
         super().__init__(args, raw_datasets, tokenizer, splitter)
-        self.args.json_keys = [
-            "chosen_input_ids",
-            "chosen_attention_mask",
-            "chosen_labels",
-            "rejected_input_ids",
-            "rejected_attention_mask",
-            "rejected_labels"
-        ]
-
-    def _format_msg(self, sample):
-        chosen = {
-            "prompt": sample["prompt"],
-            "response": [sample["response"][0]],
-            "system": sample["system"],
-            "tools": sample["tools"]
-        }
-
-        rejected = {
-            "prompt": sample["prompt"],
-            "response": [sample["response"][1]],
-            "system": sample["system"],
-            "tools": sample["tools"]
-        }
-
-        return chosen, rejected
+        self.train_on_inputs = False
+        self.args.json_keys = ["chosen_input_ids", "chosen_labels", "rejected_input_ids", "rejected_labels"]
+        self.args.output_prefix = self.args.output_prefix + "_packed"
+        self.ignored_label = -100
+        self.llama_factory_template = get_model_template(args.prompt_type.strip())
 
     def _filter(self, sample):
-        chosen, rejected = self._format_msg(sample)
+        chosen_messages = sample["prompt"] + [sample["response"][0]]
+        rejected_messages = sample["prompt"] + [sample["response"][1]]
+        system = sample["system"][0]
+        tools = sample["tools"][0]
 
-        chosen_tokenized_full_prompt = self._tokenize_prompt(
-            chosen, self.llama_factory_template, self.tokenizer.tokenizer)
-        rejected_tokenized_full_prompt = self._tokenize_prompt(
-            rejected, self.llama_factory_template, self.tokenizer.tokenizer)
+        template = self.llama_factory_template
+        tokenizer = self._unwrapped_tokenizer
+        prompt_ids, chosen_ids = template.encode_oneturn(tokenizer, chosen_messages, system, tools)
+        _, rejected_ids = template.encode_oneturn(tokenizer, rejected_messages, system, tools)
 
-        if self.args.append_eod:
-            chosen_tokenized_full_prompt.get("input_ids", []).append(self.tokenizer.eod)
-            chosen_tokenized_full_prompt.get("attention_mask", []).append(1)
-            chosen_tokenized_full_prompt.get("labels", []).append(self.tokenizer.eod)
-            rejected_tokenized_full_prompt.get("input_ids", []).append(self.tokenizer.eod)
-            rejected_tokenized_full_prompt.get("attention_mask", []).append(1)
-            rejected_tokenized_full_prompt.get("labels", []).append(self.tokenizer.eod)
+        if template.efficient_eos:
+            chosen_ids += [tokenizer.eos_token_id]
+            rejected_ids += [tokenizer.eos_token_id]
+
+        IGNORE_INDEX = -100
+        chosen_input_ids = prompt_ids + chosen_ids
+        chosen_labels = [IGNORE_INDEX] * len(prompt_ids) + chosen_ids
+        rejected_input_ids = prompt_ids + rejected_ids
+        rejected_labels = [IGNORE_INDEX] * len(prompt_ids) + rejected_ids
 
         concatenated_ids = {
-            "chosen_input_ids": [chosen_tokenized_full_prompt.get("input_ids", [])],
-            "chosen_attention_mask": [chosen_tokenized_full_prompt.get("attention_mask", [])],
-            "chosen_labels": [chosen_tokenized_full_prompt.get("labels", [])],
-            "rejected_input_ids": [rejected_tokenized_full_prompt.get("input_ids", [])],
-            "rejected_attention_mask": [rejected_tokenized_full_prompt.get("attention_mask", [])],
-            "rejected_labels": [rejected_tokenized_full_prompt.get("labels", [])]
+            "chosen_input_ids": [chosen_input_ids],
+            "chosen_labels": [chosen_labels],
+            "rejected_input_ids": [rejected_input_ids],
+            "rejected_labels": [rejected_labels]
         }
 
         return concatenated_ids

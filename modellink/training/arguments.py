@@ -300,6 +300,8 @@ def _add_data_args(parser):
                        help="HuggingFace tokenizer not use the fast version.")
     group.add_argument("--input-layernorm-in-fp32", action='store_true',
                        help="Convert input-layernorm to fp32")
+    group.add_argument("--no-shuffle", action='store_true',
+                       help="Disable data shuffling, mainly for loss comparison.")
     return parser
 
 
@@ -390,7 +392,7 @@ def _add_network_args(parser):
     group.add_argument(
         '--stage',
         default=None,
-        choices=["dpo"],
+        choices=["dpo", "rm"],
         help='Determine training mode'
     )
 
@@ -486,12 +488,15 @@ def _add_training_args(parser):
                        help='dim-model-base')
     group.add_argument('--scale-depth', type=float, default=None,
                        help='scale-depth')
-
     group.add_argument('--swap-attention', action='store_true', default=False,
                        help='switch to open swap-attention feature.'
                             'The default is False.')
     group.add_argument('--swap-modules', type=str, default=None,
                        help='Swap modules for model. Should be used together with "--swap-attention."')
+    group.add_argument('--load-checkpoint-loosely', action='store_true', default=False,
+                       help='Enable loading checkpoint not strictly.')
+    group.add_argument('--no-post-layer-norm', action='store_true', default=False,
+                       help='Disable final layer norm.')
     return parser
 
 

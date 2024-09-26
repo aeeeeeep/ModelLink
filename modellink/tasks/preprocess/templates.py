@@ -318,9 +318,7 @@ def fix_model_tokenizer(
         tokenizer.chat_template = _get_jinja_template(template, tokenizer)
     except ValueError:
         logger.info("Cannot add this chat template to tokenizer.")
-
-    return template
-
+        
 
 def _register_template(
     name: str,
@@ -553,7 +551,7 @@ _register_template(
 
 _register_template(
     name="default",
-    format_user=StringFormatter(slots=["Human: {{content}}\nAssistant: "]),
+    format_user=StringFormatter(slots=["Human: {{content}}\nAssistant:"]),
     format_system=StringFormatter(slots=["{{content}}\n"]),
     format_separator=EmptyFormatter(slots=["\n"]),
 )

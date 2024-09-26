@@ -38,12 +38,13 @@ class InstructionDatasetAttr:
     prompt: Optional[str] = "instruction"
     query: Optional[str] = "input"
     response: Optional[str] = "output"
-    chosen: Optional[str] = "chosen"
-    rejected: Optional[str] = "rejected"
     history: Optional[str] = None
     """ columns for the sharegpt format """
     messages: Optional[str] = "conversations"
     tools: Optional[str] = None
+    """ columns for the pairwise dataset """
+    chosen: Optional[str] = "chosen"
+    rejected: Optional[str] = "rejected"
     """ tags for the sharegpt format """
     role_tag: Optional[str] = "from"
     content_tag: Optional[str] = "value"

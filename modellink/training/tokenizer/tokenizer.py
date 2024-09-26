@@ -14,8 +14,9 @@
 # limitations under the License.
 
 """Megatron tokenizers. just using huggingface implementation."""
+from types import MethodType
 
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from megatron.training.tokenizer import build_tokenizer as megatron_build_tokenizer
 from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
 from megatron.core.datasets.megatron_tokenizer import MegatronTokenizer
@@ -57,6 +58,9 @@ def build_tokenizer(args):
         tokenizer = TokenizerAdaptor(megatron_build_tokenizer(args))
 
     if hasattr(args, "prompt_type") and args.prompt_type is not None:
+        if ("PreTrainedTokenizerBase" not in str(tokenizer.tokenizer._pad.__func__)):
+            tokenizer.tokenizer._pad = MethodType(PreTrainedTokenizerBase._pad, tokenizer.tokenizer)
+            tokenizer.tokenizer.padding_side = "right"
         fix_model_tokenizer(tokenizer.tokenizer, args.prompt_type.strip())
 
     return tokenizer
