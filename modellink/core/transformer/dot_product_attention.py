@@ -82,22 +82,6 @@ def dot_product_attention_init_wrapper(fn):
             self.scale_mask_softmax.scale = 1.0
             self.softmax_scale = 1.0 / self.norm_factor
 
-        if args.multi_head_latent_attention:
-            self.scale_mask_softmax.scale = True
-            self.hidden_size_per_partition = args.num_attention_heads * args.v_head_dim
-            self.q_head_dim = args.qk_nope_head_dim + args.qk_rope_head_dim
-            self.softmax_scale = self.q_head_dim ** (-0.5)
-
-            if args.rope_scaling_type is not None:
-                mscale_all_dim = args.rope_scaling_mscale_all_dim if args.rope_scaling_mscale_all_dim else 0
-                scaling_factor = args.rope_scaling_factor
-
-                if mscale_all_dim:
-                    mscale = yarn_get_mscale(scaling_factor, mscale_all_dim)
-                    self.softmax_scale = self.softmax_scale * mscale * mscale
-
-            self.norm_factor = 1.0 / self.softmax_scale
-
     return wrapper
 
 
