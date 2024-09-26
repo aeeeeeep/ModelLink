@@ -187,7 +187,6 @@ def unwrap_model_wrapper(fn):
 
 
 def get_finetune_data_on_this_tp_rank(data_iterator):
-    args = get_args()
     ds = next(data_iterator)
     tokens = ds.get('input_ids').long().cuda(non_blocking=True)
     tokens_shape = tokens.shape

@@ -133,7 +133,8 @@ class DecoderPackedMTFDataset(torch.utils.data.Dataset):
         self.pad_token = pad_token
         self.seq_length = seq_length
         self.eos_token = eos_token
-        self.shuffle_index = _build_index_mappings(name=name, data_prefix=data_prefix, start_index=documents[0], nb_documents=len(documents), mtf_dataset=self.mtf_dataset, num_samples=num_samples, seq_length=seq_length, seed=seed)
+        self.shuffle_index = _build_index_mappings(name=name, data_prefix=data_prefix, start_index=documents[0], nb_documents=len(documents), mtf_dataset=self.mtf_dataset, num_samples=num_samples, 
+                                                    seq_length=seq_length, seed=seed, shuffle=not self.args.no_shuffle)
 
     def __len__(self):
         return len(self.shuffle_index)
@@ -164,14 +165,7 @@ class DecoderPackedMTFDataset(torch.utils.data.Dataset):
         item = self.mtf_dataset[doc_idx]
 
         if self.args.is_pairwise_dataset:
-            res = {
-                "chosen_input_ids": self._cut_token(item["chosen_input_ids"], np.int64),
-                "chosen_attention_mask": self._cut_token(item["chosen_attention_mask"], np.int64),
-                "chosen_labels": self._cut_token(item["chosen_labels"], np.int64),
-                "rejected_input_ids": self._cut_token(item["rejected_input_ids"], np.int64),
-                "rejected_attention_mask": self._cut_token(item["rejected_attention_mask"], np.int64),
-                "rejected_labels": self._cut_token(item["rejected_labels"], np.int64)
-            }
+            return self._cut_pairwise_token(item, np.int64)
         elif self.args.reset_position_ids:
             position_ids = self._get_reset_position_ids(torch.from_numpy(item['input_ids']))
             return {
@@ -195,6 +189,53 @@ class DecoderPackedMTFDataset(torch.utils.data.Dataset):
             token = token[:self.seq_length]
         return token.astype(dtype)
 
+    def _cut_pairwise_token(self, item, dtype):
+        """Cut prompt and response proportionally for pairwise datasets."""
+        IGNORE_INDEX = -100
+        prompt_length = (item["chosen_labels"] != IGNORE_INDEX).nonzero()[0][0]
+        prompt_ids = item["chosen_input_ids"][:prompt_length]
+        chosen_ids = item["chosen_input_ids"][prompt_length:]
+        rejected_ids = item["rejected_input_ids"][prompt_length:]
+        source_len, target_len = _infer_seqlen(
+            len(prompt_ids), max(len(chosen_ids), len(rejected_ids)), self.seq_length
+        )
+        prompt_ids = prompt_ids[:source_len]
+        chosen_ids = chosen_ids[:target_len]
+        rejected_ids = rejected_ids[:target_len]
+
+        chosen_input_ids = np.append(prompt_ids, chosen_ids)
+        chosen_labels = np.append(IGNORE_INDEX * np.ones(source_len), chosen_ids)
+        rejected_input_ids = np.append(prompt_ids, rejected_ids)
+        rejected_labels = np.append(IGNORE_INDEX * np.ones(source_len), rejected_ids)
+
+        res = {
+            "chosen_input_ids": chosen_input_ids.astype(dtype),
+            "chosen_attention_mask": np.ones_like(chosen_input_ids).astype(dtype),
+            "chosen_labels": chosen_labels.astype(dtype),
+            "rejected_input_ids": rejected_input_ids.astype(dtype),
+            "rejected_attention_mask": np.ones_like(rejected_input_ids).astype(dtype),
+            "rejected_labels": rejected_labels.astype(dtype)
+        }
+
+        return res
+
+
+def _infer_seqlen(source_len: int, target_len: int, cutoff_len: int):
+    r"""
+    Computes the real sequence length after truncation by the cutoff_len.
+    """
+    if target_len * 2 < cutoff_len:  # truncate source
+        max_target_len = cutoff_len
+    elif source_len * 2 < cutoff_len:  # truncate target
+        max_target_len = cutoff_len - source_len
+    else:  # truncate both
+        max_target_len = int(cutoff_len * (target_len / (source_len + target_len)))
+
+    new_target_len = min(max_target_len, target_len)
+    max_source_len = max(cutoff_len - new_target_len, 0)
+    new_source_len = min(max_source_len, source_len)
+    return new_source_len, new_target_len
+
 
 def _build_index_mappings(
     name,
@@ -205,6 +246,7 @@ def _build_index_mappings(
     num_samples: int,
     seq_length: int,
     seed,
+    shuffle=True
 ):
     """
     - `shuffle_index` is [num_epoch * len(self.mtf)]
@@ -234,9 +276,11 @@ def _build_index_mappings(
             start_time = time.time()
             epoch = 0
             shuffle_idx = []
-            while len(shuffle_idx) <= num_samples:
-                new_document_ids = _build_shuffle_idx(nb_documents=nb_documents, start_index=start_index, np_rng=np_rng)
-                # Generate a shuffling of the entire dataset
+            while len(shuffle_idx) < num_samples:
+                if shuffle:
+                    new_document_ids = _build_shuffle_idx(nb_documents=nb_documents, start_index=start_index, np_rng=np_rng)
+                else:
+                    new_document_ids = _build_sequential_idx(nb_documents=nb_documents, start_index=start_index)
                 shuffle_idx.extend(new_document_ids.tolist())
                 epoch += 1
 
@@ -269,14 +313,18 @@ def _build_index_mappings(
     return shuffle_idx
 
 
-def _build_shuffle_idx(nb_documents: int, start_index, np_rng):
-    """Build the range [0, dataset_size) and shuffle."""
+def _build_sequential_idx(nb_documents: int, start_index):
+    """Build the range [0, dataset_size)."""
     dtype_ = np.int64
     stop = start_index + nb_documents
-
     result = np.arange(start=start_index, stop=stop, step=1, dtype=dtype_)
+    return result
 
+
+def _build_shuffle_idx(nb_documents: int, start_index, np_rng):
+    """Build the range [0, dataset_size) and shuffle."""
+
+    result = _build_sequential_idx(nb_documents, start_index)
     # in-place shuffling
     np_rng.shuffle(result)
-
     return result
