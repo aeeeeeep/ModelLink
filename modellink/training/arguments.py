@@ -16,8 +16,7 @@
 import os
 from functools import wraps
 import argparse
-import torch
-from modellink.utils import print_rank0_by_args
+from modellink.training.utils import print_rank0_by_args
 
 
 def extra_args_provider_decorator(extra_args_provider):
@@ -844,7 +843,7 @@ def validate_args_decorator(megatron_validate_args):
 
         _add_dummy_args(args)
 
-        from modellink.utils import print_args
+        from modellink.training.utils import print_args
         print_args('ModelLink Arguments', args)
         return args
 

@@ -24,7 +24,7 @@ from torch import distributed as dist
 from .template import GSM8K_TEMPLATE_DIR
 from ..eval_api.dataset_eval import DatasetEval
 from ..eval_api.chat import Chat
-from ....error_utils import check_divisible_by_zero
+from ...error_utils import check_divisible_by_zero
 
 logger = logging.getLogger(__name__)
 

@@ -14,10 +14,10 @@ from mindspeed.core.parallel_state import (get_context_parallel_group_for_hybrid
                                            get_context_parallel_for_hybrid_ring_world_size,
                                            get_context_parallel_for_hybrid_ring_rank,
                                            get_context_parallel_for_hybrid_ring_global_ranks)
-from modellink.model.transformer import get_attention_mask
+from modellink.tasks.models import get_attention_mask
 from modellink.core.models.common.embeddings.rotary_pos_embedding import yarn_get_mscale
-from modellink.utils import get_actual_seq_len
-from modellink.model.alibi import Alibi
+from modellink.training.utils import get_actual_seq_len
+from modellink.tasks.models.common.alibi import Alibi
 
 try:
     from einops import rearrange

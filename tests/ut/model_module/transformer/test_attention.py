@@ -5,7 +5,6 @@ import torch_npu
 import torch.distributed as dist
 
 # To activate modellink.patches.__init__
-import modellink
 from megatron.training.global_vars import set_args
 from megatron.training.arguments import parse_args
 from megatron.legacy.model.transformer import FlashSelfAttention
@@ -17,10 +16,10 @@ from mindspeed.core.parallel_state import get_context_parallel_group_for_hybrid_
 
 from tests.test_tools.dist_test import DistributedTest
 from tests.test_tools.utils import initialize_model_parallel
-from modellink.core.transformer import get_attention_mask, MUST_COMPRESS
-from modellink.core.transformer.mask_generator import set_attention_mask
-from modellink.model.alibi import Alibi
-from modellink.utils import seed_all
+from modellink.tasks.models import get_attention_mask, MUST_COMPRESS
+from modellink.tasks.models.mask_generator import set_attention_mask
+from modellink.tasks.models.common.alibi import Alibi
+from modellink.training.utils import seed_all
 
 
 def get_data_on_this_cp_rank(data, r_size, u_size, cp_rank, dim=0):

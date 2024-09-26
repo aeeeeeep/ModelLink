@@ -22,7 +22,7 @@ import numpy as np
 import torch
 
 from megatron.core.datasets.indexed_dataset import IndexedDataset
-from modellink.error_utils import ensure_valid
+from modellink.tasks.error_utils import ensure_valid
 
 
 class MTFDataset(torch.utils.data.Dataset):

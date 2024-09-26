@@ -19,7 +19,7 @@ from megatron.training.utils import average_losses_across_data_parallel_group
 from modellink.tasks.rl.utils import get_attr_from_wrapped_model
 from modellink.tasks.trainer.base import BaseTrainer
 from modellink.tasks.rl.hyper_model import HyperModelABC
-from modellink.utils import get_tune_attention_mask, get_finetune_data_on_this_tp_rank
+from modellink.training.utils import get_tune_attention_mask, get_finetune_data_on_this_tp_rank
 
 
 class DPOTrainer(BaseTrainer):

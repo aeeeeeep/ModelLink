@@ -19,7 +19,6 @@ import os
 import sys
 import types
 import torch
-import torch_npu
 import transformers
 from tqdm import tqdm
 
@@ -211,12 +210,11 @@ def _load_checkpoint(model_provider, queue, args):
         sys.path.insert(0, args.megatron_path)
 
     from megatron.training.arguments import validate_args
-    from modellink.utils import parse_args
-    from megatron.training.global_vars import set_args, set_global_variables
+    from modellink.training.utils import parse_args
+    from megatron.training.global_vars import set_global_variables
     from megatron.legacy.model import module
     from megatron.core import mpu
     from megatron.core.enums import ModelType
-    from megatron.legacy import fused_kernels
 
     # We want all arguments to come from us.
     sys.argv = ['script.py',

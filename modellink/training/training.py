@@ -32,7 +32,7 @@ from megatron.training import update_num_microbatches
 from megatron.training import get_signal_handler
 from megatron.training import get_tensorboard_writer
 from megatron.training import get_wandb_writer
-from megatron.core import mpu, tensor_parallel
+from megatron.core import mpu
 from megatron.core.utils import get_model_config
 from megatron.core.enums import ModelType
 from megatron.training.checkpointing import save_checkpoint
@@ -53,7 +53,7 @@ from megatron.training.utils import (
 )
 from megatron.core.distributed import DistributedDataParallel as DDP
 from megatron.core.distributed import finalize_model_grads
-from modellink.initialize import set_jit_fusion_options
+from modellink.training.initialize import set_jit_fusion_options
 from modellink.tasks.finetune.lora.utils import is_enable_lora
 
 
