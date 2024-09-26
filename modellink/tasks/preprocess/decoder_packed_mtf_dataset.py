@@ -15,6 +15,7 @@
 
 
 import os
+import random
 import time
 import logging
 
@@ -213,6 +214,8 @@ def _build_index_mappings(
     # rng state
     np_rng = np.random.RandomState(seed=seed)
 
+    args = get_args()
+
     # Filename of the index mappings.
     _filename = data_prefix
     _filename += '_{}_indexmap'.format(name)
@@ -236,6 +239,9 @@ def _build_index_mappings(
                 # Generate a shuffling of the entire dataset
                 shuffle_idx.extend(new_document_ids.tolist())
                 epoch += 1
+
+            if args.full_shuffle_instruction_dataset:
+                random.shuffle(shuffle_idx)
 
             np.save(shuffle_idx_filename, shuffle_idx, allow_pickle=True)
             print_rank_0(' > elasped time to build and save shuffle-idx and sample-idx mapping'
