@@ -737,6 +737,9 @@ class MegatronModel(ModelBase):
         self.args.first_k_dense_replace = getattr(hf_args, "first_k_dense_replace", None)
         self.args.moe_layer_freq = getattr(hf_args, "moe_layer_freq", None)
         self.args.multi_head_latent_attention = getattr(hf_args, "multi_head_latent_attention", False)
+        self.args.shared_expert_intermediate_size = getattr(hf_args, "shared_expert_intermediate_size", None)
+        if self.args.shared_expert_intermediate_size is not None and self.args.n_shared_experts is None:
+            self.args.n_shared_experts = self.args.shared_expert_intermediate_size // self.args.moe_intermediate_size
         if self.args.multi_head_latent_attention:
             self.args.qk_rope_head_dim = getattr(hf_args, "qk_rope_head_dim", None)
             self.args.qk_nope_head_dim = getattr(hf_args, "qk_nope_head_dim", None)
