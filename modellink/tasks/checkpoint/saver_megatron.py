@@ -41,6 +41,23 @@ def add_arguments(parser):
                        help='Number of layers per virtual pipeline stage')
     group.add_argument('--num-layer-list',
                        type=str, help='a list of number of layers, seperated by comma; e.g., 4,4,4,4')
+    group.add_argument('--load-hf-from-config', action='store_true', default=False,
+                       help='If no weights file, use from_config to load the hf model')
+
+
+def load_hf_model(args):
+    from transformers import AutoModelForCausalLM, AutoConfig
+
+    # Load Huggingface model.
+    if args.load_hf_from_config:
+        config = AutoConfig.from_pretrained(args.save_dir, trust_remote_code=True)
+        with torch.device("meta"):
+            hf_model = AutoModelForCausalLM.from_config(config, trust_remote_code=True, torch_dtype=config.torch_dtype)
+        hf_model.to_empty(device="cpu")
+    else:
+        hf_model = AutoModelForCausalLM.from_pretrained(args.save_dir, device_map="cpu", trust_remote_code=True,
+                                                        torch_dtype="auto")
+    return hf_model
 
 
 def save_huggingface(args, model):
@@ -60,10 +77,8 @@ def save_huggingface(args, model):
 
 def save_huggingface_llama(args, model, model_args):
     '''Set model params.'''
-    from transformers import AutoModelForCausalLM
+    hf_model = load_hf_model(args)
 
-    # Load Huggingface model.
-    hf_model = AutoModelForCausalLM.from_pretrained(args.save_dir, device_map="cpu", trust_remote_code=True, torch_dtype="auto")
     hf2mg_map = {}
     for name_param_m in model.named_parameters():
         layer_num = name_param_m[0].split(".")[3] if len(name_param_m[0].split(".")) > 3 else name_param_m[0].split(".")[1]
@@ -241,10 +256,7 @@ def save_huggingface_qwen(args, model, model_args):
 
 def save_huggingface_chatglm3(args, model, model_args):
     '''Set model params.'''
-    from transformers import AutoModelForCausalLM
-
-    # Load Huggingface model.
-    hf_model = AutoModelForCausalLM.from_pretrained(args.save_dir, device_map="cpu", trust_remote_code=True, torch_dtype="auto")
+    hf_model = load_hf_model(args)
     hf2mg_map = {}
     for name_param_m in model.named_parameters():
         layer_num = name_param_m[0].split(".")[3] if len(name_param_m[0].split(".")) > 3 else name_param_m[0].split(".")[1]
