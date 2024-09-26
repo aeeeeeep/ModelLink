@@ -19,7 +19,7 @@
 import torch
 
 from megatron.core import parallel_state
-from ....error_utils import ensure_var_is_not_none
+from modellink.tasks.error_utils import ensure_var_is_not_none
 
 
 def recv_from_prev_pipeline_rank_(recv_buffer=None):

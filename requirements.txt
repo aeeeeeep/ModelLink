@@ -10,8 +10,6 @@ datasets
 pybind11
 accelerate
 six
-torch==2.1.0
-torchvision==0.16.0
 protobuf
 peft==0.7.1
 tiktoken

@@ -31,8 +31,8 @@ from megatron.core.models.gpt.gpt_layer_specs import (
     get_gpt_layer_local_spec,
     get_gpt_layer_with_transformer_engine_spec,
 )
-from modellink.data.decoder_packed_mtf_dataset import build_train_valid_test_datasets as build_instruction_dataset
-from modellink.utils import get_tune_attention_mask, get_finetune_data_on_this_tp_rank, generate_actual_seq_len
+from modellink.tasks.preprocess.decoder_packed_mtf_dataset import build_train_valid_test_datasets as build_instruction_dataset
+from modellink.training.utils import get_tune_attention_mask, get_finetune_data_on_this_tp_rank, generate_actual_seq_len
 
 
 def model_provider(pre_process=True, post_process=True) -> Union[GPTModel, megatron.legacy.model.GPTModel]:
@@ -102,16 +102,25 @@ def get_batch(data_iterator):
     args = get_args()
 
     if args.is_instruction_dataset:
+        # Items and their type.
+        keys = ['input_ids', 'attention_mask', 'labels']
+        if args.reset_position_ids:
+            keys += ['position_ids']
+        data_type = torch.int64
+
         if (not mpu.is_pipeline_first_stage()) and (not mpu.is_pipeline_last_stage()):
             if args.variable_seq_lengths and args.pipeline_model_parallel_size > 2:
                 tokens, attention_mask = get_finetune_data_on_this_tp_rank(data_iterator)
 
                 return tokens, None, None, attention_mask, None
             else:
+                if args.reset_position_ids:
+                    # Broadcast data.
+                    data_b = tensor_parallel.broadcast_data(keys, next(data_iterator), data_type)
+                    generate_actual_seq_len(data_b)
+
                 return None, None, None, None, None
-        # Items and their type.
-        keys = ['input_ids', 'attention_mask', 'labels']
-        data_type = torch.int64
+
 
         # Broadcast data.
         data_b = tensor_parallel.broadcast_data(keys, next(data_iterator), data_type)
@@ -123,8 +132,12 @@ def get_batch(data_iterator):
         # ignored label -100
         loss_mask = torch.where(labels == -100, 0, 1)
 
-        attention_mask = get_tune_attention_mask(attention_mask_1d)
+        if args.reset_position_ids:
+            position_ids = data_b.get('position_ids').long()
+            generate_actual_seq_len(data_b)
+            return tokens, labels, loss_mask, None, position_ids
 
+        attention_mask = get_tune_attention_mask(attention_mask_1d)
         return tokens, labels, loss_mask, attention_mask, None
 
     # get batches based on the TP rank you are on

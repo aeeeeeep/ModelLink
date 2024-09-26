@@ -1,7 +1,7 @@
 # 请按照您的真实环境修改 set_env.sh 路径
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
 
-python tools/checkpoint/convert_ckpt.py \
+python convert_ckpt.py \
     --use-mcore-models \
     --model-type-hf llama2 \
     --model-type GPT \

@@ -12,7 +12,7 @@ from megatron.core.datasets.utils import log_single_rank
 from megatron.core.datasets.gpt_dataset import (_build_document_index,
                                                 _build_shuffle_index
                                                 )
-from modellink.error_utils import GPTDatasetSampleIndexError
+from modellink.tasks.error_utils import GPTDatasetSampleIndexError
 from .blended_megatron_dataset_builder import need_to_build_dataset
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 
 import modellink
-from test_tools.utils import judge_expression
+from tests.test_tools.utils import judge_expression
 
 
 class CovertCkptFromMegatronArgs:
@@ -23,7 +23,7 @@ class TestConvertCkptFromMegatron:
     def test_combine_lora_weights_from_megatron(self):
         args = CovertCkptFromMegatronArgs()
 
-        base_dir = Path(__file__).absolute().parent.parent.parent
+        base_dir = Path(__file__).absolute().parents[3]
         file_path = os.path.join(base_dir, "convert_ckpt.py")
         arguments = [
             "--model-type", args.model_type,
@@ -36,8 +36,8 @@ class TestConvertCkptFromMegatron:
             "--save-dir", args.save_dir
         ]
 
-        subprocess.run(["python", file_path] + arguments)
-
+        exit_code = subprocess.run(["python3", file_path] + arguments).returncode
+        assert exit_code == 0
         output_dir = os.path.join(args.save_dir, "iter_0000001")
         weight_content = torch.load(os.path.join(output_dir, "mp_rank_00/model_optim_rng.pt"))
         weight_common_content = weight_content['model']['language_model'] # extract commmon content

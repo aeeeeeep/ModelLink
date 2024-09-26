@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import os
 import logging
 import json
@@ -24,7 +25,7 @@ from .template import CEVAL_TEMPLATE_DIR, get_eval_template
 
 from ..eval_api.dataset_eval import DatasetEval
 from ..eval_api.chat import Chat
-from ....error_utils import check_divisible_by_zero
+from ...error_utils import check_divisible_by_zero
 
 
 logger = logging.getLogger(__name__)

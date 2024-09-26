@@ -41,7 +41,8 @@ def add_arguments(parser):
     group.add_argument('--lora-alpha', type=int, default=32,
                        help='Lora alpha.')
 
-def _load_checkpoint(queue, args):
+
+def _load_checkpoint(model_provider, queue, args):
 
     # Search in directory above this
     sys.path.append(os.path.abspath(
@@ -51,7 +52,7 @@ def _load_checkpoint(queue, args):
         sys.path.insert(0, args.megatron_path)
 
     try:
-        from modellink.utils import parse_args
+        from modellink.training.utils import parse_args
         from megatron.training.arguments import validate_args
         from megatron.training.global_vars import set_args, set_global_variables
         from megatron.training.checkpointing import load_args_from_checkpoint
@@ -59,7 +60,7 @@ def _load_checkpoint(queue, args):
         from megatron.legacy.model import module
         from megatron.core import mpu
         from megatron.core.enums import ModelType
-        from modellink.checkpointing import load_checkpoint_wrapper
+        from modellink.training.checkpointing import load_checkpoint_wrapper
         load_checkpoint_mg = load_checkpoint_wrapper(load_checkpoint_mg)
     except ModuleNotFoundError:
         print("Unable to import Megatron, please specify the path to Megatron using --megatron-path. Exiting.")

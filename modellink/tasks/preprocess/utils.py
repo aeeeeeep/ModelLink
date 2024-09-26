@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import bisect
 import os
 import json
 import logging
 from functools import partial
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 from datasets import load_dataset, concatenate_datasets, interleave_datasets
 
 from modellink.tasks.preprocess.templates import Role
@@ -48,12 +49,12 @@ def check_dataset_info_map(data_args, column_names, raw_datasets, tag_names=None
         if key not in column_names:
             raise ValueError(f' {key} is unvalid, Please check map_keys')
 
-    if data_args.handler_name == "AlpacaStyleInstructionHandler":
+    if data_args.handler_name in ["AlpacaStyleInstructionHandler", "AlpacaStylePairwiseHandler"]:
         for value in data_args.map_keys.values():
             if value not in raw_datasets.format['columns']:
                 raise ValueError(f' {value} is unvalid, Please check map_keys')
 
-    if data_args.handler_name == "SharegptStyleInstructionHandler":
+    if data_args.handler_name in ["SharegptStyleInstructionHandler", "SharegptStylePairwiseHandler"]:
         if "tags" in data_args.map_keys.keys():
             for tag_name in data_args.map_keys["tags"].keys():
                 if tag_name not in tag_names:
@@ -78,6 +79,54 @@ def get_handler_dataset_attr(data_args, raw_datasets):
         tag_names = ["role_tag", "content_tag", "user_tag", "assistant_tag", "observation_tag", "function_tag", "system_tag"]
         column_names = ["messages", "tags", "system", "tools"]
 
+        if data_args.map_keys is not None:
+            check_dataset_info_map(data_args, column_names, raw_datasets, tag_names)
+            for column_name, target_name in data_args.map_keys.items():
+                if column_name == "tags":
+                    for tag in tag_names:
+                        dataset_attr.set_attr(tag, data_args.map_keys["tags"])
+                else:
+                    setattr(dataset_attr, column_name, target_name)
+
+    elif data_args.handler_name in ["AlpacaStylePairwiseHandler"]:
+        dataset_attr = InstructionDatasetAttr(
+            "file",
+            prompt="prompt",
+            query="",
+            response="",
+            system="system",
+            history="history",
+            ranking=True,
+            formatting="alpaca",
+            dataset_name=data_args.handler_name
+        )
+
+        column_names = ["prompt", "chosen", "rejected", "history", "system"]
+        if data_args.map_keys is not None:
+            check_dataset_info_map(data_args, column_names, raw_datasets, None)
+            for column_name, target_name in data_args.map_keys.items():
+                setattr(dataset_attr, column_name, target_name)
+
+    elif data_args.handler_name in ["SharegptStylePairwiseHandler"]:
+        dataset_attr = InstructionDatasetAttr(
+            "file",
+            query="",
+            response="",
+            system="system",
+            ranking=True,
+            formatting="sharegpt",
+            dataset_name=data_args.handler_name
+        )
+        tag_names = [
+            "role_tag",
+            "content_tag",
+            "user_tag",
+            "assistant_tag",
+            "observation_tag",
+            "function_tag",
+            "system_tag"
+        ]
+        column_names = ["messages", "chosen", "rejected", "tags", "system", "tools"]
         if data_args.map_keys is not None:
             check_dataset_info_map(data_args, column_names, raw_datasets, tag_names)
             for column_name, target_name in data_args.map_keys.items():
@@ -189,7 +238,7 @@ def convert_alpaca_to_intermediate(sample: Dict[str, List[Any]], dataset_attr: "
     outputs = {"prompt": [], "response": [], "system": [], "tools": []}
     prompt = []
     
-    if dataset_attr.history and isinstance(sample[dataset_attr.history], dict):
+    if dataset_attr.history and hasattr(sample, "history") and isinstance(sample[dataset_attr.history], dict):
         for old_prompt, old_response in sample[dataset_attr.history]:
             prompt.append({"role": Role.USER.value, "content": old_prompt})
             prompt.append({"role": Role.ASSISTANT.value, "content": old_response})
@@ -203,14 +252,28 @@ def convert_alpaca_to_intermediate(sample: Dict[str, List[Any]], dataset_attr: "
 
     prompt.append({"role": Role.USER.value, "content": "\n".join(content)})
 
-    if dataset_attr.response and isinstance(sample[dataset_attr.response], list):
-        response = [
-            {"role": Role.ASSISTANT.value, "content": content} for content in sample[dataset_attr.response]
-        ]
-    elif dataset_attr.response and isinstance(sample[dataset_attr.response], str):
-        response = [{"role": Role.ASSISTANT.value, "content": sample[dataset_attr.response]}]
+    if dataset_attr.ranking:
+        if dataset_attr.chosen and isinstance(sample[dataset_attr.chosen], list):
+            response = [
+                {"role": Role.ASSISTANT.value, "content": sample[dataset_attr.chosen][0]},
+                {"role": Role.ASSISTANT.value, "content": sample[dataset_attr.rejected][1]},
+            ]
+        elif dataset_attr.chosen and isinstance(sample[dataset_attr.chosen], str):
+            response = [
+                {"role": Role.ASSISTANT.value, "content": sample[dataset_attr.chosen]},
+                {"role": Role.ASSISTANT.value, "content": sample[dataset_attr.rejected]},
+            ]
+        else:
+            response = []
     else:
-        response = []
+        if dataset_attr.response and isinstance(sample[dataset_attr.response], list):
+            response = [
+                {"role": Role.ASSISTANT.value, "content": content} for content in sample[dataset_attr.response]
+            ]
+        elif dataset_attr.response and isinstance(sample[dataset_attr.response], str):
+            response = [{"role": Role.ASSISTANT.value, "content": sample[dataset_attr.response]}]
+        else:
+            response = []
 
     outputs["prompt"] = prompt
     outputs["response"] = response
@@ -303,8 +366,34 @@ def convert_sharegpt_to_intermediate(
         logger.warning("Invalid message count in {}.".format(messages))
         broken_data = True
 
-    prompt = aligned_messages[:-1]
-    response = aligned_messages[-1:]
+    elif (
+            dataset_attr.ranking
+            and isinstance(sample[dataset_attr.chosen], dict)
+            and isinstance(sample[dataset_attr.rejected], dict)
+    ):  # pairwise example
+        chosen = sample[dataset_attr.chosen]
+        rejected = sample[dataset_attr.rejected]
+        if (
+                chosen[dataset_attr.role_tag] not in accept_tags[-1]
+                or rejected[dataset_attr.role_tag] not in accept_tags[-1]
+        ):
+            broken_data = True
+
+        prompt = aligned_messages
+        response = [
+            {
+                "role": tag_mapping.get(chosen.get(dataset_attr.role_tag, "gpt"), "assistant"),
+                "content": chosen[dataset_attr.content_tag]
+            },
+            {
+                "role": tag_mapping.get(chosen.get(dataset_attr.role_tag, "gpt"), "assistant"),
+                "content": rejected[dataset_attr.content_tag]
+            },
+        ]
+
+    else:  # normal example
+        prompt = aligned_messages[:-1]
+        response = aligned_messages[-1:]
 
     if broken_data:
         logger.warning("Skipping this abnormal example.")
@@ -433,3 +522,35 @@ def load_single_dataset(dataset_attr, data_args):
         dataset = dataset.select(range(num_samples))
 
     return align_dataset(dataset, dataset_attr, data_args)
+
+
+def search_for_fit(numbers: Sequence[int], capacity: int) -> int:
+    r"""
+    Finds the index of largest number that fits into the knapsack with the given capacity.
+    """
+    index = bisect.bisect(numbers, capacity)
+    return -1 if index == 0 else (index - 1)
+
+
+def greedy_knapsack(numbers: List[int], capacity: int) -> List[List[int]]:
+    r"""
+    An efficient greedy algorithm with binary search for the knapsack problem.
+    """
+    numbers.sort()  # sort numbers in ascending order for binary search
+    knapsacks = []
+
+    while numbers:
+        current_knapsack = []
+        remaining_capacity = capacity
+
+        while True:
+            index = search_for_fit(numbers, remaining_capacity)
+            if index == -1:
+                break  # no more numbers fit in this knapsack
+
+            remaining_capacity -= numbers[index]  # update the remaining capacity
+            current_knapsack.append(numbers.pop(index))  # add the number to knapsack
+
+        knapsacks.append(current_knapsack)
+
+    return knapsacks

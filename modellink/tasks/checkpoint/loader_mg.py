@@ -158,23 +158,26 @@ def get_message_layer_attn(message, model, md=None, **kwargs):
         if md.linear_bias or margs.add_qkv_bias:
             qkv_bias.append(model.get_layers_self_attention_linear_qkv_bias(**kwargs))
         if getattr(model.get_args(), "multi_head_latent_attention", False):
-            qb_weight.append(model.get_layers_self_attention_linear_qb_weight(**kwargs))
+            if getattr(model.get_args(), "q_lora_rank", None):
+                qb_weight.append(model.get_layers_self_attention_linear_qb_weight(**kwargs))
             kvb_weight.append(model.get_layers_self_attention_linear_kvb_weight(**kwargs))
 
     # Handle gated linear units
     # simple concat of the rest
     if getattr(model.get_args(), "qk_layernorm", False):
-        message["q layernorm"] = model.get_layers_self_attention_q_layernorm_weight(**kwargs)
+        if getattr(model.get_args(), "q_lora_rank", None):
+            message["q layernorm"] = model.get_layers_self_attention_q_layernorm_weight(**kwargs)
         message["k layernorm"] = model.get_layers_self_attention_k_layernorm_weight(**kwargs)
     if getattr(model.get_args(), "multi_head_latent_attention", False):
-        message["linear qb weight"] = torch.cat(qb_weight, dim=0)
+        if getattr(model.get_args(), "q_lora_rank", None):
+            message["linear qb weight"] = torch.cat(qb_weight, dim=0)
         message["linear kvb weight"] = torch.cat(kvb_weight, dim=0)
     message["qkv weight"] = torch.cat(qkv_weight, dim=0)
     message["dense weight"] = torch.cat(dense_weight, dim=1)
     if md.linear_bias or margs.add_qkv_bias:
         message["qkv bias"] = torch.cat(qkv_bias, dim=0)
 
-    if md.linear_bias:
+    if md.linear_bias or margs.add_dense_bias:
         message["dense bias"] = model.get_layers_self_attention_linear_proj_bias(**kwargs)
 
     return message
@@ -228,6 +231,7 @@ def get_message_layer_mlp(message, model, md=None, **kwargs):
     layer_idx = kwargs["layer_idx"] + kwargs["pp_rank"] * len(model.get_layers_module(**kwargs))
     first_k_dense_replace = getattr(margs, 'first_k_dense_replace', None)
     moe_layer_freq = getattr(margs, 'moe_layer_freq', None)
+    shared_expert_gate = getattr(margs, 'shared_expert_gate', None)
     if (
             margs.num_experts
             and first_k_dense_replace is not None
@@ -238,6 +242,9 @@ def get_message_layer_mlp(message, model, md=None, **kwargs):
             mlp_router_weight = model.get_layers_mlp_router_weight(**kwargs)
             num_experts_local = margs.num_experts // margs.expert_model_parallel_size
             message["mlp_moe"]["mlp router weight"] = mlp_router_weight
+            if shared_expert_gate:
+                shared_expert_gate = model.get_layers_mlp_shared_expert_gate_weight(**kwargs)
+                message["mlp_moe"]["mlp shared_expert_gate weight"] = shared_expert_gate
             weight1 = []
             weight2 = []
             for ep_rank in range(margs.expert_model_parallel_size):

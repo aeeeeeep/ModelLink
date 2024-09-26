@@ -22,7 +22,6 @@ import os
 import sys
 import copy
 import logging
-from typing import List
 
 try:
     import nltk
@@ -33,9 +32,14 @@ except ImportError:
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              os.path.pardir)))
 
-from modellink.tokenizer import build_tokenizer
+from modellink.training.tokenizer import build_tokenizer
 from modellink.tasks.preprocess.data_handler import build_dataset, get_dataset_handler
-from megatron.core.datasets.indexed_dataset import IndexedDatasetBuilder
+from megatron.core.datasets.indexed_dataset import (
+    IndexedDatasetBuilder,
+    IndexedDataset,
+    get_bin_path,
+    get_idx_path,
+)
 
 
 logging.basicConfig(level=logging.INFO)
@@ -83,8 +87,8 @@ def build_splitter(args):
 
 def add_data_args(parser):
     group = parser.add_argument_group(title='input data')
-    group.add_argument('--input', type=str,
-                       help='Path to input JSON or path or a huggingface dataset name')
+    group.add_argument('--input', type=str, required=True,
+                       help='Path to input JSON or path or a huggingface dataset name; for merge datasets, it is the directory path containing all document files to merge')
     group.add_argument('--handler-name', type=str, default="",
                        help='specify a dataset handler')
     group.add_argument('--streaming', action='store_true',
@@ -101,7 +105,8 @@ def add_data_args(parser):
                        help='Keep newlines between sentences when splitting.')
     # LlamaFactory
     group.add_argument('--prompt-type', type=str, default=None,
-                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'glm4', 'chatml', 'chatml_de', 'qwen', 'llama3', 'llama2', 'mistral', 'mixtral', 'gemma', 'alpaca'],
+                       choices=['default', 'empty', 'chatglm2', 'chatglm3', 'chatglm3_system', 'glm4', 'chatml',
+                                'chatml_de', 'qwen', 'llama3', 'llama2', 'mistral', 'mixtral', 'gemma', 'alpaca', 'deepseek2', 'deepseek2-lite'],
                        help='Which template to use for constructing prompts in training.'
                             'e.g., "qwen"')
     group.add_argument("--interleave-probs", default=None,
@@ -125,11 +130,13 @@ def add_data_args(parser):
                        help="Where to store the cache of dataset from local.")
     group.add_argument("--map-keys", type=json.loads, default=None,
                        help="Dataset field mapping.")
+    group.add_argument("--pack", action='store_true',
+                       help="Package multiple samples into one sample in a fine tuning dataset")
 
 
 def add_tokenizer_args(parser):
     group = parser.add_argument_group(title='tokenizer')
-    group.add_argument('--tokenizer-type', type=str, required=True,
+    group.add_argument('--tokenizer-type', type=str, default='PretrainedFromHF',
                        choices=['BertWordPieceLowerCase', 'BertWordPieceCase',
                                 'GPT2BPETokenizer', 'PretrainedFromHF'],
                        help='What type of tokenizer to use.')
@@ -172,12 +179,19 @@ def add_output_args(parser):
                        help='Interval between progress updates')
 
 
+def add_merge_args(parser):
+    group = parser.add_argument_group(title='merge data')
+    group.add_argument('--merge-group-keys', nargs='+', default=None, const=None,
+                       help='The `bin-idx` pair files with the same key in their filename will be merged.')
+
+
 def get_args():
     parser = argparse.ArgumentParser()
 
     add_data_args(parser)
     add_tokenizer_args(parser)
     add_output_args(parser)
+    add_merge_args(parser)
 
     args = parser.parse_args()
     args.keep_empty = False
@@ -195,9 +209,21 @@ def get_args():
 
 
 def validate_args(args):
-    support_prompt_type_handler = ["LlamaFactoryInstructionHandler", "AlpacaStyleInstructionHandler", "SharegptStyleInstructionHandler"]
+    support_prompt_type_handler = [
+        "LlamaFactoryInstructionHandler",
+        "AlpacaStyleInstructionHandler",
+        "SharegptStyleInstructionHandler",
+        "AlpacaStylePairwiseHandler",
+        "SharegptStylePairwiseHandler"
+    ]
     if args.prompt_type is not None and args.handler_name not in support_prompt_type_handler:
-        raise AssertionError('If specify prompt_type , handler name must be "LlamaFactoryInstructionHandler"、"AlpacaStyleInstructionHandler"、"SharegptStyleInstructionHandler".')
+        raise AssertionError(f'If specify prompt_type , handler name must be in:\n{support_prompt_type_handler}.')
+
+    if (args.merge_group_keys is not None) and (not os.path.isdir(args.input)):
+        raise ValueError(f"{args.input} is not a directory or does not exist")
+
+    if not os.path.isdir(os.path.dirname(args.output_prefix)):
+        raise ValueError(f"{os.path.dirname(args.output_prefix)} is not a directory or does not exist")
 
 
 def cut_range_to_subs(n, gap):
@@ -216,9 +242,46 @@ def handle_subset(params):
     return handler.output_idx_files
 
 
+def merge_datasets(args):
+    prefixes = {key: set() for key in args.merge_group_keys}
+    for key in prefixes:
+        for basename in os.listdir(args.input):
+            prefix, ext = os.path.splitext(basename)
+    
+            if prefix in prefixes[key] or key not in prefix:
+                continue
+    
+            if not os.path.isfile(os.path.join(args.input, basename)):
+                continue
+    
+            ext_pair = ".bin" if ext == ".idx" else ".idx"
+            if not os.path.isfile(os.path.join(args.input, prefix) + ext_pair):
+                raise FileNotFoundError(f"{ext_pair} file not provided for {os.path.join(args.input, prefix)}")
+    
+            prefixes[key].add(prefix)
+    
+    for key in prefixes:
+        builder = None
+        for prefix in sorted(prefixes[key]):
+            if builder is None:
+                dataset = IndexedDataset(os.path.join(args.input, prefix), multimodal=False)
+                builder = IndexedDatasetBuilder(
+                    get_bin_path(f'{args.output_prefix}_{key}'), dtype=dataset.index.dtype, multimodal=False
+                )
+                del dataset
+    
+            builder.add_index(os.path.join(args.input, prefix))
+    
+        builder.finalize(get_idx_path(f'{args.output_prefix}_{key}'))
+
+
 def main():
     args = get_args()
     validate_args(args)
+
+    if args.merge_group_keys is not None:
+        merge_datasets(args)
+        return
 
     tokenizer = build_tokenizer(args)
     splitter = build_splitter(args)

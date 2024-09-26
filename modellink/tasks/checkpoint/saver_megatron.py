@@ -14,14 +14,10 @@
 # limitations under the License.
 # Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
 
-import argparse
-from collections.abc import Mapping
-import concurrent.futures
 import os
 import sys
 import copy
 import torch
-import torch_npu
 
 
 def add_arguments(parser):
@@ -355,12 +351,11 @@ def save_model_checkpoint(model_provider, queue, args):
         sys.path.insert(0, args.megatron_path)
 
     from megatron.training.arguments import validate_args
-    from modellink.utils import parse_args
+    from modellink.training.utils import parse_args
     from megatron.training.checkpointing import save_checkpoint
     from megatron.training.global_vars import set_global_variables, get_args
     from megatron.core.enums import ModelType
     from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
-    from megatron.legacy import fused_kernels
     from megatron.core import mpu
 
     def queue_get(name=None):

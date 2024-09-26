@@ -7,8 +7,8 @@ python convert_ckpt.py \
     --saver megatron \
     --load-dir ./model_weights/llama-2-7b-hf-v0.1-tp8-pp1/ \
     --lora-load ./ckpt/llama-2-7b-lora \
-    --lora-r 16 \
-    --lora-alpha 32 \
+    --lora-r 8 \
+    --lora-alpha 16 \
     --lora-target-modules query_key_value dense dense_h_to_4h dense_4h_to_h \
     --target-tensor-parallel-size 1 \
     --target-pipeline-parallel-size 1 \

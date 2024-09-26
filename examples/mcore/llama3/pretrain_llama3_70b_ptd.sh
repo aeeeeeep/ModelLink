@@ -26,6 +26,7 @@ DISTRIBUTED_ARGS="
 GPT_ARGS="
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
+    --use-mcore-models \
     --micro-batch-size 1 \
     --global-batch-size 512 \
     --sequence-parallel \

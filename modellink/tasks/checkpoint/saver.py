@@ -57,20 +57,18 @@ def add_arguments(parser):
                        help='Whether to save as legacy')
 
 
-def update_padded_vocab_size(md, model_mg, orig_tensor, orig_word_embed):
+def update_padded_vocab_size(md, model_mg, orig_vocab_size):
     # figure out what our padded vocab size is
-    if md.true_vocab_size is not None:
-        from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
-        margs = model_mg.get_args()
-        padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
-        model_mg.set_padded_vocab_size(padded_vocab_size)
-    else:
-        logger.warning("Original vocab size not specified, leaving embedding table as-is. "
-              "If you've changed the tensor parallel size this could cause problems.")
-        model_mg.set_padded_vocab_size(orig_word_embed.shape[0])
-    margs = model_mg.get_args()
-    padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
-    model_mg.set_padded_vocab_size(padded_vocab_size)
+    if orig_vocab_size is not None:
+        if md.true_vocab_size is not None:
+            from megatron.training.tokenizer.tokenizer import _vocab_size_with_padding
+            margs = model_mg.get_args()
+            padded_vocab_size = _vocab_size_with_padding(md.true_vocab_size, margs)
+            model_mg.set_padded_vocab_size(padded_vocab_size)
+        else:
+            logger.warning("Original vocab size not specified, leaving embedding table as-is. "
+                  "If you've changed the tensor parallel size this could cause problems.")
+            model_mg.set_padded_vocab_size(orig_vocab_size)
 
 
 def vocab_padding(orig_vocab_size, padded_vocab_size, orig_tensor):
@@ -201,11 +199,13 @@ def set_model_layer_attn(model_mg, msg, md, **kwargs):
     qkv_weight = torch.chunk(qkv_org, margs.tensor_model_parallel_size, dim=0)
 
     if getattr(md, "qk_layernorm", False):
-        q_layernorm = msg.pop("q layernorm")
+        if getattr(md, "q_lora_rank", None):
+            q_layernorm = msg.pop("q layernorm")
         k_layernorm = msg.pop("k layernorm")
 
     if getattr(md, "multi_head_latent_attention", False):
-        linear_qb = msg.pop("linear qb weight")
+        if getattr(md, "q_lora_rank", None):
+            linear_qb = msg.pop("linear qb weight")
         linear_kvb = msg.pop("linear kvb weight")
 
     # Split up the parallel tensors
@@ -220,11 +220,13 @@ def set_model_layer_attn(model_mg, msg, md, **kwargs):
             model_mg.set_layers_self_attention_linear_proj_weight(**kwargs, data=dense_weight[tp_rank])
             
             if getattr(md, "qk_layernorm", False):
-                model_mg.set_layers_self_attention_q_layernorm_weight(**kwargs, data=q_layernorm)
+                if getattr(md, "q_lora_rank", None):
+                    model_mg.set_layers_self_attention_q_layernorm_weight(**kwargs, data=q_layernorm)
                 model_mg.set_layers_self_attention_k_layernorm_weight(**kwargs, data=k_layernorm)
 
             if getattr(md, "multi_head_latent_attention", False):
-                model_mg.set_layers_self_attention_linear_qb_weight(**kwargs, data=linear_qb)
+                if getattr(md, "q_lora_rank", None):
+                    model_mg.set_layers_self_attention_linear_qb_weight(**kwargs, data=linear_qb)
                 model_mg.set_layers_self_attention_linear_kvb_weight(**kwargs, data=linear_kvb)
 
             if md.linear_bias:
@@ -287,6 +289,7 @@ def _set_set_model_layer_mlp(model_mg, msg, md, pop_flag=True, is_moe_mlp=False,
 def set_model_layer_mlp(model_mg, msg, md, total_layer_num, **kwargs):
     margs = model_mg.get_args()
     first_k_dense_replace = getattr(margs, 'first_k_dense_replace', None)
+    shared_expert_gate = getattr(margs, 'shared_expert_gate', None)
     moe_layer_freq = getattr(margs, 'moe_layer_freq', None)
     if (
             margs.num_experts
@@ -297,6 +300,8 @@ def set_model_layer_mlp(model_mg, msg, md, total_layer_num, **kwargs):
             num_experts_local = margs.num_experts // margs.expert_model_parallel_size
             mlp_moe = msg.pop("mlp_moe")
             mlp_router_weight = mlp_moe.pop("mlp router weight")
+            if shared_expert_gate:
+                mlp_shared_expert_gate_weights = mlp_moe.pop("mlp shared_expert_gate weight")
             if getattr(margs, "n_shared_experts", None) is not None:
                 shared_experts_linear_fc1_weight = mlp_moe.pop("mlp shared experts linear fc1 weight")
                 shared_experts_linear_fc2_weight = mlp_moe.pop("mlp shared experts linear fc2 weight")
@@ -311,6 +316,8 @@ def set_model_layer_mlp(model_mg, msg, md, total_layer_num, **kwargs):
                 for tp_rank in range(margs.tensor_model_parallel_size):
                     kwargs['tp_rank'] = tp_rank
                     model_mg.set_layers_mlp_router_weight(**kwargs, data=mlp_router_weight)
+                    if shared_expert_gate:
+                        model_mg.set_layers_mlp_shared_expert_gate_weight(**kwargs, data=mlp_shared_expert_gate_weights)
                     if getattr(margs, "n_shared_experts", None) is not None:
                         model_mg.set_layers_mlp_shared_experts_linear_fc1_weight(**kwargs,
                                                                                  data=shared_experts_linear_fc1_weight)
@@ -483,6 +490,7 @@ def save_model_checkpoint(model_provider, queue, args):
     # Make models for first pipeline stage and fill in embeddings
     mpu.set_pipeline_model_parallel_rank(0)
     post_process = args.target_pipeline_parallel_size == 1
+    update_padded_vocab_size(md, model_mg, model_mg.args.vocab_size)
     model_mg.get_modules_from_config(pp_stage_cache_flag=True)
 
     # Embeddings

@@ -8,7 +8,6 @@ import logging as logger
 from collections import OrderedDict
 from tqdm import tqdm
 import torch
-import torch.nn as nn
 from transformers import AutoModelForCausalLM
 from megatron.core import mpu
 from megatron.training.arguments import validate_args
@@ -18,9 +17,9 @@ from megatron.training.checkpointing import load_args_from_checkpoint
 from megatron.training.global_vars import set_args
 from megatron.training.checkpointing import load_checkpoint
 from megatron.core import tensor_parallel
-from modellink.utils import parse_args
+from modellink.training.utils import parse_args
 from modellink.training import model_provider_func_wrapper
-from modellink.checkpointing import load_checkpoint_wrapper
+from modellink.training.checkpointing import load_checkpoint_wrapper
 
 logger.basicConfig(format="")
 logger.getLogger().setLevel(logger.INFO)
@@ -185,15 +184,17 @@ class ModelBase(abc.ABC):
         '''Set self-attention params.'''
         # Get attention layer & state.
         if getattr(src_model.get_args(), "qk_layernorm", False):
-            q_layernorm = src_model.get_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx)
+            if getattr(src_model.get_args(), "q_lora_rank", None):
+                q_layernorm = src_model.get_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx)
+                self.set_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx, data=q_layernorm)
             k_layernorm = src_model.get_layers_self_attention_k_layernorm_weight(layer_idx=layer_idx)
-            self.set_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx, data=q_layernorm)
             self.set_layers_self_attention_k_layernorm_weight(layer_idx=layer_idx, data=k_layernorm)
         
         if getattr(src_model.get_args(), "multi_head_latent_attention", False):
-            linear_qb = src_model.get_layers_self_attention_linear_qb_weight(layer_idx=layer_idx)
+            if getattr(src_model.get_args(), "q_lora_rank", None):
+                linear_qb = src_model.get_layers_self_attention_linear_qb_weight(layer_idx=layer_idx)
+                self.set_layers_self_attention_linear_qb_weight(layer_idx=layer_idx, data=linear_qb)
             linear_kvb = src_model.get_layers_self_attention_linear_kvb_weight(layer_idx=layer_idx)
-            self.set_layers_self_attention_linear_qb_weight(layer_idx=layer_idx, data=linear_qb)
             self.set_layers_self_attention_linear_kvb_weight(layer_idx=layer_idx, data=linear_kvb)
         
         qkv_weight = src_model.get_layers_self_attention_linear_qkv_weight(layer_idx=layer_idx)
@@ -252,6 +253,7 @@ class ModelBase(abc.ABC):
         num_experts = getattr(args, 'num_experts', None) or getattr(args, 'num_local_experts', None)
         first_k_dense_replace = getattr(args, 'first_k_dense_replace', None)
         moe_layer_freq = getattr(args, 'moe_layer_freq', None)
+        shared_expert_gate = getattr(args, 'shared_expert_gate', False)
         if (num_experts
                 and first_k_dense_replace is not None
                 and moe_layer_freq is not None
@@ -259,6 +261,9 @@ class ModelBase(abc.ABC):
             if layer_idx >= first_k_dense_replace and layer_idx % moe_layer_freq == 0:
                 router_weight = src_model.get_layers_mlp_router_weight(**kwargs)
                 self.set_layers_mlp_router_weight(**kwargs, data=router_weight)
+                if shared_expert_gate:
+                    shared_expert_gate_weight = src_model.get_layers_mlp_shared_expert_gate_weight(**kwargs)
+                    self.set_layers_mlp_shared_expert_gate_weight(**kwargs, data=shared_expert_gate_weight)
                 if getattr(self.args, "n_shared_experts", None) is not None:
                     self._set_mlp_shared_experts_state(src_model, **kwargs)
                 if args.moe_grouped_gemm:
@@ -590,8 +595,9 @@ class HuggingfaceModel(ModelBase):
             self.set_layers_self_attention_linear_qkv_pack_weight(layer_idx=layer_idx, data=qkv)
         elif qkv_type == "pack_mla":
             if self.args.q_lora_rank is None:
-                q_proj = data[:self.args.num_attention_heads * self.args.q_head_dim, :]
-                kv_proj = data[self.args.num_attention_heads * self.args.q_head_dim:, :]
+                q_head_dim = self.args.qk_nope_head_dim + self.args.qk_rope_head_dim
+                q_proj = data[:self.args.num_attention_heads * q_head_dim, :]
+                kv_proj = data[self.args.num_attention_heads * q_head_dim:, :]
             else:
                 q_proj = data[:self.args.q_lora_rank, :]
                 kv_proj = data[self.args.q_lora_rank:, :]
@@ -725,6 +731,7 @@ class MegatronModel(ModelBase):
         self.args.moe_grouped_gemm = hf_args.moe_grouped_gemm
         self.args.num_experts = getattr(hf_args, "num_experts", None)
         self.args.n_shared_experts = getattr(hf_args, "n_shared_experts", None)
+        self.args.shared_expert_gate = getattr(hf_args, "shared_expert_gate", None)
         self.args.qk_layernorm = getattr(hf_args, "qk_layernorm", False)
         self.args.moe_intermediate_size = getattr(hf_args, "moe_intermediate_size", None)
         self.args.first_k_dense_replace = getattr(hf_args, "first_k_dense_replace", None)
@@ -783,6 +790,9 @@ class MegatronModel(ModelBase):
 
         if self.md and self.args_cmd.num_layer_list:
             self.args.num_layer_list = self.args_cmd.num_layer_list
+
+    def set_padded_vocab_size(self, padded_vocab_size):
+        self.args.padded_vocab_size = padded_vocab_size
 
     def set_megatron_parallel_state(self, saver_megatron):
         if saver_megatron:
@@ -1089,7 +1099,11 @@ class MegatronMCoreModel(MegatronModel):
             "layers_mlp_shared_experts_linear_fc1"] = module_layer + "mlp.shared_experts.linear_fc1"
         self.module_mapping[
             "layers_mlp_shared_experts_linear_fc2"] = module_layer + "mlp.shared_experts.linear_fc2"
-        
+
+        # shared experts gate
+        if config_value.get('shared_expert_gate', False):
+            self.module_mapping["layers_mlp_shared_expert_gate"] = module_layer + "mlp.shared_expert_gate"
+
         # moe grouped gemm
         self.module_mapping[
             "layers_mlp_experts_weight1"] = module_layer + "mlp.experts.weight1"

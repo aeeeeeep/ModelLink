@@ -163,10 +163,12 @@ def get_message_layer_attn(message, model, layer_idx, md=None, args=None):
     dense_weight.append(model.get_layers_self_attention_linear_proj_weight(layer_idx=layer_idx))
 
     if getattr(model.get_args(), "qk_layernorm", False):
-        message["q layernorm"] = model.get_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx)
+        if getattr(model.get_args(), "q_lora_rank", None):
+            message["q layernorm"] = model.get_layers_self_attention_q_layernorm_weight(layer_idx=layer_idx)
         message["k layernorm"] = model.get_layers_self_attention_k_layernorm_weight(layer_idx=layer_idx)
     if getattr(model.get_args(), "multi_head_latent_attention", False):
-        message["linear qb weight"] = model.get_layers_self_attention_linear_qb_weight(layer_idx=layer_idx)
+        if getattr(model.get_args(), "q_lora_rank", None):
+            message["linear qb weight"] = model.get_layers_self_attention_linear_qb_weight(layer_idx=layer_idx)
         message["linear kvb weight"] = model.get_layers_self_attention_linear_kvb_weight(layer_idx=layer_idx)
 
     if args.add_qkv_bias:
@@ -237,6 +239,7 @@ def get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1):
     margs = model.get_args()
     first_k_dense_replace = getattr(margs, 'first_k_dense_replace', None)
     moe_layer_freq = getattr(margs, 'moe_layer_freq', None)
+    shared_expert_gate = getattr(margs, 'shared_expert_gate', None)
     if (
             margs.num_experts
             and first_k_dense_replace is not None
@@ -246,6 +249,9 @@ def get_message_layer_mlp(message, model, layer_idx, md=None, tp_size=1):
             message["mlp_moe"] = {}
             mlp_router_weight = model.get_layers_mlp_router_weight(layer_idx=layer_idx)
             message["mlp_moe"]["mlp router weight"] = mlp_router_weight
+            if shared_expert_gate:
+                shared_expert_gate = model.get_layers_mlp_shared_expert_gate_weight(layer_idx=layer_idx)
+                message["mlp_moe"]["mlp shared_expert_gate weight"] = shared_expert_gate
             if getattr(margs, "n_shared_experts", None) is not None:
                 fc1_weight = model.get_layers_mlp_shared_experts_linear_fc1_weight(layer_idx=layer_idx)
                 fc2_weight = model.get_layers_mlp_shared_experts_linear_fc2_weight(layer_idx=layer_idx)

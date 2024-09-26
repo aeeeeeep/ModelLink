@@ -21,17 +21,15 @@ ModelLink旨在为华为 [昇腾芯片](https://www.hiascend.com/) 上提供端�
 
 
 当前ModelLink支撑大模型使用功能:
-* [制作预训练数据集](#jump11)/[制作指令微调数据集](#jump12) 【NAIE】【昇腾】
-* [预训练](#jump13)/[全参微调](#jump14)/[低参微调](#jump15) 【昇腾】【GTS】【NAIE】
-* [流式推理/人机对话](#jump16) 【NAIE】【昇腾】
-* [评估基线数据集](#jump17)【NAIE】
-* [加速算法/融合算子/并行策略](#jump18)【昇腾】【计算算法部】【计算研究部】
-* [基于昇腾芯片采集Profiling数据](#jump19) 【昇腾】
-* [Huggingface与Megatron-LM权重转换](#jump20) 【昇腾】【OCK】
-* [基于昇腾芯片的确定性计算功能](#jump21) 【昇腾】
-* [基于昇腾芯片的高可用特性](#jump22) 【计算研究部】
+* 权重转换：[Huggingface与Megatron-LM权重转换](#jump1) 【昇腾】【OCK】【GTS】
+* 数据集处理：[预训练数据集/指令微调数据集](./examples/README.md) 【NAIE】【昇腾】
+* 分布式预训练：[加速算法/融合算子/并行策略](#jump2)【昇腾】【计算算法部】【计算研究部】
+* 分布式指令微调：[Prompt模板/动态padding/多轮对话](#jump3)【NAIE】【昇腾】
+* 分布式推理：[流式推理/人机对话](./examples/README.md) 【NAIE】【昇腾】【GTS】
+* 分布式评估：[MMLU/CEVAL/HumanEval/BBH/BoolQ/AGIEval](#jump4)【NAIE】
+* 昇腾工具链：[Profiling采集](#jump5)/[确定性计算](#jump6)/[高可用](#jump7)【昇腾】【计算研究部】
 
-强化学习等特性持续研发中....
+LoRA、DPO、奖励模型、PPO等特性即将上线
 
 ---
 
@@ -56,6 +54,7 @@ ModelLink已发布版本维护策略：
 | bk_origin_23    |  Demo     | EOL    | 2023       | 生命周期终止           | 2024/6/30 |
 | 1.0             |  常规版本  | 维护   | 2024/03/30 | 预计2024/9/30起无维护  |           |
 | 1.1             |  常规版本  | 维护   | 2024/06/30 | 预计2024/12/30起无维护 |           |
+| 1.2             |  常规版本  | 维护   | 2024/09/30 | 预计2025/03/30起无维护 |           |
 
 ---
 
@@ -80,15 +79,17 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
 
 图中呈现了对应集群规模下的 `MFU` 值与集群整体的 `线性度`情况. 计算公式已经放到社区，点击链接可进行参考：[MFU计算公式](https://gitee.com/ascend/ModelLink/wikis/%E6%9C%AF%E8%AF%AD%E5%AE%9A%E4%B9%89/%E5%A4%A7%E6%A8%A1%E5%9E%8B%20MFU%20%E8%AE%A1%E7%AE%97%E5%85%AC%E5%BC%8F)，[线性度计算公式](https://gitee.com/ascend/ModelLink/wikis/%E6%9C%AF%E8%AF%AD%E5%AE%9A%E4%B9%89/%E7%BA%BF%E6%80%A7%E5%BA%A6%E5%85%AC%E5%BC%8F)
 
-【现版本实测性能（硬件信息：Atlas 900 A2 PODc）】
-
 下述列表中支持的模型，我们在[examples/README.md](./examples/README.md)中提供了相应的使用说明，里面有详细的模型训练、推理、评估流程
 
 `参数`列中的超链接指向模型的预训练文件下载地址，`模型`列中的超链接指向更多的社区资源地址，包括Chat/Instruct权重等
 
+`性能`的单位是tokens/p/s即每张卡每秒处理的token数【现版本实测性能（硬件信息：Atlas 900 A2 PODc）】
+
+`性能2`的单位是tokens/p/s即每张卡每秒处理的token数【现版本实测性能（硬件信息：内部在研）】
+
 `认证`【Pass】表示经过昇腾官方版本测试的模型，【Test】表示待测试模型
 
-表中为开启 mc2 特性后预训练实测性能，该特性只在24RC2以上版本支持，本仓库代码层面默认关闭，若要使用，请参考[加速算法与融合算子](#加速算法与融合算子)章节
+表中为开启 mc2 特性【内部在研特性】后预训练实测性能，该特性只在24RC2以上版本支持，本仓库代码层面默认关闭，若要使用，请参考[加速算法与融合算子](#jump2)章节
 
 <table>
   <thead>
@@ -98,7 +99,6 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <th>序列</th>
       <th>实现</th>
       <th>集群</th>
-      <th>模式</th>
       <th>性能</th>
       <th>性能2</th>
       <th>参考</th>
@@ -113,11 +113,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2K</td>
       <th>Legacy</th>
       <td> 1x8</td>
-      <td> BF16 </td>
       <td> 2849 </td>
       <td> -- </td>
       <td> 2874 </td>
-      <td><center>【GTS】</center></td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -126,11 +125,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2K</td>
       <th>Legacy</th>
       <td> 1x8</td>
-      <td> FP16 </td>
       <td> 3323 </td>
       <td> -- </td>
       <td> 2673 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -138,11 +136,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4K</td>
       <th>Legacy</th>
       <td> 2x8</td>
-      <td> BF16 </td>
       <td> 854 </td>
       <td> -- </td>
       <td> 732 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -151,11 +148,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4K</td>
       <th>Legacy</th>
       <td> 1x8</td>
-      <td> FP16 </td>
       <td> 2685 </td>
       <td> -- </td>
       <td> 2036 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -163,11 +159,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4K</td>
       <th>Legacy</th>
       <td> 1x8</td>
-      <td> FP16 </td>
       <td> 1213 </td>
       <td> -- </td>
       <td> 862 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -176,11 +171,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4K</td>
       <th>Legacy</th>
       <td> 1x8</td>
-      <td> BF16 </td>
       <td> 2664 </td>
       <td> -- </td>
       <td> 3969 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -188,11 +182,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4K</td>
       <th>Mcore</th>
       <td> 1x8</td>
-      <td> BF16 </td>
       <td> 1754 </td>
       <td> -- </td>
       <td> 2062 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -201,11 +194,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2K</td>
       <th>Legacy</th>
       <td> 1x8</td>
-      <td> FP16 </td>
       <td> 2034 </td>
       <td> -- </td>
       <td> 2525 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -213,20 +205,18 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2K</td>
       <th>Legacy</th>
       <td >12x8</td>
-      <td> BF16 </td>
       <td> 100 </td>
       <td> -- </td>
       <td> 107 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
       <td rowspan="3"><a href="https://huggingface.co/THUDM">ChatGLM3</a></td>
-      <td><a href="https://huggingface.co/THUDM/chatglm3-6b-base/tree/main">6B</a></td>
+      <td rowspan="3"><a href="https://huggingface.co/THUDM/chatglm3-6b-base/tree/main">6B</a></td>
       <td>8K</td>
       <th>Mcore</th>
       <td >1x8</td>
-      <td> FP16 </td>
       <td> 4611 </td>
       <td> -- </td>
       <td> 4543 </td>
@@ -234,11 +224,9 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
-      <td><a href="https://huggingface.co/THUDM/chatglm3-6b-base/tree/main">6B</a></td>
       <td>32K</td>
       <th>Mcore</th>
       <td >1x8</td>
-      <td> FP16 </td>
       <td> 2650 </td>
       <td> -- </td>
       <td> 2887 </td>
@@ -246,11 +234,9 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
-      <td><a href="https://huggingface.co/THUDM/chatglm3-6b-base/tree/main">6B</a></td>
       <td>64K</td>
       <th>Mcore</th>
       <td >2x8</td>
-      <td> FP16 </td>
       <td> 1724 </td>
       <td> -- </td>
       <td> 2097 </td>
@@ -259,11 +245,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
     </tr>
     <tr>
       <td rowspan="2"><a href="https://huggingface.co/THUDM">GLM4</a></td>
-      <td><a href="https://huggingface.co/THUDM/glm-4-9b">9B</a></td>
+      <td rowspan="2"><a href="https://huggingface.co/THUDM/glm-4-9b">9B</a></td>
       <td> 8K </td>
       <th>Mcore</th>
       <td> 1x8 </td>
-      <td> BF16 </td>
       <td> 2221 </td>
       <td> -- </td>
       <td> 2708 </td>
@@ -271,11 +256,9 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
-      <td><a href="https://huggingface.co/THUDM/glm-4-9b">9B</a></td>
       <td> 32K </td>
       <th>Mcore</th>
       <td> 2x8 </td>
-      <td> BF16 </td>
       <td> 1482 </td>
       <td> -- </td>
       <td> 1752 </td>
@@ -288,11 +271,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4K</td>
       <th>Mcore</th>
       <td> 2x8</td>
-      <td> BF16 </td>
       <td> 902 </td>
       <td> -- </td>
       <td> 762 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -301,11 +283,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2K</td>
       <th>Legacy</th>
       <td>1x8</td>
-      <td>BF16</td>
       <td> 2776 </td>
       <td> -- </td>
       <td> 2854 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -313,11 +294,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2K</td>
       <th>Legacy</th>
       <td >4x8</td>
-      <td> BF16 </td>
       <td> 341 </td>
       <td> -- </td>
       <td> 414 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -326,21 +306,19 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 4K </td>
       <th> Mcore </th>
       <td> 1x8 </td>
-      <td> BF16 </td>
       <td> 1141 </td>
       <td> -- </td>
       <td> 1348 </td>
-      <td><center>【GTS】</td>
-      <td><center>【Test】</td>
+      <td>【GTS】</td>
+      <td>【Test】</td>
       <tr>
       <td> 32K </td>
       <th> Mcore </th>
       <td> 1x8 </td>
-      <td> BF16 </td>
       <td> 4982 </td>
       <td> -- </td>
-      <td><center> 5476 </td>
-      <td><center>【GTS】</td>
+      <td> 5476 </td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -349,11 +327,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2K</td>
       <th>Legacy</th>
       <td>1x8</td>
-      <td>FP16</td>
       <td> 3600 </td>
       <td> -- </td>
       <td> 3804 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -361,11 +338,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2K</td>
       <th>Legacy</th>
       <td>1x8</td>
-      <td>FP16</td>
       <td> 1895 </td>
       <td> -- </td>
       <td> 2012 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -373,11 +349,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
         <td>2K</td>
         <th>Legacy</th>
         <td>4x8</td>
-        <td>FP16</td>
         <td>621</td>
         <td> -- </td>
         <td>776</td>
-        <td><center>【昇腾】</td>
+        <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -385,11 +360,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2K</td>
       <th>Legacy</th>
       <td>4x8</td>
-      <td>BF16 </td>
       <td> 348 </td>
       <td> -- </td>
       <td> 426 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -398,11 +372,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4K</td>
       <th>Mcore</th>
       <td>1x8</td>
-      <td>BF16 </td>
       <td> 4672 </td>
       <td> -- </td>
       <td> 3850 </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -410,35 +383,32 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>4K</td>
       <th>Mcore</th>
       <td>1x8</td>
-      <td>BF16 </td>
       <td> 2016 </td>
       <td> -- </td>
       <td> 1920 </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
       <td><a href="https://huggingface.co/codellama/CodeLlama-34b-Instruct-hf/tree/main">34B</a></td>
       <td>4K</td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td>2x8</td>
-      <td>BF16 </td>
-      <td> 749 </td>
+      <td> 810 </td>
       <td> -- </td>
       <td> 796 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
       <td><a href="https://huggingface.co/meta-llama/Llama-2-70b-hf">70B</a></td>
       <td>4K</td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td>4x8</td>
-      <td>BF16 </td>
-      <td> 420 </td>
+      <td> 439 </td>
       <td> -- </td>
       <td> 430 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -447,48 +417,43 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 8K </td>
       <th>Mcore</th>
       <td>1x8</td>
-      <td>BF16 </td>
       <td> 2400 </td>
       <td> -- </td>
       <td> 2674 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
       <td><a href="https://huggingface.co/v2ray/Llama-3-70B/tree/main">70B</a></td>
       <td> 8K </td>
       <th>Mcore</th>
-      <td>4x8</td>
-      <td>BF16 </td>
+      <td>8x8</td>
       <td> 353 </td>
       <td> -- </td>
       <td> 355 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
       <td rowspan="3"><a href="https://modelscope.cn/organization/LLM-Research">LLaMA3.1</td>
-      <td><a href="https://modelscope.cn/models/LLM-Research/Meta-Llama-3.1-8B">8B</a></td>
+      <td rowspan="2"><a href="https://modelscope.cn/models/LLM-Research/Meta-Llama-3.1-8B">8B</a></td>
       <td> 8K </td>
       <th>Mcore</th>
       <td>1x8</td>
-      <td>BF16 </td>
       <td> 2280 </td>
       <td> -- </td>
       <td> 2520 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
-      <td><a href="https://modelscope.cn/models/LLM-Research/Meta-Llama-3.1-8B">8B</a></td>
       <td>128K</td>
       <th>Mcore</th>
       <td>4x8</td>
-      <td>BF16 </td>
       <td> 1297 </td>
       <td> -- </td>
       <td> -- </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -496,11 +461,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>8K</td>
       <th>Mcore</th>
       <td>4x8</td>
-      <td>BF16 </td>
       <td> 399 </td>
       <td> -- </td>
       <td> -- </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -509,11 +473,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 8K </td>
       <th>Legacy</th>
       <td>1x8</td>
-      <td>BF16 </td>
       <td> 2499 </td>
       <td> -- </td>
       <td> 2867 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -521,11 +484,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>2K</td>
       <th>Legacy</th>
       <td>1x8</td>
-      <td>BF16 </td>
       <td> 1560 </td>
       <td> -- </td>
       <td> 1578 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -533,11 +495,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 8K </td>
       <th>Legacy</th>
       <td>16x8</td>
-      <td>BF16 </td>
       <td> 285 </td>
       <td> -- </td>
       <td> 345 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Pass】</td>
     </tr>
     </tr>
@@ -545,90 +506,82 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td rowspan="8"><a href="https://huggingface.co/Qwen">Qwen1.5</a></td>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-0.5B/tree/main">0.5B</a> </td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 1x8 </td>
-      <td> BF16 </td>
-      <td> 22834 </td>
+      <td> 23239 </td>
       <td> -- </td>
       <td> 25306 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-1.8B/tree/main">1.8B</a> </td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 1x8 </td>
-      <td> BF16 </td>
-      <td> 13029 </td>
+      <td> 12603 </td>
       <td> -- </td>
       <td> 12181 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-4B/tree/main">4B</a> </td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 1x8 </td>
-      <td> BF16 </td>
-      <td> 5033 </td>
+      <td> 5221 </td>
       <td> -- </td>
       <td> 5328 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-7B/tree/main">7B</a> </td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 1x8 </td>
-      <td> BF16 </td>
-      <td> 2862 </td>
+      <td> 2951 </td>
       <td> -- </td>
       <td> 2621 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-14B/tree/main">14B</a> </td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th>Mcore</th>
       <td> 1x8 </td>
-      <td> BF16 </td>
-      <td> 1717 </td>
+      <td> 1760 </td>
       <td> -- </td>
       <td> 1702 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-32B/tree/main">32B</a> </td>
       <td> 8K </td>
-      <th>Legacy</th>
+      <th> Mcore </th>
       <td> 4x8 </td>
-      <td> BF16 </td>
-      <td> 751 </td>
+      <td> 768 </td>
       <td> -- </td>
       <td> 708 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-72B/tree/main">72B</a> </td>
       <td> 8K </td>
       <th> Mcore </th>
       <td> 8x8 </td>
-      <td> BF16 </td>
       <td> 339 </td>
       <td> -- </td>
       <td> 317 </td>
-      <td><center>【GTS】</td>    
+      <td>【GTS】</td>    
       <td>【Test】</td>
       <tr>
       <td> <a href="https://huggingface.co/Qwen/Qwen1.5-110B/tree/main">110B</a> </td>
       <td> 8K </td>
       <th>Mcore</th>
       <td> 8x8 </td>
-      <td> BF16 </td>
       <td> 223 </td>
       <td> -- </td>
       <td> -- </td>
-      <td><center>【GTS】</td>    
+      <td>【GTS】</td>    
       <td>【Test】</td>
     </tr>
     </tr>
@@ -637,100 +590,102 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 8K </td>
       <th>Mcore</th>
       <td> 1x8 </td>
-      <td> BF16 </td>
       <td> 3146 </td>
       <td> -- </td>
       <td> 3866 </td>
-      <td><center>【GTS】</td>    
+      <td>【GTS】</td>    
       <td>【Test】</td>
     </tr>
-    <tr>
-      <td rowspan="7"><a href="https://huggingface.co/Qwen">Qwen2</a></td>
+    </tr>
+       <tr>
+       <td rowspan="8"><a href="https://huggingface.co/Qwen">Qwen2</a></td>
       <td rowspan="2"> <a href="https://huggingface.co/Qwen/Qwen2-0.5B/tree/main">0.5B</a> </td>
       <td> 4K </td>
       <th> Mcore </th>
       <td> 1x8 </td>
-      <td> BF16 </td>
       <td> 28618 </td>
       <td> -- </td>
       <td> 34859 </td>
-      <td><center>【GTS】</td>
-      <td><center>【Test】</td>
+      <td>【GTS】</td>
+      <td>【Test】</td>
       <tr>
       <td> 32K </td>
       <th> Mcore </th>
       <td> 1x8 </td>
-      <td> BF16 </td>
       <td> 11338 </td>
       <td> -- </td>
-      <td><center> -- </td>
-      <td><center>【GTS】</td>
+      <td> -- </td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td rowspan="2"> <a href="https://huggingface.co/Qwen/Qwen2-1.5B/tree/main">1.5B</a> </td>
       <td> 4K </td>
       <th> Mcore </th>
       <td> 1x8 </td>
-      <td> BF16 </td>
       <td> 15456 </td>
       <td> -- </td>
       <td> 15603 </td>
-      <td><center>【GTS】</td>
-      <td><center>【Test】</td>
+      <td>【GTS】</td>
+      <td>【Test】</td>
       <tr>
       <td> 32K </td>
       <th> Mcore </th>
       <td> 1x8 </td>
-      <td> BF16 </td>
       <td> 7281 </td>
       <td> -- </td>
-      <td><center> 8538 </td>
-      <td><center>【GTS】</td>
+      <td> 8538 </td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td rowspan="2"><a href="https://huggingface.co/Qwen/Qwen2-7B/tree/main">7B</a></td>
       <td> 4K</td>
       <th>Mcore</th>
       <td>1x8</td>
-      <td>BF16 </td>
       <td> 4034 </td>
       <td> -- </td>
       <td>4241 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td> 32K</td>
       <th>Mcore</th>
       <td>1x8</td>
-      <td>BF16 </td>
       <td> 2040 </td>
       <td> -- </td>
       <td>2045 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
+      <td>【Test】</td>
+      <tr>
+      <td><a href="https://huggingface.co/Qwen/Qwen2-57B-A14B/tree/main">57B-A14B</a></td>
+      <td> 4K</td>
+      <th>Mcore</th>
+      <td>8x8</td>
+      <td> 416 </td>
+      <td> -- </td>
+      <td>-- </td>
+      <td>【GTS】</td>
       <td>【Test】</td>
       <tr>
       <td><a href="https://huggingface.co/Qwen/Qwen2-72B/tree/main">72B</a></td>
       <td> 4K</td>
       <th>Mcore</th>
       <td>4x8</td>
-      <td>BF16 </td>
       <td> 368 </td>
       <td> -- </td>
-      <td><center>-- </td>
-      <td><center>【GTS】</td>
+      <td>-- </td>
+      <td>【GTS】</td>
       <td>【Test】</td>
-    </tr> 
+    </tr>
     <tr>
       <td rowspan="1"><a href="https://huggingface.co/01-ai">Yi</a></td>
       <td><a href="https://huggingface.co/01-ai/Yi-34B/tree/main">34B</a></td>
       <td> 4K</td>
       <th>Mcore</th>
       <td>2x8</td>
-      <td>BF16 </td>
       <td> 855 </td>
       <td> -- </td>
       <td> 730 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -739,11 +694,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 32K</td>
       <th>Mcore</th>
       <td>8x8</td>
-      <td>BF16 </td>
       <td> 706 </td>
       <td> -- </td>
       <td> 837 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -751,22 +705,20 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 32K</td>
       <th>Mcore</th>
       <td>8x8</td>
-      <td>BF16 </td>
       <td> 239 </td>
       <td> 254 </td>
       <td> -- </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Test】</td>
     </tr>
     <tr>
       <td> 64K</td>
       <th>Mcore</th>
       <td>8x8</td>
-      <td>BF16 </td>
       <td> -- </td>
       <td> 215 </td>
       <td> -- </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -775,11 +727,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 32K</td>
       <th>Mcore</th>
       <td>1x8</td>
-      <td>BF16 </td>
       <td> 2900 </td>
       <td> -- </td>
       <td> 2734 </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -788,11 +739,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 8K </td>
       <th>Mcore</th>
       <td>1x8</td>
-      <td>BF16 </td>
       <td> 7067 </td>
       <td> -- </td>
       <td> 7602 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -800,11 +750,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 8K </td>
       <th>Mcore</th>
       <td>1x8</td>
-      <td>BF16 </td>
       <td> 2939 </td>
       <td> -- </td>
       <td> 2607 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -813,11 +762,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 8K </td>
       <th>Mcore</th>
       <td>1x8</td>
-      <td>BF16 </td>
       <td> 1713 </td>
       <td> -- </td>
       <td> 1595 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -825,11 +773,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 8K </td>
       <th>Mcore</th>
       <td>2x8</td>
-      <td>BF16 </td>
       <td> 827 </td>
       <td> -- </td>
       <td> 800 </td>
-      <td><center>【GTS】</td>
+      <td>【GTS】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -838,11 +785,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2K </td>
       <th>Legacy</th>
       <td> 16x8 </td>
-      <td> FP16 </td>
       <td> 153 </td>
       <td> -- </td>
       <td> -- </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -850,11 +796,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 2K </td>
       <th>Legacy</th>
       <td> 1x8 </td>
-      <td> FP16 </td>
       <td> 1890 </td>
       <td> -- </td>
       <td> 1840 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -863,11 +808,10 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 128K </td>
       <th> Mcore </th>
       <td> 8x8 </td>
-      <td> BF16 </td>
       <td> 424 </td>
       <td> 1066 </td>
       <td> -- </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Test】</td>
     </tr>
     <tr>
@@ -875,24 +819,22 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 128K </td>
       <th>Mcore</th>
       <td> 8x8 </td>
-      <td> BF16 </td>
       <td> 351 </td>
       <td> 918 </td>
       <td> -- </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
       <td>【Test】</td>
     </tr>
     <tr>
       <td rowspan="1"><a href="https://github.com/xai-org/grok-1">Grok1</a></td>
-      <td><a href="https://github.com/xai-org/grok-1">8x5B</a></td>
+      <td>8x5B</td>
       <td> 8K </td>
       <th>Mcore</th>
       <td> 4x8 </td>
-      <td> BF16 </td>
       <td> 1082 </td>
       <td> -- </td>
-      <td> 993.8 </td>
-      <td><center>【昇腾】</td>
+      <td> 993 </td>
+      <td>【昇腾】</td>
       <td>【Pass】</td>
     </tr>
     <tr>
@@ -901,36 +843,45 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td> 8K </td>
       <th>Mcore</th>
       <td> 4x8 </td>
-      <td> BF16 </td>
       <td> 1083 </td>
       <td> -- </td>
       <td> 1343 </td>
-      <td><center>【昇腾】</td>
+      <td>【昇腾】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
+      <td rowspan="1"><a href="https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite">DeepSeek-V2-Lite</a></td>
+      <td> 16B </td>
+      <td> 8K </td>
+      <th>Mcore</th>
+      <td> 1x8 </td>
+      <td> 2830 </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td>【昇腾】</td>
       <td>【Test】</td>
     </tr>
     <tr>
       <td rowspan="2"><a href="https://github.com/OpenBMB/MiniCPM">MiniCPM</a></td>
-      <td> 2B </td>
+      <td> <a href="https://huggingface.co/openbmb/MiniCPM-2B-sft-bf16/tree/main">2B</a> </td>
       <td> 4K </td>
       <th> Mcore </th>
       <td> 1x8 </td>
-      <td> BF16 </td>
       <td> 7314 </td>
       <td> -- </td>
       <td> 7953 </td>
-      <td><center>【NAIE】</td>
+      <td>【NAIE】</td>
       <td>【Test】</td>
     </tr>
     <tr>
-      <td> 8x2B </td>
+      <td> <a href="https://huggingface.co/openbmb/MiniCPM-MoE-8x2B/tree/main">8x2B</a> </td>
       <td> 4K </td>
       <th>Mcore</th>
       <td> 1x8 </td>
-      <td> BF16 </td>
       <td> 2981 </td>
       <td> -- </td>
       <td> 3172 </td>
-      <td><center>【昇腾】</td>
+      <td>【NAIE】</td>
       <td>【Test】</td>
     </tr>
   </tbody>
@@ -938,7 +889,7 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
 
 ---
 
-## Huggingface与Megatron-LM权重转换
+## <span id="jump1"> Huggingface与Megatron-LM权重转换
 
 ModelLink支持Huggingface、Megatron-Legacy以及Megatron-Core之间的权重格式互转，具体功能列表如下：
 
@@ -1119,7 +1070,7 @@ ModelLink支持Huggingface、Megatron-Legacy以及Megatron-Core之间的权重�
 
 ---
 
-## 预训练加速算法与融合算子
+## <span id="jump2"> 预训练加速算法与融合算子
 
 ModelLink预训练支持张量并行、流水线并行等多种加速算法和融合算子，下表为各种加速特性对应的使能开关：
 
@@ -1305,15 +1256,278 @@ ModelLink预训练支持张量并行、流水线并行等多种加速算法和�
 
 **注意事项**
 1. 具体的预训练方法见[examples/README.md](./examples/README.md)
-2. 如果需要开启MC2，需将 `modellink\arguments.py` 文件下，`validate_args_decorator`函数中的`args.use_mc2 = False`语句注释掉。
-3. Legacy结构模型不支持MOE和长序列特性，可以在Mcore结构模型上使能MOE和长序列特性。
+2. 如果需要开启MC2，需将 `modellink\arguments.py` 文件下，`validate_args_decorator`函数中的`args.use_mc2 = False`语句注释掉
+3. Legacy结构模型不支持MOE和长序列特性，可以在Mcore结构模型上使能MOE和长序列特性
 
 
 
 
 ---
 
-## 基于昇腾芯片采集Profiling数据
+## <span id="jump3"> 分布式指令微调
+ModelLink支持指令微调，方案与<a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a>统一，在微调效果保持一致的前提下，ModelLink可以表现出优异性能
+
+【与<a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a>微调Loss对比】
+<table>
+<tr>
+<th rowspan="1">Llama2-7b模型与<a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a>微调5个epoch后的loss对比图
+<p align="center"> <img src="sources/images/tune_llama2_7b_ModelLink_DeepSpeed_compare.png" height="270px" width="500px"> </p>
+</th>
+<th>
+<th rowspan="1">Qwen-7b模型与<a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a>微调4个epoch后的loss对比图
+<p align="center"> <img src="sources/images/tune_qwen_7b_ModelLink_DeepSpeed_compare.png" height="270px" width="500px"> </p>
+</tr>
+</table>
+
+
+【Llama2-7b微调后对话效果对比】
+<table>
+    <tr>
+        <th rowspan="1">Question</th>
+        <th rowspan="1">ModelLink</th>
+        <th colspan="1"><a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a></th>
+    </tr>
+    <tr>
+        <th>What is the product of 6 and 2?</th>
+        <th>The product of 6 and 2 is 12.</th>
+        <th>The product of 6 and 2 is 12.</th>
+    </tr>
+    <tr>
+        <th>Look up the boiling point of water.</th>
+        <th>The boiling point of water is 100°C (212°F)..</th>
+        <th>The boiling point of water is 100 degrees Celsius (212 degrees Fahrenheit).</th>
+    </tr>
+    <tr>
+        <th>Generate a poem that expresses joy.</th>
+        <th>I open my arms and accept life's challenge, 
+
+Embracing all of life's uncertainty. 
+
+A future of promise awaits,
+
+One that I can find in my fate. 
+
+A journey full of hope and discovery,
+
+A journey that will never end in disappointment. 
+
+For I have found the strength to keep going,
+
+Researching and learning, ever knowing. 
+
+The future is mine, and mine alone,
+
+A future that I have to own,
+
+And I will never be alone,
+
+For I will have the courage to face all of my fears,
+
+And the joy of life will be mine forever.</th>
+        <th>I am so happy, so thankful and blessed,
+
+To have a heart that's full of cheer,
+
+My soul is on fire, my spirit runs free,
+
+My love is warm, my courage is high,
+
+My world is bright and my outlook is clear,
+
+My heart is light, my spirit runs free.
+
+I take each day with a positive outlook,
+
+My energy is so high, I can't be beat,
+
+My joy is real, my emotions run deep,
+
+My soul is full and my heart does soep.
+
+I am thankful for everything I have,
+
+My life is precious and my values ​​true,
+
+My hope is high and my spirit runs free,
+
+My soul is full and my heart does soep.</th>
+    </tr>
+</table>
+
+【现版本实测性能、显存（硬件信息：Atlas 900 A2 PODc）】
+
+下述列表中的模型，我们在[examples/README.md](./examples/README.md)中提供了相应的使用说明，里面有详细的模型微调、推理、评估流程.
+其中性能的单位是samples/s
+
+<table>
+    <tr>
+        <th rowspan="2">模型</th>
+        <th rowspan="2">--prompt-type</th>
+        <th colspan="2">ModelLink + NPU</th>
+        <th colspan="2"><a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a> + NPU</th>
+        <th colspan="2"><a href="https://github.com/hiyouga/LLaMA-Factory/tree/main">DeepSpeed</a> + 参考</th>
+    </tr>
+    <tr>
+        <th>序列长度</th>
+        <th>性能</th>
+        <th>序列长度</th>
+        <th>性能</th>
+        <th>序列长度</th>
+        <th>性能</th>
+    </tr>
+    <tr>
+        <td rowspan="1">llama2-7b</td>
+        <td rowspan="1">llama2</td>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+    </tr>
+    <tr>
+        <td rowspan="1">qwen-7b</td>
+        <td rowspan="1">qwen</td>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+        <th>-</th>
+    </tr>
+
+</table>
+
+上述列表中的数据均为实测数据，且具体微调的数据集均保持一致
+
+【指令微调特性】
+
+<table>
+    <tr>
+        <th></th>
+        <th>特性名称</th>
+        <th>特性入参</th>
+    </tr>
+    <tr>
+        <td rowspan="1">支持数据集格式</td>
+        <td colspan="2">Alpaca风格、Sharegpt风格</td>
+    </tr>
+    <tr>
+        <td rowspan="4">微调数据预处理特性</td>
+        <td>数据集字段映射</td>
+        <td>--map-keys</td>
+    </tr>
+    <tr>
+        <td>prompt模板</td>
+        <td>--prompt-type</td>
+    </tr>
+    <tr>
+        <td>数据集处理器</td>
+        <td>--handler-name</td>
+    </tr>
+    <tr>
+        <td>多样本pack</td>
+        <td>--pack</td>
+    </tr>
+    <tr>
+        <td rowspan="3">微调特性</td>
+        <td>动态padding</td>
+        <td>--variable-seq-lengths</td>
+    </tr>
+    <tr>
+        <td>prompt模板</td>
+        <td>--prompt-type</td>
+    </tr>
+    <tr>
+        <td>多样本pack</td>
+        <td>--reset-position-ids</td>
+    </tr>
+    <tr>
+        <td rowspan="3">微调后推理对话特性</td>
+        <td>历史对话记录轮数</td>
+        <td>--history-turns</td>
+    </tr>
+    <tr>
+        <td>hf对话模板</td>
+        <td>--hf-chat-template</td>
+    </tr>
+    <tr>
+        <td>prompt模板</td>
+        <td>--prompt-type</td>
+    </tr>
+    <tr>
+        <td rowspan="3">微调后评估特性</td>
+        <td>评估数据集语言</td>
+        <td>--eval-language</td>
+    </tr>
+        <td>hf对话模板</td>
+        <td>--hf-chat-template</td>
+    <tr>
+        <td>prompt模板</td>
+        <td>--prompt-type</td>
+    </tr>
+    <tr>
+        <td>指令微调模板支持列表</td>
+        <td  colspan="2">['empty', 'default', 'chatglm3_system', 'chatml', 'qwen', 'llama2', 'llama3', 'mixtral', 'alpaca', 'deepseek2', 'deepseek2-lite']</td>
+    </tr>
+
+</table>
+
+---
+
+
+## <span id="jump4"> 大模型Benchmark基线评估
+
+ModelLink支持大模型在公开基准数据集上进行准确率评估，当前支持的Benchmark如下：
+
+| Benchmark | 下载链接                                                                                     | 验证集  | ModelLink                                                            | OpenCompass                                                      |
+|-----------|------------------------------------------------------------------------------------------|------|----------------------------------------------------------------------|------------------------------------------------------------------|
+| MMLU      | [GitHub](https://people.eecs.berkeley.edu/~hendrycks/data.tar)                           | test | [45.73%](./examples/mcore/llama2/evaluate_llama2_7b_mmlu_ptd.sh)     | [45.3%](https://hub.opencompass.org.cn/dataset-detail/MMLU)      |
+| CEval     | [HuggingFace](https://huggingface.co/datasets/ceval/ceval-exam/blob/main/ceval-exam.zip) | val  | [33.87%](./examples/mcore/llama2/evaluate_llama2_7b_ceval_ptd.sh)    | [32.5%](https://hub.opencompass.org.cn/dataset-detail/C-Eval)    |
+| BoolQ     | [Juhe](https://www.juhe.cn/market/product/id/10243)                                      | dev  | [75.44%](./examples/mcore/llama2/evaluate_llama2_7b_boolq_ptd.sh)    | [74.9%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)     |
+| BBH       | [GitHub](https://github.com/suzgunmirac/BIG-Bench-Hard/tree/main/bbh)                    | test | [34.4%](./examples/mcore/llama2/evaluate_llama2_7b_bbh_ptd.sh)       | [32.5%](https://hub.opencompass.org.cn/dataset-detail/BBH)       |
+| AGIEval   | [GitHub](https://github.com/ruixiangcui/AGIEval/tree/main)                               | test | [20.6%](./examples/mcore/llama2/evaluate_llama2_7b_agieval_ptd.sh)   | [20.6%](https://hub.opencompass.org.cn/dataset-detail/AGIEval)   |
+| HumanEval | [GitHub](https://github.com/openai/human-eval/tree/master/data)                          | test | [12.8%](./examples/mcore/llama2/evaluate_llama2_7b_humaneval_ptd.sh) | [12.2%](https://hub.opencompass.org.cn/dataset-detail/HumanEval) |
+
+ModelLink已支持模型的评估数据统计如下：
+
+| 模型            | 任务     | ModelLink | 社区                                                                    | 模型               | 任务     | ModelLink | 社区                                                                                |
+|---------------|--------|-----------|-----------------------------------------------------------------------|------------------|--------|-----------|-----------------------------------------------------------------------------------|
+| Aquila-7B     | BoolQ  | 77.3%     | --                                                                    | Aquila2-7B       | BoolQ  | 77.8%     | --                                                                                |
+| Aquila2-34B   | BoolQ  | 88.0%     | --                                                                    | Baichuan-7B      | BoolQ  | 69.0%     | [67.0%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)                      |
+| Baichuan-13B  | BoolQ  | 74.7%     | [73.6%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)          | Baichuan2-7B     | BoolQ  | 70.0%     | [63.2%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)                      |
+| Baichuan2-13B | BoolQ  | 78.0%     | [67.0%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)          | Bloom-7B         | MMLU   | 25.1%     | --                                                                                |
+| Bloom-176B    | BoolQ  | 64.5%     | --                                                                    | ChatGLM3-6B      | MMLU   | 61.5%     | --                                                                                |
+| GLM4-9B       | MMLU   | 74.5%     | [74.7%](https://huggingface.co/THUDM/glm-4-9b)                        | CodeQwen1.5-7B   | Human. | 54.8%     | [51.8%](https://qwenlm.github.io/zh/blog/codeqwen1.5/)                            |
+| CodeLLaMA-34B | Human. | 48.8%     | [48.8%](https://paperswithcode.com/sota/code-generation-on-humaneval) | Gemma-2B         | MMLU   | 39.6%     | --                                                                                |
+| Gemma-7B      | MMLU   | 52.2%     | --                                                                   | InternLM-7B      | MMLU   | 48.7%     | [51.0%](https://huggingface.co/internlm/internlm-7b)                              |
+| Gemma2-9B     | MMLU   | 70.7%     | [71.3%](https://huggingface.co/google/gemma-2-9b)                    | Gemma2-27B       | MMLU   | 75.5%     | [75.2%](https://huggingface.co/google/gemma-2-27b)                                |
+| LLaMA-7B      | BoolQ  | 74.6%     | [75.4%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)         | LLaMA-13B        | BoolQ  | 79.6%     | [78.7%](https://hub.opencompass.org.cn/dataset-detail/BoolQ)                      |
+| LLaMA-33B     | BoolQ  | 83.2%     | [83.1%](https://paperswithcode.com/sota/question-answering-on-boolq) | LLaMA-65B        | BoolQ  | 85.7%     | [86.6%](https://paperswithcode.com/sota/question-answering-on-boolq)              |
+| LLaMA2-7B     | MMLU   | 45.7%     | --                                                                   | LLaMA2-13B       | BoolQ  | 82.2%     | [81.7%](https://paperswithcode.com/sota/question-answering-on-boolq)              |
+| LLaMA2-34B    | BoolQ  | 82.0%     | --                                                                   | LLaMA2-70B       | BoolQ  | 86.4%     | --                                                                                |
+| LLaMA3-8B     | MMLU   | 65.2%     | --                                                                   | LLaMA3-70B       | BoolQ  | 78.4%     | --                                                                                |
+| LLaMA3.1-8B   | MMLU   | 65.3%     | --                                                                   | LLaMA3.1-70B     | MMLU   | 81.8%     | --                                                                                |
+| Mistral-7B    | MMLU   | 56.3%     | --                                                                   | Mixtral-8x7B     | MMLU   | 69.9%     | [70.6%](https://paperswithcode.com/sota/multi-task-language-understanding-on-mmlu) |
+| Mistral-8x22B | MMLU   | 77%       | [77.8%](https://mistral.ai/news/mixtral-8x22b/)                      | MiniCPM-MoE-8x2B | BoolQ  | 83.9%     | --                                                                                |
+| QWen-7B       | MMLU   | 58.1%     | [58.2%](https://huggingface.co/Qwen/Qwen-7B)                         | Qwen-14B         | MMLU   | 65.3%     | [66.3%](https://huggingface.co/Qwen/Qwen-14B)                                     |
+| QWen-72B      | MMLU   | 74.6%     | [77.4%](https://huggingface.co/Qwen/Qwen-72B)                        | QWen1.5-0.5B     | MMLU   | 39.1%     | --                                                                                |
+| QWen1.5-1.8b  | MMLU   | 46.2%     | [46.8%](https://qwenlm.github.io/zh/blog/qwen1.5/)                   | QWen1.5-4B       | MMLU   | 59.0%     | [56.1%](https://qwenlm.github.io/zh/blog/qwen1.5)                                 |
+| QWen1.5-7B    | MMLU   | 60.3%     | [61.0%](https://qwenlm.github.io/zh/blog/qwen1.5/)                   | QWen1.5-14B      | MMLU   | 67.3%     | [67.6%](https://qwenlm.github.io/zh/blog/qwen1.5)                                 |
+| QWen1.5-32B   | MMLU   | 72.5%     | [73.4%](https://huggingface.co/Qwen/Qwen-72B)                        | QWen1.5-72B      | MMLU   | 76.4%     | [77.5%](https://qwenlm.github.io/zh/blog/qwen1.5)                                 |
+| Qwen1.5-110B  | MMLU   | 80.4%     | [80.4%](https://qwenlm.github.io/zh/blog/qwen1.5-110b/)              | Yi-34B           | MMLU   | 76.3%     | [75.8%](https://hub.opencompass.org.cn/dataset-detail/MMLU)                       |
+| QWen2-0.5B    | MMLU   | 44.6%     | [45.4%](https://qwenlm.github.io/zh/blog/qwen2/)                     | QWen2-1.5B       | MMLU   | 54.7%     | [56.5%](https://qwenlm.github.io/zh/blog/qwen2/)                                  |
+| QWen2-7B      | MMLU   | 70.3%     | [70.3%](https://qwenlm.github.io/zh/blog/qwen2/)                     | QWen2-57B-A14B   |MMLU|75.6% | [76.5%](https://qwenlm.github.io/zh/blog/qwen2/)|
+| QWen2-72B     | MMLU   | 83.6%     | [84.2%](https://qwenlm.github.io/zh/blog/qwen2/)| MiniCPM-2B       | MMLU   | 51.6%     | [53.4%](https://github.com/OpenBMB/MiniCPM?tab=readme-ov-file#3)     |                                                                               
+| DeepSeek-V2-Lite-16B   | MMLU   | 57.4%     | [58.3%](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite)      | --               | --     | --        | --                                                                               |
+
+
+具体的评估功能命令介绍见[examples/README.md](./examples/README.md)
+
+---
+
+
+## <span id="jump5"> 基于昇腾芯片采集Profiling数据
 Modellink支持基于昇腾芯片采集profiling数据，以提供对模型运行情况的分析，主要API如下：
 
 
@@ -1332,7 +1546,7 @@ Modellink支持基于昇腾芯片采集profiling数据，以提供对模型运�
 
 ---
 
-## 基于昇腾芯片的确定性计算功能
+## <span id="jump6"> 基于昇腾芯片的确定性计算功能
 昇腾芯片默认采用了不确定计算加速模型训练，有时为了重复实验与对比实验需要确定性的计算结果，ModelLink使能确定性计算的开关如下：
 
 - 启动命令中加入开关
@@ -1347,7 +1561,7 @@ export HCCL_DETERMINISTIC=True
 ---
 
 
-## 基于昇腾芯片的高可用特性
+## <span id="jump7"> 基于昇腾芯片的高可用特性
 分布式优化器的思想是通过将优化器状态均匀地分布在数据并行组中来节省内存。基于该思想，设计了将数据并行组切分成两个副本数据并行组的方案，副本优化器将优化器状态均匀分布在副本数据并行组，实现优化器状态均有备份。结合华为自研的高可用框架，可实现以下功能：
 1. 训练过程中，支持故障场景保存临终checkpoint，训练结果0损失。
 2. 训练过程中，支持HBM的UCE故障检测，并完成在线修复，达到Step级重计算。

@@ -1,158 +1,56 @@
-import sys
 import os
-import math
-
-import pandas as pd
-
+from pathlib import Path
+import pytest
 import modellink
-from test_tools.utils import judge_expression, get_md5sum
-from modellink.tokenizer import build_tokenizer
-from modellink.tokenizer.tokenizer import _AutoTokenizer
-from modellink.tasks.preprocess.data_handler import AlpacaStyleInstructionHandler, SharegptStyleInstructionHandler
-from modellink.tasks.preprocess.data_handler import build_dataset, get_dataset_handler
-from preprocess_data import get_args, build_splitter
+from tests.test_tools.utils import build_args, create_testconfig, compare_file_md5_same
+from preprocess_data import main
 
 
 class TestProcessInstructionDataLf:
 
-    def setup_class(self):
-        # test for alpaca
-        sys.argv = [
-            sys.argv[0],
-            "--input", "/data/tune_dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet",
-            "--tokenizer-type", "PretrainedFromHF",
-            "--handler-name", "AlpacaStyleInstructionHandler",
-            "--output-prefix", "/data/tune_dataset/alpaca/alpaca",
-            "--tokenizer-name-or-path", "/data/qwen-7b/",
-            "--workers", "4",
-            "--log-interval", "1000",
-            "--prompt-type", "qwen"
-        ]
-        self.args = get_args()
-        self.tokenizer = build_tokenizer(self.args)
-        self.splitter = build_splitter(self.args)
-        self.raw_dataset_alpaca = build_dataset(self.args)
-        self.handler_alpaca = get_dataset_handler(self.args, self.raw_dataset_alpaca, self.tokenizer, self.splitter)
-
-        # test for alpaca history
-        sys.argv = [
-            sys.argv[0],
-            "--input", "/data/tune_dataset/oaast_sft.json",
-            "--tokenizer-type", "PretrainedFromHF",
-            "--handler-name", "AlpacaStyleInstructionHandler",
-            "--output-prefix", "/data/tune_dataset/alpaca_his/alpaca_his",
-            "--tokenizer-name-or-path", "/data/qwen-7b/",
-            "--workers", "4",
-            "--log-interval", "1000",
-            "--prompt-type", "qwen",
-            "--map-keys", '{"history":"history"}'
-        ]
-        self.args = get_args()
-        self.raw_dataset_alpaca_his = build_dataset(self.args)
-        self.handler_alpaca_his = get_dataset_handler(self.args, self.raw_dataset_alpaca_his, self.tokenizer, self.splitter)
-
-        # test for sharegpt
-        sys.argv = [
-            sys.argv[0],
-            "--input", "/data/tune_dataset/sharegpt_formatted_data-evol-gpt4.jsonl",
-            "--tokenizer-type", "PretrainedFromHF",
-            "--handler-name", "SharegptStyleInstructionHandler",
-            "--output-prefix", "/data/tune_dataset/sharegpt/sharegpt",
-            "--tokenizer-name-or-path", "/data/qwen-7b/",
-            "--workers", "4",
-            "--log-interval", "1000",
-            "--prompt-type", "qwen",
-            "--map-keys", '{"system":"system_prompt"}'
-        ]
-
-        self.args = get_args()
-        self.raw_dataset_sharegpt = build_dataset(self.args)
-        self.handler_sharegpt = get_dataset_handler(self.args, self.raw_dataset_sharegpt, self.tokenizer, self.splitter)
-
-        # test for openai
-        sys.argv = [
-            sys.argv[0],
-            "--input", "/data/tune_dataset/sss.json",
-            "--tokenizer-type", "PretrainedFromHF",
-            "--handler-name", "SharegptStyleInstructionHandler",
-            "--output-prefix", "/data/tune_dataset/openai/openai",
-            "--tokenizer-name-or-path", "/data/qwen-7b/",
-            "--workers", "4",
-            "--log-interval", "1000",
-            "--prompt-type", "qwen",
-            "--map-keys", '{"messages":"messages", "tags":{"role_tag": "role","content_tag": "content","user_tag": "user","assistant_tag": "assistant","system_tag": "system"} }'
-        ]
-
-        self.args = get_args()
-        self.raw_dataset_openai = build_dataset(self.args)
-        self.handler_openai = get_dataset_handler(self.args, self.raw_dataset_openai, self.tokenizer, self.splitter)
-
     
-    def test_get_dataset_handler(self):
+    test_config = create_testconfig(Path(__file__).with_suffix(".json"))
+
+
+    @pytest.mark.parametrize("params, base_path", 
+        [
+            (test_config["test_alpaca_dataset"][0], "/data/tune_dataset/Llamafactoryhandler/alpaca/alpaca"),
+            (test_config["test_alpaca_history_dataset"][0], "/data/tune_dataset/Llamafactoryhandler/alpaca_history/alpaca_history"),
+            (test_config["test_sharegpt_dataset"][0], "/data/tune_dataset/Llamafactoryhandler/sharegpt/sharegpt_lf"),
+            (test_config["test_openai_dataset"][0], "/data/tune_dataset/Llamafactoryhandler/openai/sss")
+        ])
+    def test_datasets(self, build_args, params, base_path):
         """
-        Test if get the right data handler for pretrain
+        Tests dataset preprocessing and validates output files by comparing MD5 checksums.
+
+        Parameters:
+        - params: dict
+            A dictionary containing dataset-specific configurations, such as input files,
+            output prefix, and tokenizer information. Extracted from `test_config`.
+        - base_path: str
+            The base path of the reference dataset files (e.g., Alpaca, Alpaca History, ShareGPT, OpenAI).
+            Used to locate the ground truth files for comparison with the generated output.
         """
-        judge_expression(isinstance(self.handler_alpaca, AlpacaStyleInstructionHandler))
-        judge_expression(isinstance(self.handler_alpaca_his, AlpacaStyleInstructionHandler))
-        judge_expression(isinstance(self.handler_sharegpt, SharegptStyleInstructionHandler))
-        judge_expression(isinstance(self.handler_openai, SharegptStyleInstructionHandler))
+        # create output dir if it doesn't exist
+        out_dir = os.path.dirname(params["output-prefix"])
+        if not os.path.isdir(out_dir):
+            os.makedirs(out_dir)
 
+        # run the main preprocessing function
+        main()
 
-    def test_serialize_to_disk(self):
-        """
-        Test generate pretrain object files and files are not None(MB).
-        """
-        self.handler_alpaca.serialize_to_disk()
-        self.handler_alpaca_his.serialize_to_disk()
-        self.handler_sharegpt.serialize_to_disk()
-        self.handler_openai.serialize_to_disk()
-        folder_path1 = "/data/tune_dataset/alpaca/"
-        folder_path2 = "/data/tune_dataset/alpaca_his/"
-        folder_path3 = "/data/tune_dataset/sharegpt/"
-        folder_path4 = "/data/tune_dataset/openai/"
+        # print dataset name for clarity
+        dataset_name = base_path.split('/')[-1]
+        print(f"=============== test_{dataset_name}_dataset =============")
 
-        def check_file_num(folder_path):
-            bin_file = 0
-            idx_file = 0
-            total_size = 0
-            for file_name in os.listdir(folder_path):
-                file_path = os.path.join(folder_path, file_name)
-                if os.path.isfile(file_path):
-                    if file_path.endswith(".bin"):
-                        bin_file += 1
-                    if file_path.endswith(".idx"):
-                        idx_file += 1
-                    total_size += os.path.getsize(file_path)
-            judge_expression(bin_file == 3)
-            judge_expression(idx_file == 3)
+        prefix_str = params["output-prefix"].split('/')[-1]
+        mid_strs = ["_packed_attention_mask_document", "_packed_input_ids_document", "_packed_labels_document"]
+        end_suffixs = [".bin", ".idx"]
 
-        check_file_num(folder_path1)
-        check_file_num(folder_path2)
-        check_file_num(folder_path3)
-        check_file_num(folder_path4)
-
-
-    def test_md5sum_with_llamafactoryhandler(self):
-        file_path_alpaca = "/data/tune_dataset/alpaca/alpaca"
-        file_path_alpaca_his = "/data/tune_dataset/alpaca_his/alpaca_his"
-        file_path_sharegpt = "/data/tune_dataset/sharegpt/sharegpt"
-        file_path_openai = "/data/tune_dataset/openai/openai"
-
-        file_path_compare_alpaca = "/data/tune_dataset/Llamafactoryhandler/alpaca/alpaca"
-        file_path_compare_alpaca_his = "/data/tune_dataset/Llamafactoryhandler/alpaca_history/alpaca_history"
-        file_path_compare_sharegpt = "/data/tune_dataset/Llamafactoryhandler/sharegpt/sharegpt_lf"
-        file_path_compare_openai = "/data/tune_dataset/Llamafactoryhandler/openai/sss"
-
-        def compare_md5sum(file_path1, file_path2):
-            judge_expression(get_md5sum(file_path1 + "_packed_attention_mask_document.idx") == get_md5sum(file_path2 + "_packed_attention_mask_document.idx"))
-            judge_expression(get_md5sum(file_path1 + "_packed_attention_mask_document.bin") == get_md5sum(file_path2 + "_packed_attention_mask_document.bin"))
-            judge_expression(get_md5sum(file_path1 + "_packed_input_ids_document.idx") == get_md5sum(file_path2 + "_packed_input_ids_document.idx"))
-            judge_expression(get_md5sum(file_path1 + "_packed_input_ids_document.bin") == get_md5sum(file_path2 + "_packed_input_ids_document.bin"))
-            judge_expression(get_md5sum(file_path1 + "_packed_labels_document.idx") == get_md5sum(file_path2 + "_packed_labels_document.idx"))
-            judge_expression(get_md5sum(file_path1 + "_packed_labels_document.bin") == get_md5sum(file_path2 + "_packed_labels_document.bin"))
-
-        compare_md5sum(file_path_alpaca, file_path_compare_alpaca)
-        compare_md5sum(file_path_alpaca_his, file_path_compare_alpaca_his)
-        compare_md5sum(file_path_sharegpt, file_path_compare_sharegpt)
-        compare_md5sum(file_path_openai, file_path_compare_openai)
-
+        # loop through mid_strs and end_suffixs, checking file MD5 hashes
+        for mid_str in mid_strs:
+            for end_suffix in end_suffixs:
+                end_str = mid_str + end_suffix
+                base_file = base_path + end_str
+                test_file = params["output-prefix"] + end_str
+                assert compare_file_md5_same(base_file, test_file)

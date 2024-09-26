@@ -20,7 +20,7 @@ from megatron.core.transformer.moe.moe_layer import MoELayer
 from megatron.training import get_args
 
 from modellink.core.transformer.custom_layers.transformer_engine import PTNorm
-from modellink.core.models.gpt.gpt_mla_layer_specs import get_gpt_mla_layer_spec
+from modellink.tasks.models.spec.gpt_mla_layer_specs import get_gpt_mla_layer_spec
 
 
 def get_gpt_layer_local_spec_wrapper(fn):

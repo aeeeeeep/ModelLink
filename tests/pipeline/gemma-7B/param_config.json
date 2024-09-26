@@ -1,76 +1,98 @@
-{
-    "NETWORK_SIZE": [
-        "--num-layers", "28",
-        "--hidden-size", "3072",
-        "--ffn-hidden-size", "24576",
-        "--num-attention-heads", "16",
-        "--max-position-embeddings", "8192",
-        "--position-embedding-type", "rope",
-        "--make-vocab-size-divisible-by", "1",
-        "--normalization", "RMSNorm",
-        "--add-rmsnorm-offset",
-        "--geglu",
-        "--kv-channels", "256",
-        "--input-embeds-norm",
-        "--vocab-size", "256000"
+ {
+    "test_gemma_7B_mmlu_evaluate": [
+        {
+            "param": {
+                "task-data-path": "/data/eval_data/mmlu/data/test/",
+                "task": "mmlu",
+                "load": "/data/gemma-7b-tp8-pp1/",
+                "tensor-model-parallel-size": 8,
+                "pipeline-model-parallel-size": 1,
+                "num-layers": 28,
+                "hidden-size": 3072,
+                "ffn-hidden-size": 24576,
+                "num-attention-heads": 16,
+                "kv-channels": 256,
+                "max-position-embeddings": 8192,
+                "seq-length": 8192,
+                "max-new-tokens": 30,
+                "geglu": null,
+                "position-embedding-type": "rope",
+                "disable-bias-linear": null,
+                "normalization": "RMSNorm",
+                "add-rmsnorm-offset": null,
+                "input-embeds-norm": null,
+                "tokenizer-type": "PretrainedFromHF",
+                "tokenizer-name-or-path": "/data/gemma-7b-hf/",
+                "tokenizer-not-use-fast": null,
+                "norm-epsilon": 1e-06,
+                "evaluation-batch-size": 1,
+                "micro-batch-size": 1,
+                "use-fused-rmsnorm": null,
+                "no-masked-softmax-fusion": null,
+                "exit-on-missing-checkpoint": null,
+                "no-load-rng": null,
+                "no-load-optim": null,
+                "max-eval-samples": 3,
+                "vocab-size": 256000,
+                "make-vocab-size-divisible-by": 1,
+                "bf16": null,
+                "seed": 42
+
+            }
+        }
     ],
 
-    "INFERENCE_AUX": [
-        "--tokenizer-type", "PretrainedFromHF",
-        "--tokenizer-model", "/home/dataset/gemma-7B-hf/tokenizer.model",
-        "--tokenizer-name-or-path", "/home/dataset/gemma-7B-hf",
-        "--load", "/home/dataset/gemma-7B-tp8-pp1",
-        "--seed", "42",
-        "--tokenizer-not-use-fast",
-        "--exit-on-missing-checkpoint"
+    "test_gemma_7B_greedy_search": [
+        {
+            "param": {
+                "tensor-model-parallel-size": 8,
+                "pipeline-model-parallel-size": 1,
+                "load": "/data/gemma-7b-tp8-pp1/",
+                "num-layers": 28,
+                "hidden-size": 3072,
+                "kv-channels": 256,
+                "ffn-hidden-size": 24576,
+                "num-attention-heads": 16,
+                "position-embedding-type": "rope",
+                "seq-length": 8192,
+                "max-position-embeddings": 8192,
+                "max-new-tokens": 256,
+                "geglu": null,
+                "input-embeds-norm": null,
+                "micro-batch-size": 1,
+                "tokenizer-type": "PretrainedFromHF",
+                "tokenizer-name-or-path": "/data/gemma-7b-hf/",
+                "tokenizer-not-use-fast": null,
+                "normalization": "RMSNorm",
+                "add-rmsnorm-offset": null,
+                "norm-epsilon": 1e-06,
+                "disable-bias-linear": null,
+                "hidden-dropout": 0,
+                "attention-dropout": 0,
+                "attention-softmax-in-fp32": null,
+                "no-load-optim": null,
+                "no-load-rng": null,
+                "no-masked-softmax-fusion": null,
+                "no-gradient-accumulation-fusion": null,
+                "exit-on-missing-checkpoint": null,
+                "make-vocab-size-divisible-by": 1,
+                "vocab-size": 256000,
+                "bf16": null,
+                "seed": 42,
+                "task": "greedy",
+                "use-deter-comp": null
+            }
+        }
     ],
 
-    "INFERENCE_PARAM": [
-        "--max-new-tokens", "256"
-    ],
-
-    "EVALUATION_PARAM": [
-        "--task-data-path", "/home/dataset/eval_dataset/mmlu/test/",
-        "--max-new-tokens", "1"
-    ],
-
-
-    "DISTRIBUTED_PARAM": [
-        "--tensor-model-parallel-size", "8",
-        "--pipeline-model-parallel-size", "1"
-    ],
-
-    "AUXILIARY_PARAM": [
-        "--micro-batch-size", "1",
-        "--global-batch-size", "16",
-        "--no-masked-softmax-fusion",
-        "--disable-bias-linear",
-        "--no-gradient-accumulation-fusion",
-        "--bf16",
-        "--attention-softmax-in-fp32",
-        "--no-load-optim",
-        "--no-load-rng",
-        "--seq-length", "8192"
-    ],
-
-
-    "PROCESS_PRETRAIN_DATA": [
-        "--input", "/home/dataset/train-00000-of-00001-a09b74b3ef9c3b56.parquet",
-        "--tokenizer-type", "PretrainedFromHF",
-        "--output-prefix", "/home/dataset/pretrain-dataset-gemma-7B/alpaca",
-        "--tokenizer-name-or-path", "/home/dataset/gemma-7B-hf",
-        "--workers", "4",
-        "--log-interval", "1000"
-    ],
-
-
-    "CONVERT_CKPT_FROM_HF": [
-        "--model-type", "GPT",
-        "--loader", "gemma_hf",
-        "--saver", "megatron",
-        "--target-tensor-parallel-size", "8",
-        "--load-dir", "/home/dataset/gemma-7B-hf",
-        "--save-dir", "/home/dataset/gemma-7B-tp8-pp1",
-        "--tokenizer-model", "/home/dataset/gemma-7B-hf/tokenizer.model"
+    "test_preprocess_pretrain_data": [
+        {
+            "param": {
+                "input": "/data/gemma-7b-hf/gemma-7b-dataset/wikipedia-cn-20230720-filtered.json",
+                "tokenizer-type": "PretrainedFromHF",
+                "tokenizer-name-or-path": "/data/gemma-7b-hf/"
+            },
+            "prefix": "alpaca"
+        }
     ]
 }

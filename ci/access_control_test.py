@@ -1,8 +1,79 @@
 import os
-import stat
-import sys
 from pathlib import Path
-import subprocess
+
+
+def read_files_from_txt(txt_file):
+    with open(txt_file, "r") as f:
+        return [line.strip() for line in f.readlines()]
+
+
+def is_examples(file):
+    return file.startswith("examples/")
+
+
+def is_pipecase(file):
+    return file.startswith("tests/pipeline")
+
+
+def is_markdown(file):
+    return file.endswith(".md")
+
+
+def is_image(file):
+    return file.endswith(".jpg") or file.endswith(".png")
+
+
+def is_txt(file):
+    return file.endswith(".txt")
+
+
+def is_owners(file):
+    return file.startswith("OWNERS")
+
+
+def is_license(file):
+    return file.startswith("LICENSE")
+
+
+def is_ut(file):
+    return file.startswith("tests/ut")
+
+
+def skip_ci(files, skip_conds):
+    for file in files:
+        if not any(condition(file) for condition in skip_conds):
+            return False
+    return True
+
+
+def choose_skip_ci(raw_txt_file):
+    if not os.path.exists(raw_txt_file):
+        return False
+    
+    file_list = read_files_from_txt(raw_txt_file)
+    skip_conds = [
+        is_examples,
+        is_pipecase,
+        is_markdown,
+        is_image,
+        is_txt,
+        is_owners,
+        is_license
+    ]
+
+    return skip_ci(file_list, skip_conds)
+
+
+def filter_exec_ut(raw_txt_file):
+    file_list = read_files_from_txt(raw_txt_file)
+    filter_conds = [
+        is_ut,
+        is_markdown
+    ]
+    for file in file_list:
+        if not any(condition(file) for condition in filter_conds):
+            return False, None
+    return True, file_list
 
 
 def acquire_exitcode(command):
@@ -15,16 +86,25 @@ def acquire_exitcode(command):
 # UT test, run with pytest
 # =============================
 
-class UT_Test:
-
+class UTTest:
     def __init__(self):
-
-        base_dir = Path(__file__).absolute().parent.parent
-        test_dir = os.path.join(base_dir, 'tests')
-        self.ut_file = os.path.join(test_dir, "ut")
+        self.base_dir = Path(__file__).absolute().parents[1]
+        self.test_dir = os.path.join(self.base_dir, 'tests')
+        self.ut_files = os.path.join(
+            self.base_dir, self.test_dir, "ut"
+        )
     
-    def run_ut(self):
-        command = f"pytest -x {self.ut_file}"
+    def run_ut(self, raw_txt_file=None):
+        if raw_txt_file is not None and os.path.exists(raw_txt_file):
+            filtered_results = filter_exec_ut(raw_txt_file)
+
+            if filtered_results[0]:
+                filtered_files = filtered_results[1]
+                full_path = [os.path.join(self.base_dir, file) for file in filtered_files]
+                exsit_ut_files = [file for file in full_path if os.path.exists(file) and file.endswith(".py")]
+                self.ut_files = " ".join(exsit_ut_files)
+
+        command = f"pytest -x {self.ut_files}"
         code = acquire_exitcode(command)
         if code == 0:
             print("UT test success")
@@ -37,27 +117,15 @@ class UT_Test:
 # ST test, run with sh.
 # ===============================================
 
-class ST_Test:
-    
+class STTest:
     def __init__(self):
+        self.base_dir = Path(__file__).absolute().parents[1]
+        self.test_dir = os.path.join(self.base_dir, 'tests')
 
-        base_dir = Path(__file__).absolute().parent.parent
-        test_dir = os.path.join(base_dir, 'tests')
-
-        st_dir = "st"
+        self.st_dir = "st"
         self.st_shell = os.path.join(
-            test_dir, st_dir, "run.sh"
+            self.test_dir, self.st_dir, "st_run.sh"
         )
-        llama_instruction_shell_file = os.path.join(
-            test_dir, st_dir, "test_llama_instruction_ptd.sh")
-        llama_pretrain_ha_save_shell_file = os.path.join(
-            test_dir, st_dir, "test_llama_pretrain_ha_save_ptd.sh")
-        llama_pretrain_ha_load_shell_file = os.path.join(
-            test_dir, st_dir, "test_llama_pretrain_ha_load_ptd.sh")
-
-        self.st_file_list = [
-            llama_instruction_shell_file
-        ]
 
     def run_st(self):
         rectify_case = f"bash {self.st_shell}"
@@ -65,24 +133,28 @@ class ST_Test:
         if rectify_code != 0:
             print("rectify case failed, check it.")
             exit(1)
-        all_success = True
-        for shell_file in self.st_file_list:
-            command = f"sh {shell_file}"
-            st_exitcode = acquire_exitcode(command)
-            if st_exitcode != 0:
-                all_success = False
-                print(f"ST run {shell_file} failed")
-                exit(1)
 
-        if all_success:
-            print("ST test success")
-        else:
-            print("ST failed")
-            exit(1)
 
+def run_tests(raw_txt_file):
+    ut = UTTest()
+    st = STTest()
+    if filter_exec_ut(raw_txt_file)[0]:
+        ut.run_ut(raw_txt_file)
+    else:
+        ut.run_ut()
+        st.run_st()
+
+
+def main():
+    parent_dir = Path(__file__).absolute().parents[2]
+    raw_txt_file = os.path.join(parent_dir, "modify.txt")
+
+    skip_signal = choose_skip_ci(raw_txt_file)
+    if skip_signal:
+        print("Skipping CI")
+    else:
+        run_tests(raw_txt_file)
 
 if __name__ == "__main__":
-    ut = UT_Test()
-    ut.run_ut()
-    st = ST_Test()
-    st.run_st()
+    main()
+    
