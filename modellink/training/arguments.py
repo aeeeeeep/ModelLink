@@ -780,11 +780,17 @@ def _store_variables(args):
     """
     variable_dict = dict()
     variable_dict["variable_seq_lengths"] = args.variable_seq_lengths
+
     # Moe models require `--sequence-parallel` to be turned on before Megatron core_v0.7.0,
     # which conflicted with the behavior of turning it off by default during inference and evaluation.
     variable_dict["origin_sequence_parallel"] = args.sequence_parallel
     if args.num_experts is not None and hasattr(args, "temperature") and args.temperature is not None:
         args.sequence_parallel = True
+
+    # to bypass megatron assertion of moe+spec
+    variable_dict["spec"] = args.spec
+    args.spec = None
+
     return variable_dict
 
 
@@ -794,6 +800,9 @@ def _restore_variables(args, variable_dict):
     # which conflicted with the behavior of turning it off by default during inference and evaluation.
     if args.num_experts is not None and hasattr(args, "temperature") and args.temperature is not None:
         args.sequence_parallel = variable_dict["origin_sequence_parallel"]
+
+    # to bypass megatron assertion of moe+spec
+    args.spec = variable_dict["spec"]
 
 
 def _add_dummy_args(args):
