@@ -187,30 +187,27 @@
     <tr>
         <td rowspan="4">Checkpoint</td>
         <td rowspan="2"> Mcore </td>
-        <td> hf2mcore, tp, pp, ep, dpp, vpp, deepseek2; hf2mcore, tp, deepseek2</td>
-        <td><a href="ut/checkpoint/test_checkpoint.py">test_checkpoint.py</a></td>
+        <td> hf2mcore: tp, pp, ep, dpp, vpp, moe_grouped_gemm, add_qkv_bias, post_norm</td>
+        <td rowspan="4"><a href="ut/checkpoint/test_checkpoint.py">test_checkpoint.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
     <tr>
-        <td>hf2mcore, tp, pp, dpp, vpp, chatglm3, qwen2</td>
-        <td><a href="ut/checkpoint/test_convert_ckpt_from_huggingface.py">test_hf2mcore.py</a></td>
+        <td> mcore2hf: tp, pp, ep, dpp, vpp, moe_grouped_gemm</td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
     <tr>
         <td rowspan="2">Legacy</td>
-        <td> legacy2mcore, lora</td>
-        <td><a href="ut/checkpoint/test_convert_ckpt_from_huggingface.py">test_legacy2hf.py</a></td>
+        <td> hf2legacy: tp, pp, dpp; mcore2legacy: tp, pp, vpp; </td>
         <td>Y</td>
         <td></td>
         <td></td>
     </tr>
     <tr>
-        <td>legacy2legacy, lora</td>
-        <td><a href="ut/checkpoint/test_convert_ckpt_from_megatron.py">test_legacy2legacy.py</a></td>
+        <td> legacy2hf: tp, pp, dpp; legacy2mcore: tp, pp, dpp;</td>
         <td>Y</td>
         <td></td>
         <td></td>
@@ -286,13 +283,20 @@
         <td></td>
     </tr>
     <tr>
-        <td rowspan="4"><a href="pipeline/chatglm3-6B">Chatglm3-6B</a></td>
-        <td rowspan="4">Legacy</td>
+        <td rowspan="5"><a href="pipeline/chatglm3-6B">Chatglm3-6B</a></td>
+        <td rowspan="5">Legacy</td>
         <td>pretrain</td>
         <td><a href="pipeline/chatglm3-6B/chatglm3_tp1_pp2_legacy.sh">chatglm3_tp1_pp2_legacy.sh</a></td>
         <td>Y</td>
         <td>Y</td>
         <td>Y</td>
+    </tr>
+    <tr>
+        <td>convert_ckpt</td>
+        <td><a href="pipeline/chatglm3-6B/test_checkpoint.py">test_checkpoint.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
     </tr>
     <tr>
         <td>data_process</td>

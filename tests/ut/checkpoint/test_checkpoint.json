@@ -130,6 +130,94 @@
                 "tokenizer-model": "/data/gemma2-9b-hf/tokenizer.json"
             }
         }
+    ],
+
+    "test_llama2_hf2legacy_tp2pp4dypp": [
+        {
+            "param": {
+                "model-type":"GPT",
+                "load-model-type":"hf",
+                "save-model-type":"mg",
+                "target-tensor-parallel-size": "2",
+                "target-pipeline-parallel-size": "4", 
+                "num-layer-list": "6,8,8,10",
+                "load-dir":"/data/llama-2-7b-hf",
+                "save-dir":"/data/llama-2-7b-hf-hf2ml-tp2pp4dypp-test",
+                "model-type-hf": "llama2",
+                "tokenizer-model":"/data/llama-2-7b-hf/tokenizer.model"
+            }
+        }
+    ],
+
+    "test_llama2_legacy2hf_tp2pp4dypp": [
+        {
+            "param": {
+                "model-type":"GPT",
+                "load-model-type":"mg",
+                "save-model-type":"hf",
+                "target-tensor-parallel-size": "1",
+                "target-pipeline-parallel-size": "1", 
+                "num-layer-list": "6,8,8,10",
+                "load-dir":"/data/llama-2-7b-hf-hf2ml-tp2pp4dypp",
+                "save-dir":"/data/llama-2-7b-hf",
+                "model-type-hf": "llama2"
+            }
+        }
+    ],
+
+    "test_llama2_legacy2mcore_tp2pp4dypp": [
+        {
+            "param": {
+                "model-type":"GPT",
+                "use-mcore-models": null,
+                "load-model-type":"mg",
+                "save-model-type":"mg",  
+                "target-tensor-parallel-size": "2",
+                "target-pipeline-parallel-size": "4", 
+                "num-layer-list": "6,8,8,10",
+                "load-from-legacy": null,
+                "load-dir":"/data/llama-2-7b-hf-legacy_test-tp1pp4vpp2",
+                "save-dir":"/data/llama-2-7b-hf-ml2mc-tp2pp4dypp-test",
+                "model-type-hf": "llama2"
+            }
+        }
+    ],
+
+    "test_llama2_mcore2legacy_tp1pp4vpp2": [
+        {
+            "param": {
+                "model-type":"GPT",
+                "use-mcore-models": null,
+                "load-model-type":"mg",
+                "save-model-type":"mg",  
+                "target-tensor-parallel-size": "1",
+                "target-pipeline-parallel-size": "4", 
+                "num-layers-per-virtual-pipeline-stage": "2",
+                "save-to-legacy": null,
+                "load-dir":"/data/llama-2-7b-hf-ml2mc-tp2pp4dypp",
+                "save-dir":"/data/llama-2-7b-hf-mc2ml-tp1pp4vpp2-test",
+                "model-type-hf": "llama2"
+            }
+        }
+    ],
+
+    "test_qwen2_hf2mcore_tp1pp1": [
+        {
+            "param": {
+                "model-type":"GPT",
+                "use-mcore-models": null,
+                "load-model-type":"hf",
+                "save-model-type":"mg",  
+                "target-tensor-parallel-size": "1",
+                "target-pipeline-parallel-size": "1", 
+                "load-dir":"/data/Qwen2-1.5B/",
+                "save-dir":"/data/qwen2-1.5b-base-mg-tp1pp1-mcore-test/",
+                "model-type-hf": "llama2",
+                "tokenizer-model":"/data/Qwen2-1.5B/tokenizer.model",
+                "add-qkv-bias": null,
+                "params-dtype": "bf16"
+            }
+        }
     ]
 }
 
