@@ -16,8 +16,7 @@ import argparse
 
 import megatron
 import megatron.core.models.gpt.gpt_layer_specs
-from mindspeed.core.fusions.fused_layer_norm import (FusedLayerNormAffineFunction, FastLayerNormFN,
-                                                     fused_layer_norm_affine)
+from mindspeed.core.fusions.fused_layer_norm import (FusedLayerNormAffineFunction, FastLayerNormFN)
 from mindspeed.core.fusions.fused_softmax import (is_kernel_available, ScaledUpperTriangMaskedSoftmax,
                                                   ScaledMaskedSoftmax, ScaledSoftmax, forward_fused_softmax)
 from mindspeed.core.fusions.fused_bias_swiglu import SwiGLUFunction, BiasSwiGLUFunction
@@ -56,7 +55,7 @@ _ARGS = None
 
 def get_modellink_args():
     """
-    获取modellink的参数
+    Get arguments of model-link and patch according to args.
     """
     global _ARGS
     if _ARGS is None:
@@ -66,10 +65,52 @@ def get_modellink_args():
 
 
 def exec_adaptation():
+    basic_adaptation()
     patch_megatron_core()
     patch_megatron_noncore()
     PatchManager.apply_patches()
     post_patch_application()
+
+
+def apex_adaptation(aspm):
+    """
+        Adaptation for apex.
+        Would be replaced with mindspeed-core implementation when npu_matmul_add ops in ATB is supported.
+    """
+
+    from mindspeed.optimizer.adamw import AdamW
+    from mindspeed.core.fusions.fused_layer_norm import fused_layer_norm_affine
+    from mindspeed.megatron_adaptor import multi_tensor_l2norm, multi_tensor_scale, multi_tensor_applier
+    aspm.register_patch('apex.optimizers.FusedAdam', AdamW, create_dummy=True)
+    aspm.register_patch('amp_C.multi_tensor_l2norm', multi_tensor_l2norm, create_dummy=True)
+    aspm.register_patch('amp_C.multi_tensor_scale', multi_tensor_scale, create_dummy=True)
+    aspm.register_patch('fused_layer_norm_cuda', create_dummy=True)
+    aspm.register_patch('apex.multi_tensor_apply.multi_tensor_applier', multi_tensor_applier, create_dummy=True)
+    aspm.register_patch('apex.normalization.fused_layer_norm.fused_layer_norm_affine', fused_layer_norm_affine,
+                        create_dummy=True)
+
+
+def other_adaptation():
+    import torch
+
+    def repeat_interleave(inputs, repeats, dim):
+        shape = inputs.shape
+        new_shape = shape[:dim + 1] + (repeats,) + shape[dim + 1:]
+        out_shape = shape[:dim] + (shape[dim] * repeats,) + shape[dim + 1:]
+        return inputs.unsqueeze(dim + 1).expand(new_shape).reshape(out_shape)
+
+    torch.Tensor.repeat_interleave = repeat_interleave  # replace npu implementation of torch.repeat_interleave
+    torch.compile = torch.jit.script
+
+
+def basic_adaptation():
+    from mindspeed.megatron_adaptor import te_adaptation, torch_adaptation
+
+    # For transformer engine
+    te_adaptation(PatchManager)
+    apex_adaptation(PatchManager)
+    torch_adaptation(PatchManager)
+    other_adaptation()
 
 
 def post_patch_application():
