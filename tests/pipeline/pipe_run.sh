@@ -4,6 +4,8 @@ BASELINE_DIR="$BASE_DIR/baseline"
 
 #mkdir cache to store product and will be removed after test
 mkdir -p "$BASE_DIR/pipe_cache"
+touch "$BASE_DIR/exec_results.log"
+echo "Execution Results" > $BASE_DIR/exec_results.log
 
 GENERATE_LOG_DIR="$BASE_DIR/pipe_cache"
 GENERATE_JSON_DIR="$BASE_DIR/pipe_cache"
@@ -18,7 +20,7 @@ find "$BASE_DIR" -mindepth 1 -maxdepth 1 -type d | while read -r dir; do
             bash $file | tee "$GENERATE_LOG_DIR/$name.log"
             SCRIPT_EXITCODE=${PIPESTATUS[0]}
             if [ $SCRIPT_EXITCODE -ne 0 ]; then
-                echo "Script has failed. Exit!"
+                echo "${name}.sh Script has failed. Exit!" >> $BASE_DIR/exec_results.log
                 exit 1
             fi
 
@@ -30,16 +32,22 @@ find "$BASE_DIR" -mindepth 1 -maxdepth 1 -type d | while read -r dir; do
                 --generate-json $GENERATE_JSON_DIR/$name.json
             PYTEST_EXITCODE=$?
             if [ $PYTEST_EXITCODE -ne 0 ]; then
-                echo "${name} compare to baseline has failed, check it!"
+                echo "${name}.sh compare to baseline has failed, check it!" >> $BASE_DIR/exec_results.log
                 exit 1
             else
-                echo "Pretrain ${name} execution success."
+                echo "Pretrain ${name}.sh execution success." >> $BASE_DIR/exec_results.log
             fi
         done
 
         # python test testing
         find "$dir" -type f -name "*.py" | while read -r file; do
-            pytest -x $file
+            pytest_result=$(pytest $file)
+            exit_status=$?
+            if [ $exit_status -eq 0 ]; then
+                echo "$file execution success." >> "$BASE_DIR/exec_results.log"
+            else
+                echo "$file has failed, check it!" >> "$BASE_DIR/exec_results.log"
+            fi
         done
     fi
 done
