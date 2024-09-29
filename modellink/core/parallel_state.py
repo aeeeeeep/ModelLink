@@ -46,6 +46,10 @@ def initialize_model_parallel_decorator(initialize_model_parallel):
         from megatron.training.utils import print_rank_0
         timeout = timedelta(minutes=distributed_timeout_minutes)
 
+        if virtual_pipeline_model_parallel_size is not None:
+            megatron.core.parallel_state._VIRTUAL_PIPELINE_MODEL_PARALLEL_RANK = 0
+            megatron.core.parallel_state._VIRTUAL_PIPELINE_MODEL_PARALLEL_WORLD_SIZE = virtual_pipeline_model_parallel_size
+
         initialize_model_parallel(
             tensor_model_parallel_size,
             pipeline_model_parallel_size,
