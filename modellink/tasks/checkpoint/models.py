@@ -8,7 +8,7 @@ import logging as logger
 from collections import OrderedDict
 from tqdm import tqdm
 import torch
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoConfig
 from megatron.core import mpu
 from megatron.training.arguments import validate_args
 from megatron.legacy.model import module
@@ -383,6 +383,20 @@ class HuggingfaceModel(ModelBase):
         else:
             load_dir = self.args_cmd.load_dir
         self.module = [AutoModelForCausalLM.from_pretrained(load_dir, device_map=device_map, trust_remote_code=trust_remote_code)]
+        if hasattr(self.args, "torch_dtype") and self.args.torch_dtype in ["float16", "bfloat16"]:
+            self.module[0] = self.module[0].to(eval(f'torch.{self.args.torch_dtype}'))
+
+    def get_modules_from_config(self, device_map="cpu", trust_remote_code=True):
+        # Load Huggingface model.
+        if self.args_cmd.save_model_type == "hf":
+            load_dir = self.args_cmd.save_dir
+        else:
+            load_dir = self.args_cmd.load_dir
+        config = AutoConfig.from_pretrained(load_dir, trust_remote_code=trust_remote_code)
+        with torch.device("meta"):
+            hf_model = AutoModelForCausalLM.from_config(config, trust_remote_code=trust_remote_code)
+        hf_model.to_empty(device=device_map)
+        self.module = [hf_model]
         if hasattr(self.args, "torch_dtype") and self.args.torch_dtype in ["float16", "bfloat16"]:
             self.module[0] = self.module[0].to(eval(f'torch.{self.args.torch_dtype}'))
 

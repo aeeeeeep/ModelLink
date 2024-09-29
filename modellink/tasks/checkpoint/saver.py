@@ -55,6 +55,8 @@ def add_arguments(parser):
                        help='Usr moe grouped gemm.')
     group.add_argument('--save-to-legacy', action='store_true',
                        help='Whether to save as legacy')
+    group.add_argument('--load-hf-from-config', action='store_true', default=False,
+                       help='If no weights file, use from_config to load the hf model')
 
 
 def update_padded_vocab_size(md, model_mg, orig_vocab_size):
@@ -429,7 +431,10 @@ def save_huggingface(args, model):
     '''Set model params.'''
     from .models import get_huggingface_model
     model_hf = get_huggingface_model(args)
-    model_hf.get_modules_from_pretrained()
+    if args.load_hf_from_config:
+        model_hf.get_modules_from_config()
+    else:
+        model_hf.get_modules_from_pretrained()
     args_cmd = model_hf.get_args_cmd()
 
     model_hf.update_module(model)
