@@ -92,5 +92,22 @@
             },
             "prefix": "alpaca"
         }
+    ],
+
+    "test_chatglm3_hf2legacy_tp2pp4": [
+        {
+            "param": {
+                "model-type": "GPT",
+                "load-model-type": "hf",
+                "save-model-type": "mg",
+                "model-type-hf": "chatglm3",
+                "target-tensor-parallel-size": "2",
+                "target-pipeline-parallel-size": "4",
+                "load-dir": "/data/chatglm3-6b-base-hf/",
+                "save-dir": "/data/chatglm3-6b-base-mg-tp2pp4-legacy-test/",
+                "tokenizer-model": "/data/chatglm3-6b-base-hf/tokenizer.model",
+                "add-qkv-bias": null
+            }
+        }
     ]
 }
