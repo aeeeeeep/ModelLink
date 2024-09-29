@@ -20,18 +20,12 @@ from megatron.core.transformer.moe.moe_layer import MoELayer
 from megatron.training import get_args
 
 from modellink.core.transformer.custom_layers.transformer_engine import PTNorm
-from modellink.tasks.models.spec.gpt_mla_layer_specs import get_gpt_mla_layer_spec
 
 
 def get_gpt_layer_local_spec_wrapper(fn):
     @wraps(fn)
     def wrapper(num_experts: int = None, moe_grouped_gemm: bool = False, qk_layernorm: bool = False):
-        args = get_args()
-
-        if args.multi_head_latent_attention:
-            res = get_gpt_mla_layer_spec(num_experts, moe_grouped_gemm, args.qk_layernorm)
-        else:
-            res = fn(num_experts, moe_grouped_gemm, qk_layernorm)
+        res = fn(num_experts, moe_grouped_gemm, qk_layernorm)
 
         res.submodules.input_layernorm = PTNorm
 
@@ -39,8 +33,7 @@ def get_gpt_layer_local_spec_wrapper(fn):
             res.submodules.self_attention.submodules.q_layernorm = PTNorm
             res.submodules.self_attention.submodules.k_layernorm = PTNorm
         res.submodules.pre_mlp_layernorm = PTNorm
-        
-        if args.post_norm:
+        if get_args().post_norm:
             res.submodules.post_attn_norm = PTNorm
             res.submodules.post_mlp_layernorm = PTNorm
         return res

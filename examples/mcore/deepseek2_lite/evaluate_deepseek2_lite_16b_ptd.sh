@@ -26,6 +26,7 @@ DISTRIBUTED_ARGS="
 "
 
 python -m torch.distributed.launch $DISTRIBUTED_ARGS evaluation.py \
+    --spec modellink.tasks.models.spec.deepseek_spec layer_spec \
     --task-data-path $DATA_PATH \
     --task $TASK\
     --load "${CHECKPOINT}" \

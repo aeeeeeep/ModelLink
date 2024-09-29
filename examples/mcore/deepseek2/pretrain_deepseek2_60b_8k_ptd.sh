@@ -29,6 +29,7 @@ DISTRIBUTED_ARGS="
 "
 
 MLA_ARGS="
+    --spec modellink.tasks.models.spec.deepseek_spec layer_spec \
     --multi-head-latent-attention \
     --qk-rope-head-dim 64 \
     --qk-nope-head-dim 128 \
