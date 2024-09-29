@@ -677,6 +677,18 @@ ModelLink 通过模型并行与数据并行来训练大语言模型，为了演�
       <td>【Test】</td>
     </tr>
     <tr>
+      <td rowspan="1"><a href="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct">Qwen2.5</a></td>
+      <td><a href="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/tree/main">7B</a></td>
+      <td> 32K</td>
+      <th>Mcore</th>
+      <td>1x8</td>
+      <td> 1980 </td>
+      <td> -- </td>
+      <td> -- </td>
+      <td>【昇腾】</td>
+      <td>【Test】</td>
+    </tr>
+    <tr>
       <td rowspan="1"><a href="https://huggingface.co/01-ai">Yi</a></td>
       <td><a href="https://huggingface.co/01-ai/Yi-34B/tree/main">34B</a></td>
       <td> 4K</td>
@@ -1519,7 +1531,7 @@ ModelLink已支持模型的评估数据统计如下：
 | QWen2-0.5B    | MMLU   | 44.6%     | [45.4%](https://qwenlm.github.io/zh/blog/qwen2/)                     | QWen2-1.5B       | MMLU   | 54.7%     | [56.5%](https://qwenlm.github.io/zh/blog/qwen2/)                                  |
 | QWen2-7B      | MMLU   | 70.3%     | [70.3%](https://qwenlm.github.io/zh/blog/qwen2/)                     | QWen2-57B-A14B   |MMLU|75.6% | [76.5%](https://qwenlm.github.io/zh/blog/qwen2/)|
 | QWen2-72B     | MMLU   | 83.6%     | [84.2%](https://qwenlm.github.io/zh/blog/qwen2/)| MiniCPM-2B       | MMLU   | 51.6%     | [53.4%](https://github.com/OpenBMB/MiniCPM?tab=readme-ov-file#3)     |                                                                               
-| DeepSeek-V2-Lite-16B   | MMLU   | 57.4%     | [58.3%](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite)      | --               | --     | --        | --                                                                               |
+| DeepSeek-V2-Lite-16B   | MMLU   | 57.4%     | [58.3%](https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite)      | QWen2.5-7B      | MMLU   | 73.7%     | [74.2%](https://qwenlm.github.io/blog/qwen2.5-llm/)                     | 
 
 
 具体的评估功能命令介绍见[examples/README.md](./examples/README.md)
