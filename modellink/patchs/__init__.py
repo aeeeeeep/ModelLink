@@ -13,9 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .megatron_mock import mock_megatron_dependencies, patch_npu_apex_torch
-mock_megatron_dependencies()
-patch_npu_apex_torch()
-
 from .megatron_patch import exec_adaptation
 exec_adaptation()
