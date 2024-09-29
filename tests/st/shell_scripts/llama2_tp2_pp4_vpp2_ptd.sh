@@ -44,6 +44,7 @@ ACCELERATE_ARGS=(
 
 MODEL_ARGS=(
     --use-mcore-models
+    --spec modellink.core.models.gpt.layer_specs llama_layer_local_spec
     --num-layers 32
     --hidden-size 4096
     --ffn-hidden-size 11008

@@ -27,6 +27,7 @@ DISTRIBUTED_ARGS="
 
 GPT_ARGS="
     --use-mcore-models \
+    --spec modellink.core.models.gpt.layer_specs llama_layer_local_spec \
     --tensor-model-parallel-size ${TP} \
     --pipeline-model-parallel-size ${PP} \
     --sequence-parallel \
