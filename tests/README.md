@@ -95,6 +95,14 @@
         <td>Y</td>
     </tr>
     <tr>
+        <td>Mcore</td>
+        <td>shared_experts shared_expert_gate</td>
+        <td><a href="st/shell_scripts/qwen2_moe_tp1_pp2_ep2_cp2_32k_ptd.sh">qwen2_moe_tp1_pp2_ep2_cp2_32k_ptd.sh</a></td>
+        <td>Y</td>
+        <td>Y</td>
+        <td>Y</td>
+    </tr>
+    <tr>
         <td>Legacy</td>
         <td>TP，PP，VPP，SP，全重计算，fused_rmsnorm，fused_swiglu，fused_rope，overlap_grad_reduce</td>
         <td><a href="st/shell_scripts/llama2_tp2_pp4_vpp2_legacy.sh">llama2_tp2_pp4_vpp2_legacy.sh</a></td>

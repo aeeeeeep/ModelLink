@@ -53,7 +53,6 @@
         "global_batch_size": 64,
         "qkv_type": "unpack",
         "mlp_experts_flag": true,
-        "n_shared_experts": 8,
         "shared_expert_gate": true,
         "first_k_dense_replace": 0,
         "moe_layer_freq": 1
@@ -61,7 +60,9 @@
       "config_hf_key_mapping": {
         "num_layers": "num_hidden_layers",
         "norm_epsilon": "rms_norm_eps",
-        "rotary_base": "rope_theta"
+        "rotary_base": "rope_theta",
+        "moe_intermediate_size": "moe_intermediate_size",
+        "shared_expert_intermediate_size": "shared_expert_intermediate_size"
       },
       "model_hf_key_mapping": {
         "model": "module[0]",
