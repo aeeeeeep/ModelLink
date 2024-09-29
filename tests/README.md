@@ -226,8 +226,8 @@
         <td></td>
     </tr>
 	<tr>
-        <td rowspan="3">ProcessData</td>
-        <td rowspan="3">Mcore</td>
+        <td rowspan="4">ProcessData</td>
+        <td rowspan="4">Mcore</td>
         <td>pretrain_data_alpaca, pretrain_merge_datasets, instruction_data_alpaca, instruction_merge_datasets</td>
         <td><a href="ut/process_data/test_preprocess_data.py">test_preprocess_data.py</a></td>
         <td>Y</td>
@@ -247,6 +247,13 @@
 	<tr>
         <td>instruction_data_handler</td>
         <td><a href="ut/process_data/test_process_instruction_pack_data.py">test_process_instruction_pack_data.py</a></td>
+        <td>Y</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>pairwise_data_alpaca, pairwise_data_sharegpt</td>
+        <td><a href="ut/process_data/test_process_pairwise_data_lf.py">test_process_pairwise_data_lf.py</a></td>
         <td>Y</td>
         <td></td>
         <td></td>
@@ -449,11 +456,11 @@
 
 #### Pipeline
 
-①贡献脚本用例放置于`pipline/`的对应模型文件夹下，如`baichuan2-13B`,文件命名规则为 {模型名}_{切分策略} 或者 {模型名}_{特性名称}， 如 `baichuan2_13B_tp8_pp1_ptd.sh`，请贡献者严格对齐；
+①贡献脚本用例放置于`pipeline/`的对应模型文件夹下，如`baichuan2-13B`,文件命名规则为 {模型名}_{切分策略} 或者 {模型名}_{特性名称}， 如 `baichuan2_13B_tp8_pp1_ptd.sh`，请贡献者严格对齐；
 
 ② 注意脚本用例中不需要单独重定向log，日志收集工作已在 `pipe_run.sh` 中进行统一管理；
 
-③ 标杆数据请放置于 `pipline/baseline` 文件夹下，**命名保证完全与 shell 脚本对齐**，否则自动化脚本执行将扫描不到；
+③ 标杆数据请放置于 `pipeline/baseline` 文件夹下，**命名保证完全与 shell 脚本对齐**，否则自动化脚本执行将扫描不到；
 
 ④ 获取标杆数据：通过门禁任务执行获得首次数据，并将结果保存至本地 log 或者 txt 文件中，后通过本地执行 `tests/st/st_utils/common.py` 中的 `transfer_logs_as_json` 函数进行提取，最后再连同用例脚本上仓即可；
 
